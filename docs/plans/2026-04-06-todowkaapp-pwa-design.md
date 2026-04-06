@@ -333,31 +333,7 @@ components/
 
 ## 4. Backend API Modifications for Sync
 
-### 4.1 New Endpoint: `GET /api/v1/sync/full` — Initial Data Load
-
-**Purpose:** Load all user data for initial IndexedDB population on new device.
-
-**Request:**
-```
-GET /api/v1/sync/full
-Cookie: access_token=...
-```
-
-**Response:**
-```json
-{
-  "sync_timestamp": "2026-04-06T12:00:00Z",
-  "tasks": [...],
-  "projects": [...],
-  "contexts": [...],
-  "areas": [...],
-  "tags": [...],
-  "subtasks": [...],
-  "notifications": [...]
-}
-```
-
-### 4.2 New Endpoint: `GET /api/v1/sync/full` — Initial Full Load
+### 4.1 New Endpoint: `GET /api/v1/sync/full` — Initial Full Load
 
 Returns all user data for initial population of IndexedDB on a new device.
 
@@ -365,24 +341,6 @@ Returns all user data for initial population of IndexedDB on a new device.
 **Auth:** Required (JWT cookie)
 
 **Response:** 200 OK
-```json
-{
-  "sync_timestamp": "2026-04-06T12:00:00Z",
-  "tasks": [...],
-  "projects": [...],
-  "contexts": [...],
-  "areas": [...],
-  "tags": [...],
-  "subtasks": [...],
-  "notifications": [...]
-}
-```
-
-### 4.2 New Endpoint: `GET /api/v1/sync/full` — Initial Full Load
-
-**Purpose:** Load all user data for first login on new device.
-
-**Response:**
 ```json
 {
   "sync_timestamp": "2026-04-06T12:00:00Z",
@@ -396,7 +354,7 @@ Returns all user data for initial population of IndexedDB on a new device.
 }
 ```
 
-### 4.3 New Endpoint: `POST /api/v1/sync` — Incremental Sync
+### 4.2 New Endpoint: `POST /api/v1/sync` — Incremental Sync
 
 **Request:**
 ```json
@@ -405,12 +363,14 @@ Returns all user data for initial population of IndexedDB on a new device.
   "last_sync_timestamp": "2026-04-06T10:00:00Z",
   "pending_ops": [
     {
+      "op_id": "uuid-op-a1b2",
       "client_id": "uuid-task-550e",
       "entity_type": "task",
       "operation": "create",
-      "data": { "title": "Buy milk", "status": "inbox", "priority": "medium" }
+      "data": { "title": "Buy milk", "status": "inbox", "priority": "medium", "tag_ids": ["uuid-tag-work"] }
     },
     {
+      "op_id": "uuid-op-c3d4",
       "client_id": "uuid-task-772a",
       "entity_type": "task",
       "operation": "update",
@@ -418,6 +378,7 @@ Returns all user data for initial population of IndexedDB on a new device.
       "data": { "title": "Buy milk 2%", "updated_at": "2026-04-06T11:00:00Z" }
     },
     {
+      "op_id": "uuid-op-e5f6",
       "client_id": "uuid-task-991b",
       "entity_type": "task",
       "operation": "delete",
@@ -470,7 +431,43 @@ Collect server_changes:
 Return: applied[], conflicts[], server_changes[], sync_timestamp
 ```
 
-### 4.5 Additional Database Table
+### 4.5 Tag-Tasks Relationship (task_tags junction table)
+
+The `task_tags` table is a many-to-many junction table on the server. On the client:
+
+- Tags are stored as `tag_ids: string[]` (local UUIDs) on each task in IndexedDB
+- When creating/updating a task, `tag_ids` is included in the task data
+- Server manages the junction table automatically:
+  - On task sync: server reads `tag_ids` from request, resolves client_ids → server_ids, updates `task_tags`
+  - On full load: server includes `tag_ids` as `tag_server_ids: number[]` on each task
+- Tags themselves are synced as independent entities
+
+### 4.6 Notifications Sync
+
+Notifications are **server-to-client only**:
+- Server creates notifications (via Celery for reminders)
+- Client receives them via sync (not creates them)
+- Client can only mark notifications as `read` (sent as pending_op with `operation: "update"`)
+
+### 4.7 Additional Database Table (client_id_map)
+
+```sql
+CREATE TABLE client_id_map (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    entity_type VARCHAR NOT NULL,
+    client_id VARCHAR NOT NULL,
+    server_id INTEGER NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE (user_id, entity_type, client_id)
+);
+```
+
+Note: `change_log` table is NOT needed for entity-level LWW.
+Server changes are collected by `WHERE updated_at > last_sync_timestamp` directly from entity tables.
+
+### 4.8 Preserved API Endpoints
 
 ```sql
 -- Client UUID → Server ID mapping (essential for sync)
@@ -489,7 +486,7 @@ CREATE TABLE client_id_map (
 Note: `change_log` table is NOT needed for entity-level LWW.
 Server changes are collected by `WHERE updated_at > last_sync_timestamp` directly from entity tables.
 
-All standard CRUD endpoints from `todo-project-spec/API.md` are preserved:
+### 4.8 Preserved API Endpoints
 - `/auth/*` — authentication (unchanged)
 - `/tasks`, `/projects`, `/contexts`, `/areas`, `/tags` — CRUD (work directly, without sync)
 - `/inbox` — quick capture
@@ -500,7 +497,7 @@ Sync endpoint is **additive**. Client can use both:
 - **Online:** direct CRUD for instant UI + sync for background
 - **Offline:** everything via IndexedDB, sync when online
 
-### 4.7 SSE + Sync Integration (Phase 5)
+### 4.9 SSE + Sync Integration (Phase 5)
 
 Server pushes SSE events on entity changes. Client triggers incremental sync on SSE event.
 
