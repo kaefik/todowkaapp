@@ -35,3 +35,6 @@ def create_app() -> FastAPI:
         return {"status": "healthy"}
 
     return app
+
+
+app = create_app()
