@@ -6,13 +6,13 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 26,
+    "done": 27,
     "in_progress": 0,
-    "ready": 5,
+    "ready": 4,
     "blocked": 0,
-    "with_tests": 0,
-    "pct_done": 72,
-    "pct_tested": 0
+    "with_tests": 1,
+    "pct_done": 75,
+    "pct_tested": 3.7
   },
   "tasks": {
     "L0/01-init-monorepo": {
@@ -561,11 +561,11 @@
       "effort": "S",
       "priority_score": 4.0,
       "depends_on": ["FE-Auth/01", "FE-Auth/03"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": true,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T15:45:00Z",
+      "completed_output": "Created frontend/src/Login.test.tsx with comprehensive login form tests using Vitest + React Testing Library. Tests cover: renders login form, validation errors for empty fields, loading state on submit, error message on failed login, calls authStore.login with correct credentials, redirects to /tasks on successful login, link to /register page exists. Mocks authStore."
     }
   }
 }
