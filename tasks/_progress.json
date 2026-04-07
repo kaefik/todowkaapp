@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 11,
+    "done": 12,
     "in_progress": 0,
-    "ready": 8,
+    "ready": 7,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 31,
+    "pct_done": 33,
     "pct_tested": 0
   },
   "tasks": {
@@ -369,11 +369,11 @@
       "effort": "XS",
       "priority_score": 11.0,
       "depends_on": ["L0/03", "FE-Auth/01"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created frontend/src/components/ProtectedRoute.tsx. Component checks authStore.isAuthenticated and isLoading. If loading, shows spinner. If not authenticated, redirects to /login using Navigate. If authenticated, renders children. TypeScript typed properly."
     },
     "FE-Auth/01-auth-store": {
       "title": "Auth Zustand Store",
