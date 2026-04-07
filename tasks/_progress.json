@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 14,
+    "done": 15,
     "in_progress": 0,
-    "ready": 8,
+    "ready": 7,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 39,
+    "pct_done": 42,
     "pct_tested": 0
   },
   "tasks": {
@@ -93,11 +93,11 @@
       "effort": "S",
       "priority_score": 5.0,
       "depends_on": ["L0/05"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:45:00Z",
+      "completed_output": "Created docker/nginx.conf as main reverse proxy configuration. Configured upstreams for backend:8000 and frontend:80. Proxy /api/* to backend with proper headers. Proxy all other requests to frontend. Added gzip compression and cache headers for static assets."
     },
     "L0/08-github-actions-ci": {
       "title": "GitHub Actions CI Configuration",
