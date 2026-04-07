@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import String, Text, Boolean, DateTime, func, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base as Base
 
 
 class Task(Base):
