@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.auth import auth_router
+from app.api.router import api_router
+from app.api.tasks import tasks_router
 from app.config import settings
 
 
@@ -18,6 +21,10 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+
+    api_router.include_router(auth_router)
+    api_router.include_router(tasks_router)
+    app.include_router(api_router)
 
     @app.get("/")
     async def root():
