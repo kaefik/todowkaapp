@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 23,
+    "done": 24,
     "in_progress": 0,
-    "ready": 6,
+    "ready": 5,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 64,
+    "pct_done": 67,
     "pct_tested": 0
   },
   "tasks": {
@@ -477,11 +477,11 @@
       "effort": "S",
       "priority_score": 4.5,
       "depends_on": ["L0/03", "FE-Tasks/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T15:00:00Z",
+      "completed_output": "Created frontend/src/components/TaskEditModal.tsx with modal dialog for editing task details. Props: task, isOpen, onClose, onSave. Form with title and description fields using react-hook-form and zod validation. Pre-fills form with current task data. Closes modal on cancel or after save. Styled with Tailwind CSS, responsive, accessible with ARIA attributes."
     },
     "FE-UI/04-router-config": {
       "title": "React Router Configuration",
