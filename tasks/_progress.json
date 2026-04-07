@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 10,
+    "done": 11,
     "in_progress": 0,
-    "ready": 6,
+    "ready": 8,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 28,
+    "pct_done": 31,
     "pct_tested": 0
   },
   "tasks": {
@@ -357,11 +357,11 @@
       "effort": "S",
       "priority_score": 6.0,
       "depends_on": ["L0/03"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created frontend/src/stores/authStore.ts with Zustand store. State: user (User | null), accessToken (memory only), isAuthenticated, isLoading, error. Actions: login, register, logout, refreshToken, clearError. login and refreshToken use fetch API with credentials. logout clears state and calls logout endpoint. User interface defined with TypeScript types."
     },
     "FE-Auth/05-protected-route": {
       "title": "Protected Route Component",
@@ -393,8 +393,8 @@
       "effort": "M",
       "priority_score": 4.3,
       "depends_on": ["L0/03", "FE-Auth/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
@@ -453,8 +453,8 @@
       "effort": "S",
       "priority_score": 4.5,
       "depends_on": ["L0/03", "FE-Auth/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
