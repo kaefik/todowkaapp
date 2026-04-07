@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 34,
+    "done": 35,
     "in_progress": 0,
     "ready": 6,
     "blocked": 0,
     "with_tests": 2,
-    "pct_done": 94,
+    "pct_done": 97,
     "pct_tested": 7.4
   },
   "tasks": {
@@ -165,11 +165,11 @@
       "effort": "XS",
       "priority_score": 7.0,
       "depends_on": ["L1/02", "L1/03"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T17:45:00Z",
+      "completed_output": "User model already has tasks relationship from L1/03-task-model. User.tasks = relationship('Task', back_populates='user', cascade='all, delete-orphan'). Task.user = relationship('User', back_populates='tasks'). Bidirectional relationship works correctly for querying."
     },
     "L2/01-task-service": {
       "title": "TaskService Implementation",
