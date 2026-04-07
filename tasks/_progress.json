@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 19,
+    "done": 20,
     "in_progress": 0,
-    "ready": 7,
+    "ready": 6,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 53,
+    "pct_done": 56,
     "pct_tested": 0
   },
   "tasks": {
@@ -333,11 +333,11 @@
       "effort": "XS",
       "priority_score": 9.0,
       "depends_on": ["L0/02", "L1/01", "L4/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T14:00:00Z",
+      "completed_output": "Created backend/.env.example with all environment variables documented. Includes DATABASE_URL, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS, REGISTRATION_ENABLED, INVITE_CODE (optional, commented), ALLOWED_ORIGINS, APP_ENV, LOG_LEVEL. Each variable has inline comment explaining its purpose."
     },
     "L8/03-frontend-env-example": {
       "title": "Frontend Environment Variables Example",
