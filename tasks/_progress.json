@@ -6,13 +6,13 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 27,
+    "done": 28,
     "in_progress": 0,
     "ready": 4,
     "blocked": 0,
-    "with_tests": 1,
-    "pct_done": 75,
-    "pct_tested": 3.7
+    "with_tests": 2,
+    "pct_done": 78,
+    "pct_tested": 7.4
   },
   "tasks": {
     "L0/01-init-monorepo": {
@@ -549,11 +549,11 @@
       "effort": "S",
       "priority_score": 4.0,
       "depends_on": ["FE-Tasks/01", "FE-UI/02"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": true,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T16:00:00Z",
+      "completed_output": "Created frontend/src/Tasks.test.tsx with comprehensive task list tests using Vitest + React Testing Library. Tests cover: renders task list, empty state when no tasks, loading state, error state with retry button, adds task via form, toggles task completion, deletes task, separates active and completed tasks, task styling with strikethrough. Mocks useTasks hook."
     },
     "FE-Tests/02-frontend-login-tests": {
       "title": "Frontend Login Form Tests",
