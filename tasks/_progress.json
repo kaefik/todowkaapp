@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 24,
+    "done": 25,
     "in_progress": 0,
     "ready": 5,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 67,
+    "pct_done": 69,
     "pct_tested": 0
   },
   "tasks": {
@@ -465,11 +465,11 @@
       "effort": "M",
       "priority_score": 4.0,
       "depends_on": ["L0/03", "FE-Tasks/01", "FE-UI/01", "FE-Auth/05"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T15:15:00Z",
+      "completed_output": "Created frontend/src/routes/Tasks.tsx with complete task management page. Uses useTasks hook for data management. Quick add form with title and optional description. Tasks separated into Active and Completed sections. Each task has checkbox, title, edit button, delete button. Completed tasks show strikethrough. Empty state, loading skeleton, error with retry. Wrapped in ProtectedRoute. Styled with Tailwind CSS, responsive."
     },
     "FE-UI/03-task-edit-modal": {
       "title": "Task Edit Modal",
