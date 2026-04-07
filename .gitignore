@@ -227,3 +227,4 @@ dist-ssr/
 # Database
 data/*.db
 backend/data/*.db
+backend/alembic.ini
