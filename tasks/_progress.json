@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 3,
+    "done": 9,
     "in_progress": 0,
-    "ready": 5,
+    "ready": 6,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 8,
+    "pct_done": 25,
     "pct_tested": 0
   },
   "tasks": {
@@ -45,11 +45,11 @@
       "effort": "S",
       "priority_score": 5.5,
       "depends_on": ["L0/01"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created Vite + React + TypeScript project with npm create vite. Installed dependencies: react-router, zustand, @tailwindcss/vite, @hookform/resolvers, react-hook-form, zod, vite-plugin-pwa. Configured Tailwind CSS via @tailwindcss/vite plugin. Created directory structure: src/{routes,components,hooks,api,stores,types,utils}. Updated tsconfig.app.json with strict mode. Created .env.example. Simplified App.tsx and index.css."
     },
     "L0/04-docker-backend": {
       "title": "Docker Backend Dockerfile",
@@ -57,11 +57,11 @@
       "effort": "XS",
       "priority_score": 9.0,
       "depends_on": ["L0/02"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created backend/Dockerfile with Python 3.12 slim image, multi-stage setup, pyproject.toml installation, application code copy, data directory creation, uvicorn CMD on 0.0.0.0:8000 with factory pattern. Also created backend/.dockerignore to exclude unnecessary files."
     },
     "L0/05-docker-frontend": {
       "title": "Docker Frontend Dockerfile",
@@ -69,8 +69,8 @@
       "effort": "S",
       "priority_score": 4.5,
       "depends_on": ["L0/03"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
@@ -117,11 +117,11 @@
       "effort": "S",
       "priority_score": 5.5,
       "depends_on": ["L0/02"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created backend/app/database.py with async engine using create_async_engine and aiosqlite. Enabled WAL mode with check_same_thread=False. Created AsyncSessionLocal session factory. Created get_db dependency function with automatic commit/rollback. DATABASE_URL read from settings. Created backend/data/ directory."
     },
     "L1/02-user-model": {
       "title": "User ORM Model",
@@ -213,11 +213,11 @@
       "effort": "XS",
       "priority_score": 7.0,
       "depends_on": ["L0/02"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created backend/app/api/router.py with APIRouter prefix='/api' and root endpoint. Created placeholder auth.py and tasks.py routers. Updated main.py to include api_router with auth and tasks sub-routers."
     },
     "L3/04-auth-endpoints": {
       "title": "Auth API Endpoints",
@@ -249,11 +249,11 @@
       "effort": "S",
       "priority_score": 6.0,
       "depends_on": ["L0/02"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created backend/app/security.py with hash_password and verify_password functions using passlib bcrypt. Created create_access_token and create_refresh_token functions using python-jose with configurable expiration. Created decode_token function for JWT validation. All functions read settings from config."
     },
     "L4/02-get-current-user": {
       "title": "get_current_user Dependency",
@@ -273,11 +273,11 @@
       "effort": "XS",
       "priority_score": 10.0,
       "depends_on": ["L4/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Added set_refresh_cookie and clear_refresh_cookie functions to backend/app/security.py. set_refresh_cookie sets HttpOnly, Secure, SameSite=Strict cookie with name 'refresh_token', path '/api/auth', and expiration from settings. clear_refresh_cookie sets max_age=0 to clear the cookie."
     },
     "L4/04-cors-configuration": {
       "title": "CORS Configuration",
@@ -345,8 +345,32 @@
       "effort": "XS",
       "priority_score": 7.0,
       "depends_on": ["L0/03", "FE-Auth/02"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
+      "has_test": false,
+      "completed_at": null,
+      "completed_output": null
+    },
+    "FE-Auth/01-auth-store": {
+      "title": "Auth Zustand Store",
+      "layer": 0,
+      "effort": "S",
+      "priority_score": 6.0,
+      "depends_on": ["L0/03"],
+      "status": "ready",
+      "folder": "ready",
+      "has_test": false,
+      "completed_at": null,
+      "completed_output": null
+    },
+    "FE-Auth/05-protected-route": {
+      "title": "Protected Route Component",
+      "layer": 0,
+      "effort": "XS",
+      "priority_score": 11.0,
+      "depends_on": ["L0/03", "FE-Auth/01"],
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
@@ -489,8 +513,8 @@
       "effort": "XS",
       "priority_score": 7.0,
       "depends_on": ["L0/03"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
