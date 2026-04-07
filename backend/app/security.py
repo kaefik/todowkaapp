@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any
 
+from fastapi import Response
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -47,3 +48,28 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return payload
     except JWTError:
         return None
+
+
+def set_refresh_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path="/api/auth",
+        secure=True,
+        httponly=True,
+        samesite="strict",
+    )
+
+
+def clear_refresh_cookie(response: Response) -> None:
+    response.set_cookie(
+        key="refresh_token",
+        value="",
+        max_age=0,
+        path="/api/auth",
+        secure=True,
+        httponly=True,
+        samesite="strict",
+    )
+
