@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 28,
+    "done": 29,
     "in_progress": 0,
     "ready": 4,
     "blocked": 0,
     "with_tests": 2,
-    "pct_done": 78,
+    "pct_done": 81,
     "pct_tested": 7.4
   },
   "tasks": {
@@ -105,11 +105,11 @@
       "effort": "S",
       "priority_score": 3.5,
       "depends_on": ["L0/02", "L0/03"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T16:15:00Z",
+      "completed_output": "Created .github/workflows/ci.yml with complete CI pipeline. Workflow triggers on push to main and pull_request. Backend job: Python 3.12, ruff lint, type check, pytest. Frontend job: Node 20, eslint, tsc typecheck, npm build. Jobs run in parallel with caching for pip and npm dependencies."
     },
     "L1/01-sqlalchemy-async-engine": {
       "title": "SQLAlchemy Async Engine Configuration",
