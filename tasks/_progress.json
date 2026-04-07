@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 9,
+    "done": 10,
     "in_progress": 0,
     "ready": 6,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 25,
+    "pct_done": 28,
     "pct_tested": 0
   },
   "tasks": {
@@ -513,11 +513,11 @@
       "effort": "XS",
       "priority_score": 7.0,
       "depends_on": ["L0/03"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T12:00:00Z",
+      "completed_output": "Created frontend/public/manifest.json with PWA configuration: name, short_name, description, start_url, display, background_color, theme_color, orientation, icons (192x192, 512x512). Added manifest link and theme-color meta tag to index.html. Updated title to 'Todowka'."
     },
     "FE-PWA/02-pwa-plugin-config": {
       "title": "Vite PWA Plugin Configuration",
@@ -525,8 +525,8 @@
       "effort": "S",
       "priority_score": 4.0,
       "depends_on": ["L0/03", "FE-PWA/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null

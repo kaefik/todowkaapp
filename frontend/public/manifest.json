@@ -1,0 +1,24 @@
+{
+  "name": "Todowka",
+  "short_name": "Todowka",
+  "description": "Todo application with authentication and PWA support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": []
+}
