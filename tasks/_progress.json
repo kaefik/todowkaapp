@@ -6,12 +6,12 @@
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 17,
+    "done": 18,
     "in_progress": 0,
-    "ready": 5,
+    "ready": 8,
     "blocked": 0,
     "with_tests": 0,
-    "pct_done": 47,
+    "pct_done": 50,
     "pct_tested": 0
   },
   "tasks": {
@@ -393,11 +393,11 @@
       "effort": "M",
       "priority_score": 4.3,
       "depends_on": ["L0/03", "FE-Auth/01"],
-      "status": "ready",
-      "folder": "ready",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-07T13:30:00Z",
+      "completed_output": "Created frontend/src/api/httpClient.ts with fetch wrapper. Request interceptor adds Authorization header from authStore. Response interceptor handles 401: calls refreshToken(), retries request, redirects to /login on failure. Handles network errors gracefully. Includes TypeScript types and ApiError class."
     },
     "FE-Auth/03-login-page": {
       "title": "Login Page",
@@ -405,8 +405,8 @@
       "effort": "S",
       "priority_score": 6.0,
       "depends_on": ["L0/03", "FE-Auth/01", "FE-Auth/02"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
@@ -417,8 +417,8 @@
       "effort": "S",
       "priority_score": 6.0,
       "depends_on": ["L0/03", "FE-Auth/01", "FE-Auth/02"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
@@ -441,8 +441,8 @@
       "effort": "M",
       "priority_score": 4.0,
       "depends_on": ["L0/03", "FE-Auth/02"],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": false,
       "completed_at": null,
       "completed_output": null
