@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
+import { useConfig } from '../hooks/useConfig'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -15,6 +16,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export function Login() {
   const navigate = useNavigate()
   const { login, isLoading, error, clearError } = useAuthStore()
+  const { config } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
@@ -97,17 +99,19 @@ export function Login() {
             {isLoading || isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Sign up
-              </Link>
-            </p>
-          </div>
+          {config?.registration_enabled && (
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{' '}
+                <Link
+                  to="/register"
+                  className="font-medium text-indigo-600 hover:text-indigo-500"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          )}
         </form>
       </div>
     </div>

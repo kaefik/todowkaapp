@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { httpClient } from '../api/httpClient'
 import { ProtectedRoute } from '../components/ProtectedRoute'
@@ -54,9 +55,17 @@ function ProfileContent() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Профиль</h1>
-        <p className="mt-2 text-gray-600">Информация о вашем аккаунте и статистика</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Профиль</h1>
+          <p className="mt-2 text-gray-600">Информация о вашем аккаунте и статистика</p>
+        </div>
+        <Link
+          to="/settings"
+          className="px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors"
+        >
+          Настройки
+        </Link>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-6">

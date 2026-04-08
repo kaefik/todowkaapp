@@ -22,6 +22,23 @@ function TasksContent() {
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      return 'Сегодня'
+    } else if (diffDays === 1) {
+      return 'Вчера'
+    } else if (diffDays < 7) {
+      return `${diffDays} дн. назад`
+    } else {
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    }
+  }
+
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newTaskTitle.trim()) return
@@ -169,6 +186,9 @@ function TasksContent() {
                         {task.description}
                       </p>
                     )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      {formatDate(task.created_at)}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -237,6 +257,9 @@ function TasksContent() {
                           {task.description}
                         </p>
                       )}
+                      <p className="mt-1 text-xs text-gray-400 line-through">
+                        {formatDate(task.created_at)}
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <button

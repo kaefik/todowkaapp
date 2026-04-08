@@ -3,6 +3,7 @@ import { Login } from './routes/Login'
 import { Register } from './routes/Register'
 import { Tasks } from './routes/Tasks'
 import { Profile } from './routes/Profile'
+import { Settings } from './routes/Settings'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 
@@ -30,6 +31,10 @@ const routes: RouteObject[] = [
       {
         path: 'profile',
         element: <Profile />,
+      },
+      {
+        path: 'settings',
+        element: <Settings />,
       },
     ],
   },
