@@ -9,6 +9,7 @@ function TasksContent() {
     isLoading,
     error,
     addTask,
+    updateTask,
     toggleTask,
     deleteTask,
     refetch,
@@ -29,7 +30,7 @@ function TasksContent() {
     try {
       await addTask({
         title: newTaskTitle,
-        description: newTaskDescription || null,
+        description: newTaskDescription || undefined,
       })
       setNewTaskTitle('')
       setNewTaskDescription('')
@@ -58,7 +59,7 @@ function TasksContent() {
 
   const handleSaveTask = async (id: string, data: { title?: string; description?: string | null }) => {
     try {
-      await toggleTask(id)
+      await updateTask(id, data)
       refetch()
     } catch {
     }

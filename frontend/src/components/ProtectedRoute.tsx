@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Navigate } from 'react-router'
 import { useAuthStore } from '../stores/authStore'
 

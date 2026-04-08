@@ -43,9 +43,9 @@ async function fetchWithAuth<T>(
   const authStore = useAuthStore.getState()
   const { skipAuth, ...fetchConfig } = config
 
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...fetchConfig.headers,
+    ...(fetchConfig.headers as Record<string, string>),
   }
 
   if (!skipAuth && authStore.accessToken) {
@@ -78,7 +78,7 @@ async function fetchWithAuth<T>(
         }
       } else {
         return new Promise((resolve, reject) => {
-          subscribeTokenRefresh((token) => {
+          subscribeTokenRefresh(() => {
             fetchWithAuth<T>(url, { ...config, skipAuth: false })
               .then(resolve)
               .catch(reject)
