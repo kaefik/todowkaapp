@@ -35,6 +35,12 @@ async def register(
             detail="Registration is disabled",
         )
 
+    if settings.invite_code and data.invite_code != settings.invite_code:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid invite code",
+        )
+
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():
         raise HTTPException(

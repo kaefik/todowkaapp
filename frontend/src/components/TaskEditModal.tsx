@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Task, UpdateTask } from '../hooks/useTasks'
+import { useTasks } from '../hooks/useTasks'
 
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -20,6 +21,9 @@ interface TaskEditModalProps {
 }
 
 export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalProps) {
+  const { fetchTask } = useTasks()
+  const [currentTask, setCurrentTask] = useState<Task | null>(task)
+
   const {
     register,
     handleSubmit,
@@ -31,18 +35,26 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   useEffect(() => {
     if (isOpen && task) {
-      console.log('TaskEditModal: Opening with task:', task)
+      fetchTask(task.id)
+        .then(setCurrentTask)
+        .catch(() => {
+          setCurrentTask(task)
+        })
+    }
+  }, [isOpen, task, fetchTask])
+
+  useEffect(() => {
+    if (currentTask) {
       reset({
-        title: task.title,
-        description: task.description,
+        title: currentTask.title,
+        description: currentTask.description,
       })
     }
-  }, [isOpen, task, reset])
+  }, [currentTask, reset])
 
   const onSubmit = (data: EditTaskFormData) => {
-    if (!task) return
-    console.log('TaskEditModal: Saving task:', task.id, data)
-    onSave(task.id, data)
+    if (!currentTask) return
+    onSave(currentTask.id, data)
     onClose()
   }
 

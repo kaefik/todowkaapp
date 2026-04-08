@@ -11,6 +11,7 @@ const registerSchema = z
     email: z.string().email('Invalid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
+    inviteCode: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
@@ -40,6 +41,7 @@ export function Register() {
         username: data.username,
         email: data.email,
         password: data.password,
+        invite_code: data.inviteCode,
       })
       navigate('/login')
     } catch {
@@ -111,19 +113,19 @@ export function Register() {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
+              <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-700">
+                Invite Code (optional)
               </label>
               <input
-                {...register('confirmPassword')}
-                type="password"
-                id="confirmPassword"
-                autoComplete="new-password"
+                {...register('inviteCode')}
+                type="text"
+                id="inviteCode"
+                autoComplete="off"
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                placeholder="Confirm your password"
+                placeholder="Enter invite code if you have one"
               />
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
+              {errors.inviteCode && (
+                <p className="mt-1 text-sm text-red-600">{errors.inviteCode.message}</p>
               )}
             </div>
           </div>

@@ -64,10 +64,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   register: async (data) => {
     set({ isLoading: true, error: null })
     try {
+      const registerData: Record<string, unknown> = {
+        username: data.username,
+        email: data.email,
+        password: data.password,
+      }
+      if (data.invite_code) {
+        registerData.invite_code = data.invite_code
+      }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(registerData),
       })
 
       if (!response.ok) {

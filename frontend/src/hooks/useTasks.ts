@@ -41,6 +41,7 @@ interface UseTasksReturn {
   updateTask: (id: string, data: UpdateTask) => Promise<void>
   toggleTask: (id: string) => Promise<void>
   deleteTask: (id: string) => Promise<void>
+  fetchTask: (id: string) => Promise<Task>
   refetch: () => Promise<void>
 }
 
@@ -117,11 +118,24 @@ export function useTasks(): UseTasksReturn {
     const task = tasks.find((t) => t.id === id)
     if (!task) return
 
+    setIsLoading(true)
+    setError(null)
     try {
-      await updateTask(id, { completed: !task.completed })
-    } catch {
+      const response = await httpClient.patch<ApiTask>(`/tasks/${id}/toggle`)
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...response.data, completed: response.data.is_completed } : t))
+      )
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+        throw err
+      }
+      setError('Failed to toggle task')
+      throw err
+    } finally {
+      setIsLoading(false)
     }
-  }, [tasks, updateTask])
+  }, [tasks])
 
   const deleteTask = useCallback(async (id: string) => {
     setIsLoading(true)
@@ -141,6 +155,24 @@ export function useTasks(): UseTasksReturn {
     }
   }, [])
 
+  const fetchTask = useCallback(async (id: string): Promise<Task> => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
+      return { ...response.data, completed: response.data.is_completed }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+        throw err
+      }
+      setError('Failed to fetch task')
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
   return {
     tasks,
     isLoading,
@@ -149,6 +181,7 @@ export function useTasks(): UseTasksReturn {
     updateTask,
     toggleTask,
     deleteTask,
+    fetchTask,
     refetch,
   }
 }
