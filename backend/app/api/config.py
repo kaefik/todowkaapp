@@ -17,8 +17,13 @@ async def get_config(db: Annotated[AsyncSession, Depends(get_db)]) -> ConfigResp
     result = await db.execute(select(func.count(User.id)))
     current_users = result.scalar() or 0
 
+    registration_available = settings.registration_enabled
+    if settings.max_users and current_users >= settings.max_users:
+        registration_available = False
+
     return ConfigResponse(
         registration_enabled=settings.registration_enabled,
         max_users=settings.max_users,
         current_users=current_users,
+        registration_available=registration_available,
     )

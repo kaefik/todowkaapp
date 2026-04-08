@@ -6,6 +6,7 @@ interface Config {
   registration_enabled: boolean
   max_users: number | null
   current_users: number
+  registration_available: boolean
 }
 
 export function useConfig() {

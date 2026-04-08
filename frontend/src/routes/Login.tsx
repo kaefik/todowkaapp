@@ -99,7 +99,7 @@ export function Login() {
             {isLoading || isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
 
-          {config?.registration_enabled && (
+          {config?.registration_available && (
             <div className="text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{' '}

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
+import { useConfig } from '../hooks/useConfig'
 
 const registerSchema = z
   .object({
@@ -22,7 +23,8 @@ type RegisterFormData = z.infer<typeof registerSchema>
 
 export function Register() {
   const navigate = useNavigate()
-  const { register: registerUser, isLoading, error, clearError } = useAuthStore()
+  const { registerAndLogin, isLoading, error, clearError } = useAuthStore()
+  const { config, isLoading: configLoading } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const {
@@ -33,17 +35,33 @@ export function Register() {
     resolver: zodResolver(registerSchema),
   })
 
+  if (configLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!config || !config.registration_available) {
+    navigate('/login')
+    return null
+  }
+
   const onSubmit = async (data: RegisterFormData) => {
     clearError()
     setIsSubmitting(true)
     try {
-      await registerUser({
+      await registerAndLogin({
         username: data.username,
         email: data.email,
         password: data.password,
         invite_code: data.inviteCode,
       })
-      navigate('/login')
+      navigate('/tasks')
     } catch {
     }
     setIsSubmitting(false)
@@ -109,6 +127,23 @@ export function Register() {
               />
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <input
+                {...register('confirmPassword')}
+                type="password"
+                id="confirmPassword"
+                autoComplete="new-password"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="Confirm your password"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
               )}
             </div>
 
