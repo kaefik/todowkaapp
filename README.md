@@ -135,6 +135,32 @@ VITE_APP_NAME=Todowka
 
 ### Backend Development
 
+#### Quick Start with Auto-Setup Script (Recommended)
+
+The `run.sh` script automates the entire backend setup and startup process:
+
+```bash
+cd backend
+
+# Make the script executable (first time only)
+chmod +x run.sh
+
+# Run the script
+./run.sh
+```
+
+**What the script does:**
+- Creates a virtual environment if it doesn't exist
+- Installs/updates all dependencies from `pyproject.toml`
+- Creates the `data/` directory for the database
+- Creates `.env` file from `.env.example` if it doesn't exist
+- Runs database migrations automatically
+- Starts the FastAPI development server
+
+The script will handle all setup steps and launch the server at `http://localhost:8000`.
+
+#### Manual Setup
+
 ```bash
 # Navigate to backend directory
 cd backend
@@ -156,6 +182,29 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 The API will be available at `http://localhost:8000` with interactive docs at `http://localhost:8000/api/docs`.
 
 ### Frontend Development
+
+#### Quick Start with Auto-Setup Script (Recommended)
+
+The `run.sh` script automates the entire frontend setup and startup process:
+
+```bash
+cd frontend
+
+# Make the script executable (first time only)
+chmod +x run.sh
+
+# Run the script
+./run.sh
+```
+
+**What the script does:**
+- Installs/updates all npm dependencies
+- Creates `.env` file from `.env.example` if it doesn't exist
+- Starts the Vite development server with hot reload
+
+The script will handle all setup steps and launch the frontend at `http://localhost:5173`.
+
+#### Manual Setup
 
 ```bash
 # Navigate to frontend directory
