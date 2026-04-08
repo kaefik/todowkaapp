@@ -43,8 +43,8 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await httpClient.get<Task[]>('/tasks')
-      setTasks(response.data)
+      const response = await httpClient.get<{ items: Task[]; total: number }>('/tasks')
+      setTasks(response.data.items.map(t => ({ ...t, completed: t.is_completed })))
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -64,8 +64,8 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await httpClient.post<Task>('/tasks', data)
-      setTasks((prev) => [...prev, response.data])
+      const response = await httpClient.post<{ is_completed: boolean } & Task>('/tasks', data)
+      setTasks((prev) => [...prev, { ...response.data, completed: response.data.is_completed }])
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -82,9 +82,14 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await httpClient.put<Task>(`/tasks/${id}`, data)
+      const updateData: Record<string, unknown> = {}
+      if (data.title !== undefined) updateData.title = data.title
+      if (data.description !== undefined) updateData.description = data.description
+      if (data.completed !== undefined) updateData.is_completed = data.completed
+
+      const response = await httpClient.put<{ is_completed: boolean } & Task>(`/tasks/${id}`, updateData)
       setTasks((prev) =>
-        prev.map((task) => (task.id === id ? response.data : task))
+        prev.map((task) => (task.id === id ? { ...response.data, completed: response.data.is_completed } : task))
       )
     } catch (err) {
       if (err instanceof ApiError) {
