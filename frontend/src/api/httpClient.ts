@@ -97,7 +97,7 @@ async function fetchWithAuth<T>(
       throw new ApiError(response.status, response.statusText, errorMessage)
     }
 
-    const data = await response.json()
+    const data = response.status === 204 ? null : await response.json()
 
     return {
       data,
