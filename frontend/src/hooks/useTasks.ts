@@ -119,7 +119,7 @@ export function useTasks(): UseTasksReturn {
 
     try {
       await updateTask(id, { completed: !task.completed })
-    } catch (err) {
+    } catch {
     }
   }, [tasks, updateTask])
 

@@ -21,7 +21,7 @@ export function InstallPrompt() {
 
     const checkInstalled = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      const isInApp = (window.navigator as any).standalone === true
+      const isInApp = (window.navigator as { standalone?: boolean }).standalone === true
       setIsInstalled(isStandalone || isInApp)
     }
 

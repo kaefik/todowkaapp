@@ -70,7 +70,7 @@ async function fetchWithAuth<T>(
           isRefreshing = false
 
           return fetchWithAuth<T>(url, { ...config, skipAuth: false })
-        } catch (refreshError) {
+        } catch {
           isRefreshing = false
           authStore.logout()
           window.location.href = '/login'

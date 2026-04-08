@@ -32,9 +32,8 @@ export function Login() {
       await login(data)
       navigate('/tasks')
     } catch {
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }
 
   return (

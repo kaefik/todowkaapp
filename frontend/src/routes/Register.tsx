@@ -43,9 +43,8 @@ export function Register() {
       })
       navigate('/login')
     } catch {
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }
 
   return (

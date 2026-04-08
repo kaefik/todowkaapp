@@ -19,6 +19,7 @@ interface AuthState {
   logout: () => void
   refreshToken: () => Promise<void>
   clearError: () => void
+  fetchCurrentUser: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -125,5 +126,37 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearError: () => {
     set({ error: null })
+  },
+
+  fetchCurrentUser: async () => {
+    set({ isLoading: true, error: null })
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user')
+      }
+
+      const data = await response.json()
+      set({
+        user: data,
+        accessToken: data.access_token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      })
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch user',
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+      })
+      throw error
+    }
   },
 }))

@@ -36,9 +36,8 @@ function TasksContent() {
       setNewTaskDescription('')
       setShowDescription(false)
     } catch {
-    } finally {
-      setIsAdding(false)
     }
+    setIsAdding(false)
   }
 
   const handleToggleTask = (id: string) => {

@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, RouterProvider, type RouteObject } from 
 import { Login } from './routes/Login'
 import { Register } from './routes/Register'
 import { Tasks } from './routes/Tasks'
+import { Profile } from './routes/Profile'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 
@@ -25,6 +26,10 @@ const routes: RouteObject[] = [
       {
         index: true,
         element: <Tasks />,
+      },
+      {
+        path: 'profile',
+        element: <Profile />,
       },
     ],
   },
