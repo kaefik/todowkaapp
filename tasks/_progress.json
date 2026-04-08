@@ -1,17 +1,17 @@
 {
   "project": "Todowka App",
   "created": "2026-04-07T12:00:00Z",
-  "updated": "2026-04-08T07:10:19.841285+00:00",
+  "updated": "2026-04-08T07:23:09.068730+00:00",
   "guide": "tasks/2026-04-07/00-guide.md",
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 38,
+    "done": 39,
     "in_progress": 0,
     "ready": 3,
     "blocked": 0,
     "with_tests": 2,
-    "pct_done": 105.6,
+    "pct_done": 108.3,
     "pct_tested": 7.4
   },
   "tasks": {
@@ -268,11 +268,11 @@
         "L4/02",
         "L4/03"
       ],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-08T07:21:59.346336+00:00",
+      "completed_output": "Implemented all auth endpoints in backend/app/api/auth.py. POST /register creates user with validation, returns 201. POST /login verifies credentials, returns access token, sets HttpOnly refresh cookie. POST /refresh validates refresh token from cookie, rotates refresh token. POST /logout clears refresh cookie. GET /me returns current user using get_current_user dependency. All endpoints use proper HTTP status codes and error responses. All acceptance criteria met."
     },
     "L3/05-task-endpoints": {
       "title": "Task API Endpoints",
@@ -358,8 +358,8 @@
         "L4/02",
         "L4/03"
       ],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": true,
       "completed_at": null,
       "completed_output": null
