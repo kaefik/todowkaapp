@@ -26,5 +26,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.tsx", "src/**/*.test.ts"]
 }

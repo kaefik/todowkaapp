@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTasks } from '../hooks/useTasks'
+import { useTasks, type Task } from '../hooks/useTasks'
 import { ProtectedRoute } from '../components/ProtectedRoute'
 import { TaskEditModal } from '../components/TaskEditModal'
 
@@ -20,7 +20,7 @@ function TasksContent() {
   const [showDescription, setShowDescription] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(false)
-  const [editingTask, setEditingTask] = useState<ReturnType<typeof useTasks>['tasks'][number] | null>(null)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,7 +53,7 @@ function TasksContent() {
     }
   }
 
-  const handleEditTask = (task: ReturnType<typeof useTasks>['tasks'][number]) => {
+  const handleEditTask = (task: Task) => {
     setEditingTask(task)
   }
 
@@ -261,14 +261,12 @@ function TasksContent() {
         </div>
       )}
 
-      {editingTask && (
-        <TaskEditModal
-          task={editingTask}
-          isOpen={!!editingTask}
-          onClose={() => setEditingTask(null)}
-          onSave={handleSaveTask}
-        />
-      )}
+      <TaskEditModal
+        task={editingTask}
+        isOpen={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        onSave={handleSaveTask}
+      />
     </div>
   )
 }

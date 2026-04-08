@@ -11,6 +11,16 @@ export interface Task {
   updated_at: string
 }
 
+interface ApiTask {
+  id: string
+  title: string
+  description: string | null
+  is_completed: boolean
+  user_id: string
+  created_at: string
+  updated_at: string
+}
+
 export interface CreateTask {
   title: string
   description?: string
@@ -43,7 +53,7 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await httpClient.get<{ items: Task[]; total: number }>('/tasks')
+      const response = await httpClient.get<{ items: ApiTask[]; total: number }>('/tasks')
       setTasks(response.data.items.map(t => ({ ...t, completed: t.is_completed })))
     } catch (err) {
       if (err instanceof ApiError) {
@@ -64,7 +74,7 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await httpClient.post<{ is_completed: boolean } & Task>('/tasks', data)
+      const response = await httpClient.post<ApiTask>('/tasks', data)
       setTasks((prev) => [...prev, { ...response.data, completed: response.data.is_completed }])
     } catch (err) {
       if (err instanceof ApiError) {
@@ -87,7 +97,7 @@ export function useTasks(): UseTasksReturn {
       if (data.description !== undefined) updateData.description = data.description
       if (data.completed !== undefined) updateData.is_completed = data.completed
 
-      const response = await httpClient.put<{ is_completed: boolean } & Task>(`/tasks/${id}`, updateData)
+      const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
       setTasks((prev) =>
         prev.map((task) => (task.id === id ? { ...response.data, completed: response.data.is_completed } : task))
       )
