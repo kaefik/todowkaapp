@@ -1,17 +1,17 @@
 {
   "project": "Todowka App",
   "created": "2026-04-07T12:00:00Z",
-  "updated": "2026-04-07T12:00:00Z",
+  "updated": "2026-04-08T06:33:21.452166Z",
   "guide": "tasks/2026-04-07/00-guide.md",
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 36,
+    "done": 37,
     "in_progress": 0,
-    "ready": 6,
+    "ready": 3,
     "blocked": 0,
     "with_tests": 2,
-    "pct_done": 100,
+    "pct_done": 102.8,
     "pct_tested": 7.4
   },
   "tasks": {
@@ -32,7 +32,9 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 5.5,
-      "depends_on": ["L0/01"],
+      "depends_on": [
+        "L0/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -44,7 +46,9 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 5.5,
-      "depends_on": ["L0/01"],
+      "depends_on": [
+        "L0/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -56,7 +60,9 @@
       "layer": 0,
       "effort": "XS",
       "priority_score": 9.0,
-      "depends_on": ["L0/02"],
+      "depends_on": [
+        "L0/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -68,7 +74,9 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.5,
-      "depends_on": ["L0/03"],
+      "depends_on": [
+        "L0/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -80,7 +88,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.5,
-      "depends_on": ["L0/04", "L0/05"],
+      "depends_on": [
+        "L0/04",
+        "L0/05"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -92,7 +103,9 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 5.0,
-      "depends_on": ["L0/05"],
+      "depends_on": [
+        "L0/05"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -104,7 +117,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 3.5,
-      "depends_on": ["L0/02", "L0/03"],
+      "depends_on": [
+        "L0/02",
+        "L0/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -116,7 +132,9 @@
       "layer": 1,
       "effort": "S",
       "priority_score": 5.5,
-      "depends_on": ["L0/02"],
+      "depends_on": [
+        "L0/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -128,7 +146,9 @@
       "layer": 1,
       "effort": "XS",
       "priority_score": 11.0,
-      "depends_on": ["L1/01"],
+      "depends_on": [
+        "L1/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -140,7 +160,10 @@
       "layer": 1,
       "effort": "XS",
       "priority_score": 11.0,
-      "depends_on": ["L1/01", "L1/02"],
+      "depends_on": [
+        "L1/01",
+        "L1/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -152,7 +175,10 @@
       "layer": 1,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L1/02", "L1/03"],
+      "depends_on": [
+        "L1/02",
+        "L1/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -164,7 +190,10 @@
       "layer": 1,
       "effort": "XS",
       "priority_score": 7.0,
-      "depends_on": ["L1/02", "L1/03"],
+      "depends_on": [
+        "L1/02",
+        "L1/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -176,7 +205,10 @@
       "layer": 2,
       "effort": "M",
       "priority_score": 4.0,
-      "depends_on": ["L1/01", "L1/03"],
+      "depends_on": [
+        "L1/01",
+        "L1/03"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": false,
@@ -188,7 +220,9 @@
       "layer": 3,
       "effort": "XS",
       "priority_score": 11.0,
-      "depends_on": ["L1/02"],
+      "depends_on": [
+        "L1/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -200,7 +234,9 @@
       "layer": 3,
       "effort": "XS",
       "priority_score": 11.0,
-      "depends_on": ["L1/03"],
+      "depends_on": [
+        "L1/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -212,7 +248,9 @@
       "layer": 3,
       "effort": "XS",
       "priority_score": 7.0,
-      "depends_on": ["L0/02"],
+      "depends_on": [
+        "L0/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -224,7 +262,12 @@
       "layer": 3,
       "effort": "M",
       "priority_score": 4.0,
-      "depends_on": ["L3/01", "L4/01", "L4/02", "L4/03"],
+      "depends_on": [
+        "L3/01",
+        "L4/01",
+        "L4/02",
+        "L4/03"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": false,
@@ -236,7 +279,11 @@
       "layer": 3,
       "effort": "M",
       "priority_score": 4.0,
-      "depends_on": ["L2/01", "L3/02", "L4/03"],
+      "depends_on": [
+        "L2/01",
+        "L3/02",
+        "L4/03"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": false,
@@ -248,7 +295,9 @@
       "layer": 4,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L0/02"],
+      "depends_on": [
+        "L0/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -260,19 +309,24 @@
       "layer": 4,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L1/02", "L4/01"],
-      "status": "backlog",
-      "folder": "backlog",
+      "depends_on": [
+        "L1/02",
+        "L4/01"
+      ],
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-08T06:33:21.452034Z",
+      "completed_output": "Created backend/app/dependencies.py with get_current_user function. Extracts JWT from Authorization header, decodes token, queries User from database, returns User if valid. Raises 401 for invalid tokens, expired tokens, missing users, or inactive users. Uses HTTPBearer for automatic Bearer prefix removal. Uses get_db dependency for database session. All acceptance criteria met."
     },
     "L4/03-refresh-cookie-management": {
       "title": "Refresh Token Cookie Management",
       "layer": 4,
       "effort": "XS",
       "priority_score": 10.0,
-      "depends_on": ["L4/01"],
+      "depends_on": [
+        "L4/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -284,7 +338,9 @@
       "layer": 4,
       "effort": "XS",
       "priority_score": 10.0,
-      "depends_on": ["L0/02"],
+      "depends_on": [
+        "L0/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -296,7 +352,12 @@
       "layer": 7,
       "effort": "M",
       "priority_score": 3.3,
-      "depends_on": ["L3/04", "L4/01", "L4/02", "L4/03"],
+      "depends_on": [
+        "L3/04",
+        "L4/01",
+        "L4/02",
+        "L4/03"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": true,
@@ -308,7 +369,11 @@
       "layer": 7,
       "effort": "M",
       "priority_score": 3.3,
-      "depends_on": ["L2/01", "L3/05", "L4/02"],
+      "depends_on": [
+        "L2/01",
+        "L3/05",
+        "L4/02"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": true,
@@ -320,7 +385,14 @@
       "layer": 8,
       "effort": "S",
       "priority_score": 7.0,
-      "depends_on": ["L0/08", "L1/04", "L3/04", "L3/05", "FE-UI/04", "FE-PWA/02"],
+      "depends_on": [
+        "L0/08",
+        "L1/04",
+        "L3/04",
+        "L3/05",
+        "FE-UI/04",
+        "FE-PWA/02"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": false,
@@ -332,7 +404,11 @@
       "layer": 8,
       "effort": "XS",
       "priority_score": 9.0,
-      "depends_on": ["L0/02", "L1/01", "L4/01"],
+      "depends_on": [
+        "L0/02",
+        "L1/01",
+        "L4/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -344,7 +420,10 @@
       "layer": 8,
       "effort": "XS",
       "priority_score": 7.0,
-      "depends_on": ["L0/03", "FE-Auth/02"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -356,31 +435,24 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L0/03"],
-      "status": "done",
-      "folder": "done",
+      "depends_on": [
+        "L0/03"
+      ],
+      "status": "backlog",
+      "folder": "backlog",
       "has_test": false,
-      "completed_at": "2026-04-07T12:00:00Z",
-      "completed_output": "Created frontend/src/stores/authStore.ts with Zustand store. State: user (User | null), accessToken (memory only), isAuthenticated, isLoading, error. Actions: login, register, logout, refreshToken, clearError. login and refreshToken use fetch API with credentials. logout clears state and calls logout endpoint. User interface defined with TypeScript types."
+      "completed_at": null,
+      "completed_output": null
     },
     "FE-Auth/05-protected-route": {
       "title": "Protected Route Component",
       "layer": 0,
       "effort": "XS",
       "priority_score": 11.0,
-      "depends_on": ["L0/03", "FE-Auth/01"],
-      "status": "done",
-      "folder": "done",
-      "has_test": false,
-      "completed_at": "2026-04-07T12:00:00Z",
-      "completed_output": "Created frontend/src/components/ProtectedRoute.tsx. Component checks authStore.isAuthenticated and isLoading. If loading, shows spinner. If not authenticated, redirects to /login using Navigate. If authenticated, renders children. TypeScript typed properly."
-    },
-    "FE-Auth/01-auth-store": {
-      "title": "Auth Zustand Store",
-      "layer": 0,
-      "effort": "S",
-      "priority_score": 6.0,
-      "depends_on": ["L0/03"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/01"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": false,
@@ -392,7 +464,10 @@
       "layer": 0,
       "effort": "M",
       "priority_score": 4.3,
-      "depends_on": ["L0/03", "FE-Auth/01"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -404,7 +479,11 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L0/03", "FE-Auth/01", "FE-Auth/02"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/01",
+        "FE-Auth/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -416,31 +495,26 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L0/03", "FE-Auth/01", "FE-Auth/02"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/01",
+        "FE-Auth/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
       "completed_at": "2026-04-07T14:15:00Z",
       "completed_output": "Created frontend/src/routes/Register.tsx with registration form. Uses react-hook-form and zod for validation. Fields: username (min 3), email (valid), password (min 8), confirm password (must match). Calls authStore.register() on submit. Shows loading and error states. Redirects to /login on success. Includes link to /login. Styled with Tailwind CSS."
     },
-    "FE-Auth/05-protected-route": {
-      "title": "Protected Route Component",
-      "layer": 0,
-      "effort": "XS",
-      "priority_score": 11.0,
-      "depends_on": ["L0/03", "FE-Auth/01"],
-      "status": "backlog",
-      "folder": "backlog",
-      "has_test": false,
-      "completed_at": null,
-      "completed_output": null
-    },
     "FE-Tasks/01-use-tasks-hook": {
       "title": "useTasks Hook",
       "layer": 0,
       "effort": "M",
       "priority_score": 4.0,
-      "depends_on": ["L0/03", "FE-Auth/02"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -452,7 +526,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.5,
-      "depends_on": ["L0/03", "FE-Auth/01"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -464,7 +541,12 @@
       "layer": 0,
       "effort": "M",
       "priority_score": 4.0,
-      "depends_on": ["L0/03", "FE-Tasks/01", "FE-UI/01", "FE-Auth/05"],
+      "depends_on": [
+        "L0/03",
+        "FE-Tasks/01",
+        "FE-UI/01",
+        "FE-Auth/05"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -476,7 +558,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.5,
-      "depends_on": ["L0/03", "FE-Tasks/01"],
+      "depends_on": [
+        "L0/03",
+        "FE-Tasks/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -488,7 +573,14 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 6.0,
-      "depends_on": ["L0/03", "FE-Auth/03", "FE-Auth/04", "FE-Auth/05", "FE-UI/01", "FE-UI/02"],
+      "depends_on": [
+        "L0/03",
+        "FE-Auth/03",
+        "FE-Auth/04",
+        "FE-Auth/05",
+        "FE-UI/01",
+        "FE-UI/02"
+      ],
       "status": "backlog",
       "folder": "backlog",
       "has_test": false,
@@ -500,7 +592,9 @@
       "layer": 0,
       "effort": "XS",
       "priority_score": 5.0,
-      "depends_on": ["FE-UI/02"],
+      "depends_on": [
+        "FE-UI/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -512,7 +606,9 @@
       "layer": 0,
       "effort": "XS",
       "priority_score": 7.0,
-      "depends_on": ["L0/03"],
+      "depends_on": [
+        "L0/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -524,7 +620,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.0,
-      "depends_on": ["L0/03", "FE-PWA/01"],
+      "depends_on": [
+        "L0/03",
+        "FE-PWA/01"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -536,7 +635,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 3.0,
-      "depends_on": ["L0/03", "FE-PWA/02"],
+      "depends_on": [
+        "L0/03",
+        "FE-PWA/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": false,
@@ -548,7 +650,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.0,
-      "depends_on": ["FE-Tasks/01", "FE-UI/02"],
+      "depends_on": [
+        "FE-Tasks/01",
+        "FE-UI/02"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": true,
@@ -560,7 +665,10 @@
       "layer": 0,
       "effort": "S",
       "priority_score": 4.0,
-      "depends_on": ["FE-Auth/01", "FE-Auth/03"],
+      "depends_on": [
+        "FE-Auth/01",
+        "FE-Auth/03"
+      ],
       "status": "done",
       "folder": "done",
       "has_test": true,
