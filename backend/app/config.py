@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     registration_enabled: bool = True
     invite_code: str | None = None
+    max_users: int | None = None
     allowed_origins: str = "http://localhost:5173,http://localhost:80"
     app_env: str = "development"
     log_level: str = "info"

@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from fastapi.security import HTTPBearer
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -40,6 +40,15 @@ async def register(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid invite code",
         )
+
+    if settings.max_users:
+        result = await db.execute(select(func.count(User.id)))
+        user_count = result.scalar() or 0
+        if user_count >= settings.max_users:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Maximum number of users ({settings.max_users}) reached",
+            )
 
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():

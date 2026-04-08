@@ -130,11 +130,19 @@ export function Register() {
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
+      {error && (
+        <div className="rounded-md bg-red-50 p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
+
+      {config && config.max_users && (
+        <div className="rounded-md bg-blue-50 p-4">
+          <p className="text-sm text-blue-800">
+            Доступно мест для регистрации: {config.max_users - config.current_users} из {config.max_users}
+          </p>
+        </div>
+      )}
 
           <button
             type="submit"

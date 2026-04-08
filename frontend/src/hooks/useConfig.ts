@@ -4,6 +4,8 @@ import { ApiError } from '../api/httpClient'
 
 interface Config {
   registration_enabled: boolean
+  max_users: number | null
+  current_users: number
 }
 
 export function useConfig() {
