@@ -1,17 +1,17 @@
 {
   "project": "Todowka App",
   "created": "2026-04-07T12:00:00Z",
-  "updated": "2026-04-08T07:23:09.068730+00:00",
+  "updated": "2026-04-08T07:52:18.320687+00:00",
   "guide": "tasks/2026-04-07/00-guide.md",
   "execution_style": "careful",
   "metrics": {
     "total": 36,
-    "done": 39,
+    "done": 40,
     "in_progress": 0,
-    "ready": 3,
+    "ready": 2,
     "blocked": 0,
     "with_tests": 2,
-    "pct_done": 108.3,
+    "pct_done": 111.1,
     "pct_tested": 7.4
   },
   "tasks": {
@@ -284,11 +284,11 @@
         "L3/02",
         "L4/03"
       ],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "done",
+      "folder": "done",
       "has_test": false,
-      "completed_at": null,
-      "completed_output": null
+      "completed_at": "2026-04-08T07:51:41.983628+00:00",
+      "completed_output": "Implemented all task CRUD endpoints in backend/app/api/tasks.py. GET /tasks with pagination (limit/offset). POST /tasks creates task, returns 201. GET /tasks/{id} returns single task. PUT /tasks/{id} updates task. PATCH /tasks/{id}/toggle flips is_completed. DELETE /tasks/{id} deletes task, returns 204. All endpoints use get_current_user dependency and verify task ownership via TaskService. All acceptance criteria met."
     },
     "L4/01-security-utilities": {
       "title": "Password Hashing and JWT Utilities",
@@ -374,8 +374,8 @@
         "L3/05",
         "L4/02"
       ],
-      "status": "backlog",
-      "folder": "backlog",
+      "status": "ready",
+      "folder": "ready",
       "has_test": true,
       "completed_at": null,
       "completed_output": null
