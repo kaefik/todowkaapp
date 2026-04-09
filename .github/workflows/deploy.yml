@@ -1,0 +1,118 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy_mode:
+        description: 'Deployment mode'
+        required: true
+        default: 'ssl'
+        type: choice
+        options:
+          - ssl
+          - http
+
+jobs:
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ secrets.DOMAIN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for CI to complete
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Backend'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+      - name: Wait for CI to complete
+        uses: lewagon/wait-on-check-action@v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Frontend'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DOMAIN: ${{ secrets.DOMAIN }}
+          EMAIL: ${{ secrets.EMAIL }}
+          DEPLOY_MODE: ${{ github.event.inputs.deploy_mode || 'ssl' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key ${SSH_USER}@${SERVER_HOST} << 'ENDSSH'
+            cd ${DEPLOY_PATH}
+            
+            # Pull latest changes
+            git pull origin main
+            
+            # Set environment variables
+            export DEPLOY_MODE=${DEPLOY_MODE}
+            export DOMAIN=${DOMAIN}
+            export EMAIL=${EMAIL}
+            
+            # Run deployment
+            cd docker
+            chmod +x deploy-ssl.sh
+            ./deploy-ssl.sh
+          ENDSSH
+
+      - name: Health check
+        env:
+          DOMAIN: ${{ secrets.DOMAIN }}
+          DEPLOY_MODE: ${{ github.event.inputs.deploy_mode || 'ssl' }}
+        run: |
+          # Wait for services to start
+          sleep 30
+          
+          # Check backend health
+          if [ "$DEPLOY_MODE" = "ssl" ]; then
+            BACKEND_URL="https://${DOMAIN}/api/health"
+            FRONTEND_URL="https://${DOMAIN}"
+          else
+            BACKEND_URL="http://${DOMAIN}/api/health"
+            FRONTEND_URL="http://${DOMAIN}"
+          fi
+          
+          # Check backend
+          if curl -f ${BACKEND_URL} > /dev/null 2>&1; then
+            echo "✅ Backend is healthy"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
+          
+          # Check frontend
+          if curl -f ${FRONTEND_URL} > /dev/null 2>&1; then
+            echo "✅ Frontend is accessible"
+          else
+            echo "❌ Frontend health check failed"
+            exit 1
+          fi
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deployment to production successful"
+          else
+            echo "❌ Deployment to production failed"
+          fi
