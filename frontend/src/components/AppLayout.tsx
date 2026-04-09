@@ -19,14 +19,6 @@ export function AppLayout() {
             <div className="flex items-center space-x-4">
               {isAuthenticated && user && (
                 <div className="flex items-center space-x-4">
-                  {user.is_admin && (
-                    <Link
-                      to="/admin/users"
-                      className="text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
-                    >
-                      Пользователи
-                    </Link>
-                  )}
                   <Link
                     to="/profile"
                     className="text-sm font-medium text-gray-700 hover:text-indigo-600 transition-colors hidden sm:block"
