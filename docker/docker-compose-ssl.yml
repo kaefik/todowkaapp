@@ -8,7 +8,6 @@ services:
       - "8000:8000"
     volumes:
       - backend-data:/app/data
-      - ../backend:/app
     environment:
       - DATABASE_URL=sqlite+aiosqlite:///./data/todowka.db
       - SECRET_KEY=${SECRET_KEY:-changeme-generate-random-string-64-chars}
