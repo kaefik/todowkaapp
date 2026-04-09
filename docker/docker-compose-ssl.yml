@@ -48,9 +48,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx-ssl.conf:/etc/nginx/conf.d/default.conf
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./nginx-ssl.conf:/etc/nginx/conf.d/default.conf:z
+      - ./certbot/conf:/etc/letsencrypt:z
+      - ./certbot/www:/var/www/certbot:z
     depends_on:
       - frontend
       - backend
@@ -63,8 +63,8 @@ services:
     image: certbot/certbot
     container_name: todowka-certbot
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt:z
+      - ./certbot/www:/var/www/certbot:z
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
       - todowka-network
