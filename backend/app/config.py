@@ -1,3 +1,4 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings
 
 
@@ -12,6 +13,13 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173,http://localhost:80"
     app_env: str = "development"
     log_level: str = "info"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if self.database_url.startswith("sqlite+aiosqlite:///./"):
+            relative_path = self.database_url.replace("sqlite+aiosqlite:///./", "")
+            absolute_path = str(Path(__file__).parent.parent / relative_path)
+            self.database_url = f"sqlite+aiosqlite:///{absolute_path}"
 
     class Config:
         env_file = ".env"
