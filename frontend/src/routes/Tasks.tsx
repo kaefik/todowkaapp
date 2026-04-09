@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTasks, type Task } from '../hooks/useTasks'
 import { ProtectedRoute } from '../components/ProtectedRoute'
 import { TaskEditModal } from '../components/TaskEditModal'
@@ -15,12 +15,19 @@ function TasksContent() {
     refetch,
   } = useTasks()
 
+  const inputRef = useRef<HTMLInputElement>(null)
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskDescription, setNewTaskDescription] = useState('')
   const [showDescription, setShowDescription] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+
+  useEffect(() => {
+    if (!isLoading) {
+      inputRef.current?.focus()
+    }
+  }, [isLoading])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -52,6 +59,7 @@ function TasksContent() {
       setNewTaskTitle('')
       setNewTaskDescription('')
       setShowDescription(false)
+      inputRef.current?.focus()
     } catch {
     }
     setIsAdding(false)
@@ -116,6 +124,7 @@ function TasksContent() {
       <form onSubmit={handleAddTask} className="bg-white rounded-lg shadow-sm p-4">
         <div className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
