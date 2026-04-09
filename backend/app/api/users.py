@@ -52,7 +52,7 @@ async def block_user(
     await db.execute(
         update(User)
         .where(User.id == user_id)
-        .values(is_blocked=True, is_active=False)
+        .values(is_active=False)
     )
     await db.commit()
     await db.refresh(user)
@@ -78,7 +78,7 @@ async def unblock_user(
     await db.execute(
         update(User)
         .where(User.id == user_id)
-        .values(is_blocked=False, is_active=True)
+        .values(is_active=True)
     )
     await db.commit()
     await db.refresh(user)

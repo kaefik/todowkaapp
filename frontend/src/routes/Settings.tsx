@@ -245,17 +245,13 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500">{u.email}</td>
                   <td className="px-4 py-3">
-                    {u.is_blocked ? (
-                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                        Заблокирован
-                      </span>
-                    ) : u.is_active ? (
+                    {u.is_active ? (
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                         Активен
                       </span>
                     ) : (
-                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                        Неактивен
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                        Заблокирован
                       </span>
                     )}
                   </td>
@@ -276,21 +272,21 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                   <td className="px-4 py-3 text-right text-sm">
                     {currentUser.id !== u.id && !u.is_admin && (
                       <div className="flex justify-end gap-2">
-                        {u.is_blocked ? (
-                          <button
-                            onClick={() => handleUnblock(u.id)}
-                            disabled={actionLoading === u.id}
-                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                          >
-                            {actionLoading === u.id ? '...' : 'Разблокировать'}
-                          </button>
-                        ) : (
+                        {u.is_active ? (
                           <button
                             onClick={() => handleBlock(u.id)}
                             disabled={actionLoading === u.id}
                             className="text-yellow-600 hover:text-yellow-900 disabled:opacity-50"
                           >
                             {actionLoading === u.id ? '...' : 'Блокировать'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleUnblock(u.id)}
+                            disabled={actionLoading === u.id}
+                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                          >
+                            {actionLoading === u.id ? '...' : 'Разблокировать'}
                           </button>
                         )}
                         <button
