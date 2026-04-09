@@ -162,7 +162,7 @@ fi
 
 # Проверка health status
 log_info "Проверка health status сервисов..."
-sleep 5
+sleep 15
 
 MAX_RETRIES=30
 RETRY_COUNT=0
