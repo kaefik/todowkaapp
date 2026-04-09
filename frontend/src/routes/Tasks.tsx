@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTasks, type Task } from '../hooks/useTasks'
-import { ProtectedRoute } from '../components/ProtectedRoute'
 import { TaskEditModal } from '../components/TaskEditModal'
 
 function TasksContent() {
@@ -303,9 +302,5 @@ function TasksContent() {
 }
 
 export function Tasks() {
-  return (
-    <ProtectedRoute>
-      <TasksContent />
-    </ProtectedRoute>
-  )
+  return <TasksContent />
 }

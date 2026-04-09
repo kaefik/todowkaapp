@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { httpClient } from '../api/httpClient'
-import { ProtectedRoute } from '../components/ProtectedRoute'
 
 interface Stats {
   total: number
@@ -146,9 +145,5 @@ function ProfileContent() {
 }
 
 export function Profile() {
-  return (
-    <ProtectedRoute>
-      <ProfileContent />
-    </ProtectedRoute>
-  )
+  return <ProfileContent />
 }

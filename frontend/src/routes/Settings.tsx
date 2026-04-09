@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { ProtectedRoute } from '../components/ProtectedRoute'
 import { useAuthStore } from '../stores/authStore'
 import { usersApi } from '../api/users'
 import type { User } from '../api/users'
@@ -310,9 +309,5 @@ function UsersTab({ currentUser }: { currentUser: User }) {
 }
 
 export function Settings() {
-  return (
-    <ProtectedRoute>
-      <SettingsContent />
-    </ProtectedRoute>
-  )
+  return <SettingsContent />
 }
