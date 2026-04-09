@@ -227,3 +227,6 @@ dist-ssr/
 # Database
 data/*.db
 backend/data/*.db
+
+# SSL Certificates (generated locally)
+docker/certbot/
