@@ -107,27 +107,55 @@ if [ "$DEPLOY_MODE" = "ssl" ]; then
         fi
     else
         log_info "SSL сертификаты не найдены, получаем новые..."
-        log_warn "Убедитесь что домен $DOMAIN指向 на этот сервер"
         
-        # Получение сертификата (сначала staging для теста)
-        log_info "Тестовый запуск получения сертификата..."
-        docker-compose -f "$COMPOSE_FILE" exec certbot certbot certonly --webroot --webroot-path /var/www/certbot --email $EMAIL --agree-tos --no-eff-email --staging -d $DOMAIN --dry-run
-        
-        if [ $? -eq 0 ]; then
-            log_info "Тестовый запуск успешен, получаем реальные сертификаты..."
-            docker-compose -f "$COMPOSE_FILE" exec certbot certbot certonly --webroot --webroot-path /var/www/certbot --email $EMAIL --agree-tos --no-eff-email -d $DOMAIN
+        # Проверка на локальный домен
+        if [[ "$DOMAIN" == "localhost" || "$DOMAIN" == *"localhost"* ]]; then
+            log_warn "Локальный домен '$DOMAIN' - используем самоподписанные сертификаты"
+            
+            # Создание директории для сертификатов
+            mkdir -p "$SCRIPT_DIR/certbot/conf/live/$DOMAIN"
+            
+            # Генерация самоподписанных сертификатов
+            log_info "Генерация самоподписанных сертификатов..."
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/privkey.pem" \
+                -out "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" \
+                -subj "/CN=$DOMAIN/O=$DOMAIN/C=US"
             
             if [ $? -eq 0 ]; then
-                log_info "Сертификаты успешно получены"
+                log_info "Самоподписанные сертификаты успешно созданы"
+                log_warn "Браузеры будут показывать предупреждения - это нормально для локальной разработки"
+                log_info "Для доступа: https://$DOMAIN"
+                log_info "В браузере нажмите 'Advanced' → 'Proceed to $DOMAIN (unsafe)'"
                 docker-compose -f "$COMPOSE_FILE" restart nginx
             else
-                log_error "Не удалось получить сертификаты"
+                log_error "Не удалось создать самоподписанные сертификаты"
                 log_info "Продолжаем в HTTP режиме"
             fi
         else
-            log_error "Тестовый запуск не удался"
-            log_info "Проверьте DNS настройки и попробуйте снова"
-            log_info "Продолжаем в HTTP режиме"
+            # Получение Let's Encrypt сертификатов для реального домена
+            log_warn "Убедитесь что домен $DOMAIN указывает на этот сервер"
+            
+            # Получение сертификата (сначала staging для теста)
+            log_info "Тестовый запуск получения сертификата..."
+            docker-compose -f "$COMPOSE_FILE" exec certbot certbot certonly --webroot --webroot-path /var/www/certbot --email $EMAIL --agree-tos --no-eff-email --staging -d $DOMAIN --dry-run
+            
+            if [ $? -eq 0 ]; then
+                log_info "Тестовый запуск успешен, получаем реальные сертификаты..."
+                docker-compose -f "$COMPOSE_FILE" exec certbot certbot certonly --webroot --webroot-path /var/www/certbot --email $EMAIL --agree-tos --no-eff-email -d $DOMAIN
+                
+                if [ $? -eq 0 ]; then
+                    log_info "Сертификаты успешно получены"
+                    docker-compose -f "$COMPOSE_FILE" restart nginx
+                else
+                    log_error "Не удалось получить сертификаты"
+                    log_info "Продолжаем в HTTP режиме"
+                fi
+            else
+                log_error "Тестовый запуск не удался"
+                log_info "Проверьте DNS настройки и попробуйте снова"
+                log_info "Продолжаем в HTTP режиме"
+            fi
         fi
     fi
 fi
