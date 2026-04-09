@@ -140,17 +140,13 @@ export default function UserManagement() {
                   {user.email}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {user.is_blocked ? (
+                  {!user.is_active ? (
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                       Заблокирован
                     </span>
-                  ) : user.is_active ? (
+                  ) : (
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                       Активен
-                    </span>
-                  ) : (
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Неактивен
                     </span>
                   )}
                 </td>
@@ -171,7 +167,7 @@ export default function UserManagement() {
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   {currentUser?.id !== user.id && !user.is_admin && (
                     <div className="flex justify-end space-x-2">
-                      {user.is_blocked ? (
+                      {!user.is_active ? (
                         <button
                           onClick={() => handleUnblock(user.id)}
                           disabled={actionLoading === user.id}

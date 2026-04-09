@@ -1,4 +1,7 @@
 from pathlib import Path
+from typing import Any
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -13,6 +16,13 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173,http://localhost:80"
     app_env: str = "development"
     log_level: str = "info"
+
+    @field_validator("invite_code", "max_users", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: Any) -> Any:
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -41,14 +41,14 @@ async def register(
             detail="Invalid invite code",
         )
 
-    if settings.max_users:
-        result = await db.execute(select(func.count(User.id)))
-        user_count = result.scalar() or 0
-        if user_count >= settings.max_users:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Maximum number of users ({settings.max_users}) reached",
-            )
+    result = await db.execute(select(func.count(User.id)))
+    user_count = result.scalar() or 0
+
+    if settings.max_users and user_count >= settings.max_users:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Maximum number of users ({settings.max_users}) reached",
+        )
 
     result = await db.execute(select(User).where(User.username == data.username))
     if result.scalar_one_or_none():

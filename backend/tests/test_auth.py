@@ -153,7 +153,7 @@ async def test_login_inactive_user(client, db_session):
         json={"username": "testuser", "password": "password123"},
     )
     assert response.status_code == 401
-    assert "Inactive user" in response.json()["detail"]
+    assert "User is blocked" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
