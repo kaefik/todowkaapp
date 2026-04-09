@@ -10,7 +10,7 @@ services:
       - backend-data:/app/data
       - ../backend:/app
     environment:
-      - DATABASE_URL=ssl+aiosqlite:///./data/todowka.db
+      - DATABASE_URL=sqlite+aiosqlite:///./data/todowka.db
       - SECRET_KEY=${SECRET_KEY:-changeme-generate-random-string-64-chars}
       - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
       - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
