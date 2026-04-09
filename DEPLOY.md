@@ -45,6 +45,74 @@ chmod +x deploy-ssl.sh
 ./deploy-ssl.sh
 ```
 
+## Параметры запуска скрипта deploy-ssl.sh
+
+Скрипт поддерживает следующие параметры через переменные окружения:
+
+### Переменные окружения
+
+| Переменная | По умолчанию | Описание |
+|-----------|-------------|----------|
+| `DEPLOY_MODE` | `ssl` | Режим деплоя: `ssl` (с HTTPS) или `http` (без HTTPS) |
+| `DOMAIN` | `localhost` | Домен или IP адрес сервера |
+| `EMAIL` | `admin@localhost` | Email для Let's Encrypt сертификатов |
+| `BACKUP_DB` | `false` | Создавать ли бэкап БД перед деплоем (`true`/`false`) |
+
+### Способы задания параметров
+
+**Способ 1: Через файл .env**
+
+```bash
+cd /var/www/todowkaapp/docker
+nano .env
+```
+
+Добавьте или измените переменные:
+```bash
+DEPLOY_MODE=ssl
+DOMAIN=your-domain.com
+EMAIL=admin@your-domain.com
+BACKUP_DB=true
+```
+
+**Способ 2: Прямо при запуске скрипта**
+
+```bash
+# Полный деплой с SSL
+DEPLOY_MODE=ssl DOMAIN=your-domain.com EMAIL=admin@your-domain.com BACKUP_DB=true ./deploy-ssl.sh
+
+# Деплой без SSL (HTTP только)
+DEPLOY_MODE=http DOMAIN=your-domain.com ./deploy-ssl.sh
+
+# Локальный деплой с бэкапом
+BACKUP_DB=true ./deploy-ssl.sh
+```
+
+**Способ 3: Экспорт переменных**
+
+```bash
+export DEPLOY_MODE=ssl
+export DOMAIN=your-domain.com
+export EMAIL=admin@your-domain.com
+export BACKUP_DB=true
+./deploy-ssl.sh
+```
+
+### Особенности работы
+
+- **SSL режим (`DEPLOY_MODE=ssl`)**:
+  - Для локального домена (`localhost`) автоматически создаются самоподписанные сертификаты
+  - для реального домена запрашиваются Let's Encrypt сертификаты
+  - Настраивается автообновление сертификатов через cron
+  
+- **HTTP режим (`DEPLOY_MODE=http`)**:
+  - Запускается без SSL сертификатов
+  - Подходит для внутреннего использования или за внешним прокси
+
+- **Бэкап БД (`BACKUP_DB=true`)**:
+  - Создается бэкап в директории `/var/www/todowkaapp/backups/`
+  - Формат: `todowka_YYYYMMDD_HHMMSS.db`
+
 ### Шаг 4: Деплой
 
 Автоматический (при push в main):
