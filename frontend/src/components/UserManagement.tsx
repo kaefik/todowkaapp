@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { usersApi, User } from '../api/users'
+import { usersApi } from '../api/users'
+import type { User } from '../api/users'
 import { useAuthStore } from '../stores/authStore'
 
 export default function UserManagement() {
