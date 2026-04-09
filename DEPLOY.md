@@ -64,6 +64,31 @@ cd /var/www/todowkaapp/docker
 ./deploy-ssl.sh
 ```
 
+## Устранение неполадок
+
+### Ошибка: Backend не запускается, логи показывают `no such table: users`
+
+**Проблема:** Таблицы базы данных не созданы, миграции Alembic не применены.
+
+**Решение:**
+
+```bash
+# 1. Проверьте содержимое backend/alembic.ini
+# Путь к базе данных должен быть: sqlite+aiosqlite:////app/data/todowka.db
+
+# 2. Если путь неверный, исправьте его:
+cd /var/www/todowkaapp
+nano backend/alembic.ini
+# Измените строку sqlalchemy.url на:
+# sqlalchemy.url = sqlite+aiosqlite:////app/data/todowka.db
+
+# 3. Пересоберите и перезапустите контейнеры
+cd docker
+./deploy-ssl.sh
+```
+
+**Причина:** В Docker контейнере путь к базе данных должен указывать на `/app/data/`, а не на путь хостовой системы.
+
 ## Документация
 
 Подробная документация:
