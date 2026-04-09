@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.schemas.config import ConfigResponse
 from app.models.user import User
+from app.schemas.config import ConfigResponse
 
 config_router = APIRouter(prefix="/config", tags=["config"])
 

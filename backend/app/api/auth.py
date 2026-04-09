@@ -64,10 +64,13 @@ async def register(
             detail="Email already exists",
         )
 
+    is_first_user = user_count == 0
+
     user = User(
         username=data.username,
         email=data.email,
         password_hash=hash_password(data.password),
+        is_admin=is_first_user,
     )
     db.add(user)
     await db.commit()
@@ -95,6 +98,12 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Inactive user",
+        )
+
+    if user.is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User is blocked",
         )
 
     access_token = create_access_token(data={"sub": str(user.id)})

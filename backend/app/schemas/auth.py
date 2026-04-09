@@ -1,6 +1,7 @@
 from datetime import datetime
-from pydantic import BaseModel, EmailStr, Field
 from uuid import UUID
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserResponse(BaseModel):
@@ -8,6 +9,8 @@ class UserResponse(BaseModel):
     username: str
     email: EmailStr
     is_active: bool
+    is_admin: bool
+    is_blocked: bool
     created_at: datetime
 
     model_config = {

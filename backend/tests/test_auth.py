@@ -1,5 +1,6 @@
 import pytest
 from sqlalchemy import select
+
 from app.config import settings
 from app.models.user import User
 

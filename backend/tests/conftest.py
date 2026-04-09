@@ -1,9 +1,7 @@
-import pytest
-import pytest_asyncio
-from httpx import AsyncClient, ASGITransport
 import os
-import sys
-from pathlib import Path
+
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 
 os.environ["SECRET_KEY"] = "test-secret-key-32-chars-long"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"

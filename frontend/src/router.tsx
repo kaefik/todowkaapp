@@ -4,6 +4,7 @@ import { Register } from './routes/Register'
 import { Tasks } from './routes/Tasks'
 import { Profile } from './routes/Profile'
 import { Settings } from './routes/Settings'
+import UserManagement from './routes/UserManagement'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 
@@ -35,6 +36,10 @@ const routes: RouteObject[] = [
       {
         path: 'settings',
         element: <Settings />,
+      },
+      {
+        path: 'admin/users',
+        element: <UserManagement />,
       },
     ],
   },

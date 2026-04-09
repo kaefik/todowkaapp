@@ -1,8 +1,9 @@
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
-from app.models.user import User
+
 from app.models.task import Task
+from app.models.user import User
 
 
 @pytest_asyncio.fixture

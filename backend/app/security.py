@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Any
+
 import bcrypt
 from fastapi import Response
 from jose import JWTError, jwt

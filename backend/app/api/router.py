@@ -8,5 +8,5 @@ async def api_root():
     return {
         "message": "Todowka API",
         "version": "0.1.0",
-        "endpoints": ["/api/auth", "/api/tasks", "/api/stats", "/api/config"],
+        "endpoints": ["/api/auth", "/api/tasks", "/api/stats", "/api/config", "/api/users"],
     }

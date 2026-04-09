@@ -6,6 +6,7 @@ from app.api.config import config_router
 from app.api.router import api_router
 from app.api.stats import stats_router
 from app.api.tasks import tasks_router
+from app.api.users import users_router
 from app.config import settings
 
 
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     api_router.include_router(config_router)
     api_router.include_router(stats_router)
     api_router.include_router(tasks_router)
+    api_router.include_router(users_router)
     app.include_router(api_router)
 
     @app.get("/")

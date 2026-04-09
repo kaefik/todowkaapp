@@ -1,17 +1,15 @@
-from logging.config import fileConfig
-import sys
 import os
+import sys
+from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.database import Base
-from app.models.user import User
-from app.models.task import Task
+from app.config import settings
 
 config = context.config
 
@@ -21,8 +19,14 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def get_sqlite_url(url: str) -> str:
+    if url.startswith('sqlite+aiosqlite://'):
+        return url.replace('sqlite+aiosqlite://', 'sqlite://', 1)
+    return url
+
+
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = get_sqlite_url(settings.database_url)
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -35,8 +39,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    configuration = config.get_section(config.config_ini_section, {})
-    configuration['sqlalchemy.url'] = configuration['sqlalchemy.url'].replace('sqlite+aiosqlite://', 'sqlite:///')
+    db_url = get_sqlite_url(settings.database_url)
+    
+    configuration = {
+        'sqlalchemy.url': db_url
+    }
 
     connectable = engine_from_config(
         configuration,

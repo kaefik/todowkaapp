@@ -5,6 +5,8 @@ export interface User {
   username: string
   email: string
   is_active: boolean
+  is_admin: boolean
+  is_blocked: boolean
   created_at: string
 }
 
