@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Tasks } from './routes/Tasks'
 
@@ -267,6 +267,57 @@ describe('Tasks', () => {
       await user.click(retryButton)
 
       expect(mockRefetch).toHaveBeenCalled()
+    })
+  })
+
+  describe('input autofocus', () => {
+    it('focuses input after initial load completes', () => {
+      vi.useFakeTimers()
+
+      vi.mocked(useTasks).mockReturnValue({
+        tasks: [],
+        isLoading: false,
+        error: null,
+        addTask: mockAddTask,
+        updateTask: vi.fn(),
+        toggleTask: vi.fn(),
+        deleteTask: vi.fn(),
+        refetch: mockRefetch,
+      })
+
+      render(<Tasks />)
+
+      act(() => {
+        vi.advanceTimersByTime(100)
+      })
+
+      expect(screen.getByPlaceholderText('Add a new task...')).toHaveFocus()
+
+      vi.useRealTimers()
+    })
+
+    it('focuses input after adding a task', async () => {
+      mockAddTask.mockImplementation(async () => {})
+
+      const user = userEvent.setup()
+      renderTasks()
+
+      const input = screen.getByPlaceholderText('Add a new task...')
+      await user.type(input, 'New Task')
+
+      input.blur()
+      expect(input).not.toHaveFocus()
+
+      const addButton = screen.getByRole('button', { name: 'Add' })
+      await user.click(addButton)
+
+      await waitFor(() => {
+        expect(mockAddTask).toHaveBeenCalledWith({ title: 'New Task' })
+      })
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('Add a new task...')).toHaveFocus()
+      })
     })
   })
 

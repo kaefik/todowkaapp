@@ -43,9 +43,14 @@ function TasksContent() {
     },
   })
 
+  const titleField = register('title')
+
   useEffect(() => {
     if (!isLoading) {
-      inputRef.current?.focus()
+      const id = requestAnimationFrame(() => {
+        inputRef.current?.focus()
+      })
+      return () => cancelAnimationFrame(id)
     }
   }, [isLoading])
 
@@ -76,7 +81,9 @@ function TasksContent() {
       await addTask(taskData)
       reset()
       setShowDescription(false)
-      inputRef.current?.focus()
+      requestAnimationFrame(() => {
+        inputRef.current?.focus()
+      })
     } catch {
     }
     setIsAdding(false)
@@ -146,9 +153,11 @@ function TasksContent() {
               placeholder="Add a new task..."
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isAdding || isSubmitting}
-              {...register('title', { ref: (e) => {
+              {...titleField}
+              ref={(e) => {
+                titleField.ref(e)
                 inputRef.current = e
-              }})}
+              }}
             />
             {errors.title && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
