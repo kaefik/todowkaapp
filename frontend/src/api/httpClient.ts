@@ -73,7 +73,7 @@ async function fetchWithAuth<T>(
         } catch {
           isRefreshing = false
           authStore.logout()
-          window.location.href = '/login'
+          window.location.href = '/login?reason=session_expired'
           throw new ApiError(401, 'Unauthorized', 'Session expired')
         }
       } else {

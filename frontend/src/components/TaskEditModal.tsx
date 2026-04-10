@@ -23,6 +23,8 @@ interface TaskEditModalProps {
 export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalProps) {
   const { fetchTask } = useTasks()
   const [currentTask, setCurrentTask] = useState<Task | null>(task)
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const {
     register,
@@ -35,10 +37,17 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   useEffect(() => {
     if (isOpen && task) {
+      setLoading(true)
+      setFetchError(null)
       fetchTask(task.id)
-        .then(setCurrentTask)
-        .catch(() => {
+        .then((data) => {
+          setCurrentTask(data)
+          setLoading(false)
+        })
+        .catch((err) => {
+          setFetchError(err.message || 'Failed to load task')
           setCurrentTask(task)
+          setLoading(false)
         })
     }
   }, [isOpen, task, fetchTask])
@@ -70,6 +79,20 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         onClick={(e) => e.stopPropagation()}
       >
           <h2 className="text-xl font-bold mb-4 text-gray-900">Edit Task</h2>
+
+          {fetchError && (
+            <div className="mb-4 rounded-md bg-red-50 p-4">
+              <p className="text-sm text-red-800">{fetchError}</p>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-4">
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-20 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          ) : (
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
@@ -120,6 +143,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>,
       document.body

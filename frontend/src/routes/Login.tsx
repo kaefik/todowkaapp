@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -15,9 +15,17 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 export function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login, isLoading, error, clearError } = useAuthStore()
   const { config } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sessionExpired, setSessionExpired] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('reason') === 'session_expired') {
+      setSessionExpired(true)
+    }
+  }, [searchParams])
 
   const {
     register,
@@ -84,6 +92,12 @@ export function Login() {
               )}
             </div>
           </div>
+
+          {sessionExpired && (
+            <div className="rounded-md bg-yellow-50 p-4">
+              <p className="text-sm text-yellow-800">Сессия истекла. Войдите снова.</p>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-md bg-red-50 p-4">
