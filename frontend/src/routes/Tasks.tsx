@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useTasks, type Task } from '../hooks/useTasks'
+import { useTasks, type Task, type UpdateTask } from '../hooks/useTasks'
 import { TaskEditModal } from '../components/TaskEditModal'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -105,11 +105,12 @@ function TasksContent() {
     setEditingTask(task)
   }
 
-  const handleSaveTask = async (id: string, data: { title?: string; description?: string | null }) => {
+  const handleSaveTask = async (id: string, data: UpdateTask) => {
     try {
       await updateTask(id, data)
       refetch()
-    } catch {
+    } catch (err) {
+      console.error('Failed to save task:', err)
     }
   }
 

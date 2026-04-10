@@ -10,7 +10,7 @@ import { useContexts } from '../hooks/useContexts'
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().nullable().optional(),
-  context_id: z.string().nullable().optional(),
+  context_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
 })
 
 type EditTaskFormData = z.infer<typeof editTaskSchema>

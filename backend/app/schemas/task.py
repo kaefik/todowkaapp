@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class TaskCreate(BaseModel):
@@ -9,12 +9,26 @@ class TaskCreate(BaseModel):
     description: str | None = None
     context_id: UUID | None = None
 
+    @field_validator('context_id', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == '':
+            return None
+        return v
+
 
 class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     is_completed: bool | None = None
     context_id: UUID | None = None
+
+    @field_validator('context_id', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == '':
+            return None
+        return v
 
 
 class TaskResponse(BaseModel):
