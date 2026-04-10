@@ -1,34 +1,20 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
-    context_id: UUID | None = None
-
-    @field_validator('context_id', mode='before')
-    @classmethod
-    def empty_str_to_none(cls, v):
-        if v == '':
-            return None
-        return v
+    context_id: str | None = Field(default=None, max_length=36)
 
 
 class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     is_completed: bool | None = None
-    context_id: UUID | None = None
-
-    @field_validator('context_id', mode='before')
-    @classmethod
-    def empty_str_to_none(cls, v):
-        if v == '':
-            return None
-        return v
+    context_id: str | None = Field(default=None, max_length=36)
 
 
 class TaskResponse(BaseModel):
