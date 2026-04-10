@@ -7,7 +7,7 @@ import { z } from 'zod'
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be at most 255 characters'),
-  description: z.string().optional(),
+  description: z.string().nullable().optional(),
 })
 
 type TaskCreateFormData = z.infer<typeof taskCreateSchema>
@@ -69,10 +69,11 @@ function TasksContent() {
   const handleAddTask = async (data: TaskCreateFormData) => {
     setIsAdding(true)
     try {
-      await addTask({
-        title: data.title,
-        description: data.description || undefined,
-      })
+      const taskData: Record<string, unknown> = { title: data.title }
+      if (data.description && data.description.trim()) {
+        taskData.description = data.description
+      }
+      await addTask(taskData)
       reset()
       setShowDescription(false)
       inputRef.current?.focus()
@@ -145,10 +146,9 @@ function TasksContent() {
               placeholder="Add a new task..."
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isAdding || isSubmitting}
-              {...register('title')}
-              ref={(e) => {
+              {...register('title', { ref: (e) => {
                 inputRef.current = e
-              }}
+              }})}
             />
             {errors.title && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>

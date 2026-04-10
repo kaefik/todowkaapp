@@ -75,9 +75,12 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
+      console.log('Sending task data:', data)
       const response = await httpClient.post<ApiTask>('/tasks', data)
+      console.log('Task created:', response.data)
       setTasks((prev) => [...prev, { ...response.data, completed: response.data.is_completed }])
     } catch (err) {
+      console.error('Failed to add task:', err)
       if (err instanceof ApiError) {
         setError(err.message)
         throw err

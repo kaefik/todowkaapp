@@ -32,6 +32,12 @@ async def create_task(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaskResponse:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"Received task data: {data}")
+    logger.info(f"Task data dict: {data.model_dump()}")
+    logger.info(f"Title type: {type(data.title)}, value: {repr(data.title)}")
+    logger.info(f"Description type: {type(data.description)}, value: {repr(data.description)}")
     service = TaskService(db)
     task = await service.create_task(user_id=current_user.id, data=data)
     return task
