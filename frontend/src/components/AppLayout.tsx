@@ -23,6 +23,12 @@ export function AppLayout() {
                 <>
                   <div className="hidden sm:flex items-center space-x-4">
                     <Link
+                      to="/contexts"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    >
+                      Контексты
+                    </Link>
+                    <Link
                       to="/profile"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     >
