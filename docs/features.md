@@ -130,6 +130,15 @@
 - Конфигурация CORS для разрешённых источников
 - SQLAlchemy ORM с параметризованными запросами (предотвращение SQL-инъекций)
 - Встроенная защита от XSS в React
+- Refresh token blacklist для предотвращения повторного использования отозванных токенов
+  - Каждому refresh токену присваивается уникальный JTI (JWT ID)
+  - При logout refresh токен добавляется в blacklist
+  - При успешном refresh старый токен добавляется в blacklist (rotation)
+  - Повторное использование отозванного токена возвращает HTTP 401
+  - Конфигурируется через переменную окружения REFRESH_TOKEN_ROTATION_ENABLED (true по умолчанию)
+  - Модель RevokedToken в базе данных для хранения отозванных токенов
+  - Миграция: alembic/versions/20260410_1503_66f131828079_add_revoked_tokens_table.py
+  - Тесты: tests/test_revoked_tokens.py
 - Rate limiting для предотвращения brute-force атак:
   - POST /api/auth/login — 5 попыток в минуту с одного IP
   - POST /api/auth/register — 3 регистрации в час с одного IP
@@ -151,10 +160,11 @@
 - База данных SQLite с UUID первичными ключами
 - Alembic для миграций базы данных
 - Асинхронные операции с базой данных
-- Модели User и Task с отношениями (один ко многим)
+- Модели User, Task и RevokedToken с отношениями (один ко многим)
 - Автоматический commit/rollback в зависимостях БД
 - Композитный индекс ix_tasks_user_id_is_completed для оптимизации запросов
 - Cascade delete при удалении пользователя
+- Таблица revoked_tokens для хранения отозванных refresh токенов (JTI + revoked_at)
 
 #### Деплой и DevOps
 - Контейнеризация с Docker

@@ -178,7 +178,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
 
       if (!response.ok) {
-        throw new Error('Token refresh failed')
+        const error = await response.json()
+        throw new Error(error.detail || 'Token refresh failed')
       }
 
       const data = await response.json()

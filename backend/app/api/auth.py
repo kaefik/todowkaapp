@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.models.revoked_token import RevokedToken
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
@@ -16,6 +17,7 @@ from app.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    get_token_jti,
     hash_password,
     set_refresh_cookie,
     verify_password,
@@ -150,6 +152,20 @@ async def refresh(
             detail="Invalid token type",
         )
 
+    token_jti = payload.get("jti")
+    if not token_jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        )
+
+    result = await db.execute(select(RevokedToken).where(RevokedToken.token_jti == token_jti))
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked",
+        )
+
     user_id = payload.get("sub")
 
     if user_id is None:
@@ -172,11 +188,27 @@ async def refresh(
 
     set_refresh_cookie(response, new_refresh_token)
 
+    if settings.refresh_token_rotation_enabled:
+        revoked_token = RevokedToken(token_jti=token_jti)
+        db.add(revoked_token)
+        await db.commit()
+
     return TokenResponse(access_token=access_token, user=user)
 
 
 @auth_router.post("/logout")
-async def logout(response: Response) -> dict[str, str]:
+async def logout(
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    refresh_token: Annotated[str | None, Cookie()] = None,
+) -> dict[str, str]:
+    if refresh_token and settings.refresh_token_rotation_enabled:
+        token_jti = get_token_jti(refresh_token)
+        if token_jti:
+            revoked_token = RevokedToken(token_jti=token_jti)
+            db.add(revoked_token)
+            await db.commit()
+
     clear_refresh_cookie(response)
     return {"message": "Logged out successfully"}
 
