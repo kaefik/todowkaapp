@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,6 +10,11 @@ from app.api.stats import stats_router
 from app.api.tasks import tasks_router
 from app.api.users import users_router
 from app.config import settings
+
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 def create_app() -> FastAPI:
@@ -38,6 +45,12 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health():
+        from sqlalchemy import text
+
+        from app.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
         return {"status": "healthy"}
 
     return app

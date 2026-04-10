@@ -26,4 +26,5 @@ async def get_config(db: Annotated[AsyncSession, Depends(get_db)]) -> ConfigResp
         max_users=settings.max_users,
         current_users=current_users,
         registration_available=registration_available,
+        invite_code_required=settings.invite_code is not None,
     )

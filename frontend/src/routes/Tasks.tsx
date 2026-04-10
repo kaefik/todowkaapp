@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTasks, type Task } from '../hooks/useTasks'
-import { ProtectedRoute } from '../components/ProtectedRoute'
 import { TaskEditModal } from '../components/TaskEditModal'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const taskCreateSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(255, 'Title must be at most 255 characters'),
+  description: z.string().optional(),
+})
+
+type TaskCreateFormData = z.infer<typeof taskCreateSchema>
 
 function TasksContent() {
   const {
@@ -16,12 +25,23 @@ function TasksContent() {
   } = useTasks()
 
   const inputRef = useRef<HTMLInputElement>(null)
-  const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newTaskDescription, setNewTaskDescription] = useState('')
   const [showDescription, setShowDescription] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<TaskCreateFormData>({
+    resolver: zodResolver(taskCreateSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+    },
+  })
 
   useEffect(() => {
     if (!isLoading) {
@@ -46,18 +66,14 @@ function TasksContent() {
     }
   }
 
-  const handleAddTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTaskTitle.trim()) return
-
+  const handleAddTask = async (data: TaskCreateFormData) => {
     setIsAdding(true)
     try {
       await addTask({
-        title: newTaskTitle,
-        description: newTaskDescription || undefined,
+        title: data.title,
+        description: data.description || undefined,
       })
-      setNewTaskTitle('')
-      setNewTaskDescription('')
+      reset()
       setShowDescription(false)
       inputRef.current?.focus()
     } catch {
@@ -121,44 +137,50 @@ function TasksContent() {
         </div>
       )}
 
-      <form onSubmit={handleAddTask} className="bg-white rounded-lg shadow-sm p-4">
+      <form onSubmit={handleSubmit(handleAddTask)} className="bg-white rounded-lg shadow-sm p-4">
         <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={newTaskTitle}
-            onChange={(e) => setNewTaskTitle(e.target.value)}
-            placeholder="Add a new task..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            disabled={isAdding}
-          />
+          <div className="flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Add a new task..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isAdding || isSubmitting}
+              {...register('title')}
+            />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setShowDescription(!showDescription)}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            disabled={isAdding}
+            className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isAdding || isSubmitting}
           >
             {showDescription ? '−' : '+'}
           </button>
           <button
             type="submit"
-            disabled={isAdding || !newTaskTitle.trim()}
+            disabled={isAdding || isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isAdding ? 'Adding...' : 'Add'}
+            {isAdding || isSubmitting ? 'Adding...' : 'Add'}
           </button>
         </div>
 
         {showDescription && (
           <div className="mt-3">
             <textarea
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
               placeholder="Add a description (optional)"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              disabled={isAdding}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isAdding || isSubmitting}
+              {...register('description')}
             />
+            {errors.description && (
+              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+            )}
           </div>
         )}
       </form>
@@ -303,9 +325,5 @@ function TasksContent() {
 }
 
 export function Tasks() {
-  return (
-    <ProtectedRoute>
-      <TasksContent />
-    </ProtectedRoute>
-  )
+  return <TasksContent />
 }

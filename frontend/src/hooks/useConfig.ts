@@ -7,6 +7,7 @@ interface Config {
   max_users: number | null
   current_users: number
   registration_available: boolean
+  invite_code_required: boolean
 }
 
 export function useConfig() {
