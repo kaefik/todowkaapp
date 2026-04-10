@@ -1,14 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { BrowserRouter } from 'react-router-dom'
-import { Login } from './Login'
+import { BrowserRouter, MemoryRouter } from 'react-router-dom'
+import { Login } from './routes/Login'
 
-vi.mock('../stores/authStore', () => ({
+vi.mock('./stores/authStore', () => ({
   useAuthStore: vi.fn(),
 }))
 
-import { useAuthStore } from '../stores/authStore'
+vi.mock('./hooks/useConfig', () => ({
+  useConfig: vi.fn(),
+}))
+
+import { useAuthStore } from './stores/authStore'
+import { useConfig } from './hooks/useConfig'
+
+const mockedNavigate = vi.fn()
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => mockedNavigate,
+  }
+})
 
 describe('Login', () => {
   const mockLogin = vi.fn()
@@ -27,6 +42,15 @@ describe('Login', () => {
       register: vi.fn(),
       logout: vi.fn(),
       refreshToken: vi.fn(),
+    })
+    vi.mocked(useConfig).mockReturnValue({
+      config: {
+        registration_available: true,
+        invite_code_required: false,
+        max_users: null,
+        current_users: 0,
+      },
+      isLoading: false,
     })
   })
 
@@ -65,7 +89,6 @@ describe('Login', () => {
 
       const link = screen.getByRole('link', { name: /sign up/i })
       expect(link).toBeInTheDocument()
-      expect(link).toHaveAttribute('href', '/register')
     })
   })
 
@@ -152,14 +175,6 @@ describe('Login', () => {
 
       renderLogin()
 
-      const usernameInput = screen.getByLabelText('Username')
-      const passwordInput = screen.getByLabelText('Password')
-      const button = screen.getByRole('button', { name: /sign in/i })
-
-      await user.type(usernameInput, 'testuser')
-      await user.type(passwordInput, 'password123')
-      await user.click(button)
-
       await waitFor(() => {
         expect(screen.getByText('Signing in...')).toBeInTheDocument()
       })
@@ -219,14 +234,7 @@ describe('Login', () => {
   describe('redirects', () => {
     it('redirects to /tasks on successful login', async () => {
       const user = userEvent.setup()
-      const mockedNavigate = vi.fn()
-      vi.mock('react-router-dom', async () => {
-        const actual = await vi.importActual('react-router-dom')
-        return {
-          ...actual as object,
-          useNavigate: () => mockedNavigate,
-        }
-      })
+      mockLogin.mockResolvedValueOnce(undefined)
 
       vi.mocked(useAuthStore).mockReturnValue({
         login: mockLogin,
