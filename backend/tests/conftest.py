@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 os.environ["SECRET_KEY"] = "test-secret-key-32-chars-long"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["REGISTRATION_ENABLED"] = "true"
+os.environ["APP_ENV"] = "test"
 
 from app.database import AsyncSessionLocal, Base, engine
 from app.main import create_app

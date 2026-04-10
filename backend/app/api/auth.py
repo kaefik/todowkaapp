@@ -1,7 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer
+from slowapi import Limiter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,12 +21,24 @@ from app.security import (
     verify_password,
 )
 
+
+def get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+limiter = Limiter(key_func=get_client_ip, enabled=settings.app_env != "test")
+
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
 
 
 @auth_router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+@limiter.limit(f"{settings.register_rate_limit}/hour")
 async def register(
+    request: Request,
     data: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
@@ -80,7 +93,9 @@ async def register(
 
 
 @auth_router.post("/login", response_model=TokenResponse)
+@limiter.limit(f"{settings.login_rate_limit}/minute")
 async def login(
+    request: Request,
     data: LoginRequest,
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
