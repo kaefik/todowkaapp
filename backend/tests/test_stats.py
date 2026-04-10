@@ -21,11 +21,11 @@ async def user_with_tasks(db_session):
     db_session.add(user)
     await db_session.commit()
     await db_session.refresh(user)
-    
+
     now = datetime.now()
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
-    
+
     tasks = [
         Task(
             user_id=user.id,
@@ -63,10 +63,10 @@ async def user_with_tasks(db_session):
             updated_at=week_ago,
         ),
     ]
-    
+
     db_session.add_all(tasks)
     await db_session.commit()
-    
+
     return user
 
 
@@ -87,16 +87,16 @@ async def test_get_stats_empty(client, db_session):
     )
     db_session.add(user)
     await db_session.commit()
-    
+
     access_token = create_access_token({"sub": user.id})
-    
+
     response = await client.get(
         "/api/stats",
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["total"] == 0
     assert data["active"] == 0
     assert data["completed"] == 0
@@ -111,7 +111,7 @@ async def test_get_stats_with_tasks(client, auth_headers):
     response = await client.get("/api/stats", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["total"] == 5
     assert data["active"] == 3
     assert data["completed"] == 2
@@ -137,7 +137,7 @@ async def test_get_stats_invalid_token(client):
 async def test_get_stats_only_user_tasks(client, auth_headers, db_session):
     result = await db_session.execute(select(User).where(User.username != "testuser"))
     other_user = result.scalar_one_or_none()
-    
+
     if other_user:
         other_task = Task(
             user_id=other_user.id,
@@ -146,11 +146,11 @@ async def test_get_stats_only_user_tasks(client, auth_headers, db_session):
         )
         db_session.add(other_task)
         await db_session.commit()
-    
+
     response = await client.get("/api/stats", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["total"] == 5
 
 
@@ -159,7 +159,7 @@ async def test_get_stats_all_fields_present(client, auth_headers):
     response = await client.get("/api/stats", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
-    
+
     expected_fields = [
         "total",
         "active",
@@ -169,7 +169,7 @@ async def test_get_stats_all_fields_present(client, auth_headers):
         "completed_week",
         "completed_month",
     ]
-    
+
     for field in expected_fields:
         assert field in data
         assert isinstance(data[field], int)

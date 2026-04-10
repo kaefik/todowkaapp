@@ -8,10 +8,8 @@ from alembic import context
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.database import Base
-from app.models.user import User
-from app.models.task import Task
 from app.config import settings
+from app.database import Base
 
 config = context.config
 

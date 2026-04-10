@@ -1,6 +1,6 @@
 import pytest
 import pytest_asyncio
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from app.models.task import Task
 from app.models.user import User
@@ -131,7 +131,7 @@ async def test_block_admin_user(client, admin_headers, db_session):
     )
     db_session.add(another_admin)
     await db_session.commit()
-    
+
     response = await client.patch(
         f"/api/users/{another_admin.id}/block",
         headers=admin_headers,
@@ -175,13 +175,13 @@ async def test_unblock_nonexistent_user(client, admin_headers):
 @pytest.mark.asyncio
 async def test_delete_user_success(client, admin_headers, user_with_tasks, db_session):
     user_id = user_with_tasks.id
-    
+
     response = await client.delete(
         f"/api/users/{user_id}",
         headers=admin_headers,
     )
     assert response.status_code == 204
-    
+
     result = await db_session.execute(select(User).where(User.id == user_id))
     assert result.scalar_one_or_none() is None
 
@@ -207,7 +207,7 @@ async def test_delete_admin_user(client, admin_headers, db_session):
     )
     db_session.add(another_admin)
     await db_session.commit()
-    
+
     response = await client.delete(
         f"/api/users/{another_admin.id}",
         headers=admin_headers,

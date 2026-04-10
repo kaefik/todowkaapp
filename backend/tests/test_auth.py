@@ -259,9 +259,9 @@ async def test_me_invalid_token(client, db_session):
 @pytest.mark.asyncio
 async def test_register_with_valid_invite_code(client, db_session, monkeypatch):
     from app import config
-    
+
     monkeypatch.setattr(config.settings, "invite_code", "SECRET123")
-    
+
     response = await client.post(
         "/api/auth/register",
         json={
@@ -279,9 +279,9 @@ async def test_register_with_valid_invite_code(client, db_session, monkeypatch):
 @pytest.mark.asyncio
 async def test_register_with_invalid_invite_code(client, db_session, monkeypatch):
     from app import config
-    
+
     monkeypatch.setattr(config.settings, "invite_code", "SECRET123")
-    
+
     response = await client.post(
         "/api/auth/register",
         json={
@@ -298,9 +298,9 @@ async def test_register_with_invalid_invite_code(client, db_session, monkeypatch
 @pytest.mark.asyncio
 async def test_register_without_invite_code_when_required(client, db_session, monkeypatch):
     from app import config
-    
+
     monkeypatch.setattr(config.settings, "invite_code", "SECRET123")
-    
+
     response = await client.post(
         "/api/auth/register",
         json={
@@ -316,9 +316,9 @@ async def test_register_without_invite_code_when_required(client, db_session, mo
 @pytest.mark.asyncio
 async def test_register_without_invite_code_when_not_required(client, db_session, monkeypatch):
     from app import config
-    
+
     monkeypatch.setattr(config.settings, "invite_code", None)
-    
+
     response = await client.post(
         "/api/auth/register",
         json={
@@ -333,9 +333,9 @@ async def test_register_without_invite_code_when_not_required(client, db_session
 @pytest.mark.asyncio
 async def test_register_when_max_users_reached(client, db_session, monkeypatch):
     from app import config
-    
+
     monkeypatch.setattr(config.settings, "max_users", 2)
-    
+
     await client.post(
         "/api/auth/register",
         json={
@@ -344,7 +344,7 @@ async def test_register_when_max_users_reached(client, db_session, monkeypatch):
             "password": "Password123!",
         },
     )
-    
+
     await client.post(
         "/api/auth/register",
         json={
@@ -353,7 +353,7 @@ async def test_register_when_max_users_reached(client, db_session, monkeypatch):
             "password": "Password123!",
         },
     )
-    
+
     response = await client.post(
         "/api/auth/register",
         json={
@@ -369,9 +369,9 @@ async def test_register_when_max_users_reached(client, db_session, monkeypatch):
 @pytest.mark.asyncio
 async def test_register_without_max_users_limit(client, db_session, monkeypatch):
     from app import config
-    
+
     monkeypatch.setattr(config.settings, "max_users", None)
-    
+
     for i in range(10):
         response = await client.post(
             "/api/auth/register",
