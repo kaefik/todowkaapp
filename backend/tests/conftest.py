@@ -23,7 +23,7 @@ async def db_session():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def client():
+async def client(db_session):
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

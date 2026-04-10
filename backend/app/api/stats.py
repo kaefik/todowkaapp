@@ -20,6 +20,9 @@ async def get_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StatsResponse:
     user_id = current_user.id
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
 
     total_result = await db.execute(
         select(func.count(Task.id)).where(Task.user_id == user_id)
