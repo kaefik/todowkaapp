@@ -25,16 +25,7 @@ class ApiError extends Error {
 }
 
 let isRefreshing = false
-let refreshSubscribers: Array<(token: string) => void> = []
-
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb)
-}
-
-function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token))
-  refreshSubscribers = []
-}
+let refreshPromise: Promise<void> | null = null
 
 async function fetchWithAuth<T>(
   url: string,
@@ -70,7 +61,6 @@ async function fetchWithAuth<T>(
 
       if (errorMessage === 'Refresh token has been revoked') {
         isRefreshing = false
-        refreshSubscribers = []
         authStore.logout()
         window.location.href = '/login?reason=token_revoked'
         throw new ApiError(401, 'Unauthorized', 'Token has been revoked')
@@ -78,27 +68,23 @@ async function fetchWithAuth<T>(
 
       if (!isRefreshing) {
         isRefreshing = true
-        try {
-          await authStore.refreshToken()
-          const newToken = authStore.accessToken
-          onTokenRefreshed(newToken || '')
-          isRefreshing = false
+        refreshPromise = (async () => {
+          try {
+            await authStore.refreshToken()
+          } finally {
+            isRefreshing = false
+            refreshPromise = null
+          }
+        })()
+      }
 
-          return fetchWithAuth<T>(url, { ...config, skipAuth: false })
-        } catch {
-          isRefreshing = false
-          authStore.logout()
-          window.location.href = '/login?reason=session_expired'
-          throw new ApiError(401, 'Unauthorized', 'Session expired')
-        }
-      } else {
-        return new Promise((resolve, reject) => {
-          subscribeTokenRefresh(() => {
-            fetchWithAuth<T>(url, { ...config, skipAuth: false })
-              .then(resolve)
-              .catch(reject)
-          })
-        })
+      try {
+        await refreshPromise
+        return fetchWithAuth<T>(url, { ...config, skipAuth: false })
+      } catch {
+        authStore.logout()
+        window.location.href = '/login?reason=session_expired'
+        throw new ApiError(401, 'Unauthorized', 'Session expired')
       }
     }
 

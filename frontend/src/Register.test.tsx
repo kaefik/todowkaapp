@@ -326,8 +326,6 @@ describe('Register', () => {
     })
 
     it('shows loading state while registering', async () => {
-      const user = userEvent.setup()
-
       vi.mocked(useAuthStore).mockReturnValue({
         registerAndLogin: mockRegisterAndLogin,
         clearError: mockClearError,
@@ -349,7 +347,6 @@ describe('Register', () => {
     })
 
     it('shows error message when registration fails', async () => {
-      const user = userEvent.setup()
       const errorMessage = 'Registration failed'
       mockRegisterAndLogin.mockRejectedValue(new Error(errorMessage))
 

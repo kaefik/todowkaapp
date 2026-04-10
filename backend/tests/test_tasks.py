@@ -11,11 +11,11 @@ async def auth_user1(client, db_session):
     user_data = {
         "username": "user1",
         "email": "user1@example.com",
-        "password": "password123",
+        "password": "Password123!",
     }
     await client.post("/api/auth/register", json=user_data)
     login_response = await client.post(
-        "/api/auth/login", json={"username": "user1", "password": "password123"}
+        "/api/auth/login", json={"username": "user1", "password": "Password123!"}
     )
     token = login_response.json()["access_token"]
     result = await db_session.execute(select(User).where(User.username == "user1"))
@@ -28,11 +28,11 @@ async def auth_user2(client, db_session):
     user_data = {
         "username": "user2",
         "email": "user2@example.com",
-        "password": "password123",
+        "password": "Password123!",
     }
     await client.post("/api/auth/register", json=user_data)
     login_response = await client.post(
-        "/api/auth/login", json={"username": "user2", "password": "password123"}
+        "/api/auth/login", json={"username": "user2", "password": "Password123!"}
     )
     token = login_response.json()["access_token"]
     result = await db_session.execute(select(User).where(User.username == "user2"))

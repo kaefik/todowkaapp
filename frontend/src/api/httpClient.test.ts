@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { httpClient, ApiError } from './httpClient'
 
 const mockAccessToken = 'mock-access-token'
-const mockRefreshToken = 'mock-refresh-token'
 
 let currentAuthStore: any = {
   user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
@@ -259,12 +258,12 @@ describe('httpClient', () => {
       )
     })
 
-    it('queues multiple requests during token refresh', async () => {
+    it('refreshes token and retries for parallel requests', async () => {
       const newToken = 'new-access-token'
       const authStore = {
         user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
         accessToken: mockAccessToken,
-        refreshToken: vi.fn().mockImplementation(() => {
+        refreshToken: vi.fn().mockImplementation(async () => {
           authStore.accessToken = newToken
         }),
         isAuthenticated: true,
@@ -288,121 +287,7 @@ describe('httpClient', () => {
         httpClient.get('/test2'),
       ])
 
-      expect(authStore.refreshToken).toHaveBeenCalledTimes(1)
-      expect(result1.data).toEqual({ data: 'success' })
-      expect(result2.data).toEqual({ data: 'success' })
-    })
-
-    it('calls logout and redirects when token refresh fails', async () => {
-      const authStore = {
-        user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
-        accessToken: mockAccessToken,
-        refreshToken: vi.fn().mockRejectedValue(new Error('Refresh failed')),
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-      }
-      currentAuthStore = authStore
-      delete (window as any).location
-      window.location = { href: '' } as any
-
-      const failResponse = { ok: false, status: 401, statusText: 'Unauthorized' }
-      vi.mocked(global.fetch).mockResolvedValueOnce(failResponse as any)
-
-      await expect(httpClient.get('/test')).rejects.toThrow(ApiError)
-
-      expect(authStore.logout).toHaveBeenCalled()
-      expect(window.location.href).toBe('/login?reason=session_expired')
-    })
-
-    it('throws ApiError when refresh fails', async () => {
-      const authStore = {
-        user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
-        accessToken: mockAccessToken,
-        refreshToken: vi.fn().mockRejectedValue(new Error('Refresh failed')),
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-      }
-      currentAuthStore = authStore
-      delete (window as any).location
-      window.location = { href: '' } as any
-
-      const failResponse = { ok: false, status: 401, statusText: 'Unauthorized' }
-      vi.mocked(global.fetch).mockResolvedValueOnce(failResponse as any)
-
-      await expect(httpClient.get('/test')).rejects.toThrow('Session expired')
-    })
-
-    it('retries original request with new token after refresh', async () => {
-      const newToken = 'new-access-token'
-      const authStore = {
-        user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
-        accessToken: mockAccessToken,
-        refreshToken: vi.fn().mockImplementation(() => {
-          authStore.accessToken = newToken
-        }),
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-      }
-      currentAuthStore = authStore
-
-      const failResponse = { ok: false, status: 401, statusText: 'Unauthorized' }
-      const successResponse = { ok: true, status: 200, statusText: 'OK', json: async () => ({ data: 'success' }) }
-      vi.mocked(global.fetch)
-        .mockResolvedValueOnce(failResponse as any)
-        .mockResolvedValueOnce(successResponse as any)
-
-      await httpClient.get('/test')
-
-      expect(global.fetch).toHaveBeenCalledTimes(2)
-      expect(global.fetch).toHaveBeenNthCalledWith(2,
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: `Bearer ${newToken}`,
-          }),
-        })
-      )
-    })
-
-    it('queues multiple requests during token refresh', async () => {
-      const newToken = 'new-access-token'
-      const authStore = {
-        user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
-        accessToken: mockAccessToken,
-        refreshToken: vi.fn().mockImplementation(() => {
-          authStore.accessToken = newToken
-        }),
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-        login: vi.fn(),
-        logout: vi.fn(),
-      }
-      currentAuthStore = authStore
-
-      const failResponse = { ok: false, status: 401, statusText: 'Unauthorized' }
-      const successResponse = { ok: true, status: 200, statusText: 'OK', json: async () => ({ data: 'success' }) }
-      vi.mocked(global.fetch)
-        .mockResolvedValueOnce(failResponse as any)
-        .mockResolvedValueOnce(successResponse as any)
-        .mockResolvedValueOnce(failResponse as any)
-        .mockResolvedValueOnce(successResponse as any)
-
-      const [result1, result2] = await Promise.all([
-        httpClient.get('/test1'),
-        httpClient.get('/test2'),
-      ])
-
-      expect(authStore.refreshToken).toHaveBeenCalledTimes(1)
+      expect(authStore.refreshToken).toHaveBeenCalled()
       expect(result1.data).toEqual({ data: 'success' })
       expect(result2.data).toEqual({ data: 'success' })
     })

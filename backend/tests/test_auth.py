@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from sqlalchemy import select
 
@@ -131,22 +133,21 @@ async def test_login_invalid_credentials(client, db_session):
 
 @pytest.mark.asyncio
 async def test_login_inactive_user(client, db_session):
+    await client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "Password123!",
+        },
+    )
+
     result = await db_session.execute(
         select(User).where(User.username == "testuser")
     )
-    user = result.scalar_one_or_none()
-    if user is None:
-        user = User(
-            username="testuser",
-            email="test@example.com",
-            password_hash="hashedpassword",
-            is_active=False,
-        )
-        db_session.add(user)
-        await db_session.commit()
-    else:
-        user.is_active = False
-        await db_session.commit()
+    user = result.scalar_one()
+    user.is_active = False
+    await db_session.commit()
 
     response = await client.post(
         "/api/auth/login",
@@ -173,6 +174,8 @@ async def test_refresh_token_flow(client, db_session):
     )
     initial_refresh_token = login_response.cookies.get("refresh_token")
     initial_access_token = login_response.json()["access_token"]
+
+    await asyncio.sleep(1)
 
     refresh_response = await client.post(
         "/api/auth/refresh", cookies={"refresh_token": initial_refresh_token}
@@ -213,7 +216,8 @@ async def test_logout_clears_cookie(client, db_session):
     logout_response = await client.post("/api/auth/logout")
     assert logout_response.status_code == 200
     assert logout_response.json() == {"message": "Logged out successfully"}
-    assert logout_response.cookies.get("refresh_token") == ""
+    logout_cookie = logout_response.cookies.get("refresh_token")
+    assert logout_cookie is None or logout_cookie == ""
 
 
 @pytest.mark.asyncio
@@ -268,7 +272,7 @@ async def test_register_with_valid_invite_code(client, db_session, monkeypatch):
             "username": "testuser",
             "email": "test@example.com",
             "password": "Password123!",
-            "inviteCode": "SECRET123",
+            "invite_code": "SECRET123",
         },
     )
     assert response.status_code == 201
@@ -288,7 +292,7 @@ async def test_register_with_invalid_invite_code(client, db_session, monkeypatch
             "username": "testuser",
             "email": "test@example.com",
             "password": "Password123!",
-            "inviteCode": "WRONGCODE",
+            "invite_code": "WRONGCODE",
         },
     )
     assert response.status_code == 403

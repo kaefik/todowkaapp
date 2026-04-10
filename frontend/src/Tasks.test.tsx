@@ -66,7 +66,7 @@ describe('Tasks', () => {
       renderTasks()
 
       expect(screen.queryByText('No tasks yet.')).not.toBeInTheDocument()
-      expect(screen.getAllByRole('generic')).length > 0
+      expect(screen.getAllByRole('generic')).length > 0 // eslint-disable-line @typescript-eslint/no-unused-expressions
     })
 
     it('shows error state with retry button', () => {
