@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -6,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
-    description: str | None = None
+    description: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -21,6 +22,7 @@ class TaskResponse(BaseModel):
     title: str
     description: str | None
     is_completed: bool
+    completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

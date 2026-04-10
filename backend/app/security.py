@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -40,7 +41,8 @@ def create_refresh_token(data: dict[str, Any], expires_delta: timedelta | None =
         expire = datetime.now(UTC) + expires_delta
     else:
         expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    jti = str(uuid.uuid4())
+    to_encode.update({"exp": expire, "type": "refresh", "jti": jti})
     encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -75,4 +77,11 @@ def clear_refresh_cookie(response: Response) -> None:
         httponly=True,
         samesite="strict",
     )
+
+
+def get_token_jti(token: str) -> str | None:
+    payload = decode_token(token)
+    if payload is None:
+        return None
+    return payload.get("jti")
 

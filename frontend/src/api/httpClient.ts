@@ -61,6 +61,21 @@ async function fetchWithAuth<T>(
     })
 
     if (response.status === 401 && !skipAuth) {
+      let errorMessage = response.statusText
+      try {
+        const errorData = await response.json()
+        errorMessage = errorData.detail || errorMessage
+      } catch {
+      }
+
+      if (errorMessage === 'Refresh token has been revoked') {
+        isRefreshing = false
+        refreshSubscribers = []
+        authStore.logout()
+        window.location.href = '/login?reason=token_revoked'
+        throw new ApiError(401, 'Unauthorized', 'Token has been revoked')
+      }
+
       if (!isRefreshing) {
         isRefreshing = true
         try {

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export interface User {
   id: string
@@ -24,7 +25,9 @@ interface AuthState {
   fetchCurrentUser: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
@@ -43,6 +46,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!response.ok) {
         const error = await response.json()
+        if (response.status === 429) {
+          throw new Error('Слишком много попыток. Попробуйте снова через минуту.')
+        }
         throw new Error(error.detail || 'Login failed')
       }
 
@@ -83,6 +89,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!response.ok) {
         const error = await response.json()
+        if (response.status === 429) {
+          throw new Error('Слишком много попыток регистрации. Попробуйте снова через час.')
+        }
         throw new Error(error.detail || 'Registration failed')
       }
 
@@ -128,6 +137,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!loginResponse.ok) {
         const error = await loginResponse.json()
+        if (loginResponse.status === 429) {
+          throw new Error('Слишком много попыток. Попробуйте снова через минуту.')
+        }
         throw new Error(error.detail || 'Login after registration failed')
       }
 
@@ -169,7 +181,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       })
 
       if (!response.ok) {
-        throw new Error('Token refresh failed')
+        const error = await response.json()
+        throw new Error(error.detail || 'Token refresh failed')
       }
 
       const data = await response.json()
@@ -232,4 +245,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw error
     }
   },
-}))
+}),
+    {
+      name: 'auth-storage',
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+)

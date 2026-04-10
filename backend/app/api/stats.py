@@ -20,6 +20,9 @@ async def get_stats(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StatsResponse:
     user_id = current_user.id
+    now = datetime.now()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
 
     total_result = await db.execute(
         select(func.count(Task.id)).where(Task.user_id == user_id)
@@ -60,7 +63,7 @@ async def get_stats(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
             Task.is_completed,
-            Task.updated_at >= week_ago
+            Task.completed_at >= week_ago
         )
     )
     completed_week = completed_week_result.scalar() or 0
@@ -69,7 +72,7 @@ async def get_stats(
         select(func.count(Task.id)).where(
             Task.user_id == user_id,
             Task.is_completed,
-            Task.updated_at >= month_ago
+            Task.completed_at >= month_ago
         )
     )
     completed_month = completed_month_result.scalar() or 0

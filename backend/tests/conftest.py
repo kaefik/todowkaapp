@@ -6,6 +6,7 @@ from httpx import ASGITransport, AsyncClient
 os.environ["SECRET_KEY"] = "test-secret-key-32-chars-long"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["REGISTRATION_ENABLED"] = "true"
+os.environ["APP_ENV"] = "test"
 
 from app.database import AsyncSessionLocal, Base, engine
 from app.main import create_app
@@ -23,7 +24,7 @@ async def db_session():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def client():
+async def client(db_session):
     app = create_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:

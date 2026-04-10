@@ -71,59 +71,59 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-75"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 dark:bg-black/90"
       onClick={onClose}
     >
       <div
-        className="bg-white p-6 rounded-lg shadow-2xl max-w-lg w-full mx-4 border-4 border-indigo-500"
+        className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-2xl max-w-lg w-full mx-4 border-4 border-indigo-500 dark:border-indigo-400"
         onClick={(e) => e.stopPropagation()}
       >
-          <h2 className="text-xl font-bold mb-4 text-gray-900">Edit Task</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Edit Task</h2>
 
           {fetchError && (
-            <div className="mb-4 rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{fetchError}</p>
+            <div className="mb-4 rounded-md bg-red-50 dark:bg-red-900/20 p-4">
+              <p className="text-sm text-red-800 dark:text-red-400">{fetchError}</p>
             </div>
           )}
 
           {loading ? (
             <div className="space-y-4">
-              <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
-              <div className="h-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
             </div>
           ) : (
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Title
               </label>
               <input
                 {...register('title')}
                 type="text"
                 id="title"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                 placeholder="Task title"
               />
               {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
               </label>
               <textarea
                 {...register('description')}
                 id="description"
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                 placeholder="Task description (optional)"
               />
               {errors.description && (
-                <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
               )}
             </div>
 
@@ -131,13 +131,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
               >
                 Save
               </button>

@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173,http://localhost:80"
     app_env: str = "development"
     log_level: str = "info"
+    login_rate_limit: int = 5
+    register_rate_limit: int = 3
+    refresh_token_rotation_enabled: bool = True
 
     @field_validator("invite_code", "max_users", mode="before")
     @classmethod

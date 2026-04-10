@@ -1,13 +1,15 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer
+from slowapi import Limiter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.models.revoked_token import RevokedToken
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
@@ -15,17 +17,30 @@ from app.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    get_token_jti,
     hash_password,
     set_refresh_cookie,
     verify_password,
 )
+
+
+def get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+limiter = Limiter(key_func=get_client_ip, enabled=settings.app_env != "test")
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
 
 
 @auth_router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+@limiter.limit(f"{settings.register_rate_limit}/hour")
 async def register(
+    request: Request,
     data: RegisterRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
@@ -80,7 +95,9 @@ async def register(
 
 
 @auth_router.post("/login", response_model=TokenResponse)
+@limiter.limit(f"{settings.login_rate_limit}/minute")
 async def login(
+    request: Request,
     data: LoginRequest,
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -135,6 +152,20 @@ async def refresh(
             detail="Invalid token type",
         )
 
+    token_jti = payload.get("jti")
+    if not token_jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        )
+
+    result = await db.execute(select(RevokedToken).where(RevokedToken.token_jti == token_jti))
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked",
+        )
+
     user_id = payload.get("sub")
 
     if user_id is None:
@@ -157,11 +188,27 @@ async def refresh(
 
     set_refresh_cookie(response, new_refresh_token)
 
+    if settings.refresh_token_rotation_enabled:
+        revoked_token = RevokedToken(token_jti=token_jti)
+        db.add(revoked_token)
+        await db.commit()
+
     return TokenResponse(access_token=access_token, user=user)
 
 
 @auth_router.post("/logout")
-async def logout(response: Response) -> dict[str, str]:
+async def logout(
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    refresh_token: Annotated[str | None, Cookie()] = None,
+) -> dict[str, str]:
+    if refresh_token and settings.refresh_token_rotation_enabled:
+        token_jti = get_token_jti(refresh_token)
+        if token_jti:
+            revoked_token = RevokedToken(token_jti=token_jti)
+            db.add(revoked_token)
+            await db.commit()
+
     clear_refresh_cookie(response)
     return {"message": "Logged out successfully"}
 
