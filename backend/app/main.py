@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.auth import auth_router
 from app.api.config import config_router
+from app.api.contexts import contexts_router
 from app.api.router import api_router
 from app.api.stats import stats_router
 from app.api.tasks import tasks_router
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
 
     api_router.include_router(auth_router)
     api_router.include_router(config_router)
+    api_router.include_router(contexts_router)
     api_router.include_router(stats_router)
     api_router.include_router(tasks_router)
     api_router.include_router(users_router)

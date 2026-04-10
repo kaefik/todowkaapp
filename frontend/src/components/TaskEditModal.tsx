@@ -5,10 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Task, UpdateTask } from '../hooks/useTasks'
 import { useTasks } from '../hooks/useTasks'
+import { useContexts } from '../hooks/useContexts'
 
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().nullable().optional(),
+  context_id: z.string().nullable().optional(),
 })
 
 type EditTaskFormData = z.infer<typeof editTaskSchema>
@@ -22,6 +24,7 @@ interface TaskEditModalProps {
 
 export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalProps) {
   const { fetchTask } = useTasks()
+  const { contexts } = useContexts()
   const [currentTask, setCurrentTask] = useState<Task | null>(task)
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -57,6 +60,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       reset({
         title: currentTask.title,
         description: currentTask.description,
+        context_id: (currentTask as Record<string, unknown>).context_id as string | null ?? null,
       })
     }
   }, [currentTask, reset])
@@ -125,6 +129,24 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
               )}
+            </div>
+
+            <div>
+              <label htmlFor="context_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Контекст
+              </label>
+              <select
+                {...register('context_id')}
+                id="context_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">Без контекста</option>
+                {contexts.map((ctx) => (
+                  <option key={ctx.id} value={ctx.id}>
+                    {ctx.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="flex gap-3 justify-end">
