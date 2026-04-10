@@ -60,11 +60,17 @@ class TaskService:
         return task
 
     async def toggle_task(self, user_id: UUID, task_id: UUID) -> Task | None:
+        from datetime import datetime
+
         task = await self.get_task(user_id, task_id)
         if task is None:
             return None
 
         task.is_completed = not task.is_completed
+        if task.is_completed:
+            task.completed_at = datetime.now()
+        else:
+            task.completed_at = None
         await self.db.flush()
         await self.db.refresh(task)
         return task

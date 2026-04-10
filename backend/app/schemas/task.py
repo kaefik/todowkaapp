@@ -21,6 +21,7 @@ class TaskResponse(BaseModel):
     title: str
     description: str | None
     is_completed: bool
+    completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
