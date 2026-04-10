@@ -43,6 +43,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!response.ok) {
         const error = await response.json()
+        if (response.status === 429) {
+          throw new Error('Слишком много попыток. Попробуйте снова через минуту.')
+        }
         throw new Error(error.detail || 'Login failed')
       }
 
@@ -83,6 +86,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!response.ok) {
         const error = await response.json()
+        if (response.status === 429) {
+          throw new Error('Слишком много попыток регистрации. Попробуйте снова через час.')
+        }
         throw new Error(error.detail || 'Registration failed')
       }
 
@@ -128,6 +134,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!loginResponse.ok) {
         const error = await loginResponse.json()
+        if (loginResponse.status === 429) {
+          throw new Error('Слишком много попыток. Попробуйте снова через минуту.')
+        }
         throw new Error(error.detail || 'Login after registration failed')
       }
 
