@@ -228,6 +228,7 @@ describe('TaskEditModal', () => {
         expect(mockOnSave).toHaveBeenCalledWith('1', {
           title: 'Updated Title',
           description: 'Updated description',
+          context_id: null,
         })
       })
     })
@@ -251,6 +252,7 @@ describe('TaskEditModal', () => {
         expect(mockOnSave).toHaveBeenCalledWith('1', {
           title: 'Updated Title',
           description: 'Test description',
+          context_id: null,
         })
       })
     })
