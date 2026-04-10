@@ -267,6 +267,78 @@
 
 ---
 
+## Итерация 2: GTD-методология (Планирование)
+
+### Планируемые возможности
+
+#### Контексты
+- CRUD для контекстов (Home, Office, Phone и т.д.)
+- Привязка задач к контексту (context_id в tasks)
+- Фильтрация задач по контексту
+
+#### Области ответственности
+- CRUD для областей (Здоровье, Финансы, Карьера и т.д.)
+- Привязка задач и проектов к области (area_id)
+
+#### Теги
+- CRUD для тегов с цветовой маркировкой
+- M:N связь тегов и задач (таблица task_tags)
+- Multi-select тегов в форме задачи
+- Фильтрация задач по тегам
+
+#### Проекты
+- CRUD для проектов с прогресс-баром
+- Привязка задач к проекту (project_id)
+- Автоматический подсчёт прогресса (tasks_total, tasks_completed, progress_percent)
+- Страницы списка проектов и деталей проекта
+
+#### GTD-статусы
+- Статусы: inbox, next_action, waiting_for, someday_maybe, reference, trash
+- Поле gtd_status в модели tasks (default: inbox)
+- Перемещение задач между статусами (move)
+- Страницы для каждого GTD-статуса (/inbox, /next, /waiting, /someday, /completed)
+- Счётчики задач по статусам в sidebar
+
+#### Inbox — быстрый захват
+- Quick Capture Bar — быстрое добавление в Inbox (input + Enter)
+- Inline-форма уточнения задачи (контекст, проект, дедлайн, статус)
+- Клавиатурный шорткат для фокуса на Quick Capture (Ctrl+K)
+- Кнопки быстрого перемещения (→ Next, → Waiting, → Someday, → Trash)
+
+#### Подзадачи
+- Иерархия задач (parent_task_id)
+- Прогресс подзадач (subtasks_count, subtasks_completed)
+- Раскрываемый список подзадач в карточке задачи
+
+#### Поиск и фильтрация
+- Полнотекстовый поиск по title + description + notes
+- Комбинированные фильтры (GTD-статус, контекст, область, проект, теги, дедлайн)
+- Сортировка (по позиции, дате, дедлайну, названию)
+- Сохранение фильтров в URL query params
+- Подсветка результатов поиска
+
+#### Sidebar навигация
+- GTD-секции с badges-счётчиками
+- Список проектов с мини-прогрессбарами
+- Контексты, области, теги
+- Mobile: slide-over через бургер-меню
+- Desktop: collapsible (свернуть в иконки)
+
+#### Расширенная форма задачи
+- Поля: gtd_status, контекст, проект, область, дедлайн, теги, заметки
+- Progressive disclosure (базовые поля + «Дополнительно»)
+- Автозаполнение при создании из контекста sidebar
+
+#### Новые модели БД
+- Таблица `contexts` (id, user_id, name, created_at)
+- Таблица `areas` (id, user_id, name, created_at)
+- Таблица `tags` (id, user_id, name, color, created_at)
+- Таблица `task_tags` (task_id, tag_id)
+- Таблица `projects` (id, user_id, name, description, area_id, status, created_at, updated_at)
+- Расширение `tasks` (gtd_status, context_id, area_id, project_id, parent_task_id, position, due_date, notes)
+
+---
+
 ## История возможностей
 
 *Последнее обновление: 10 апреля 2026 года*
