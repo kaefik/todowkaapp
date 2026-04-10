@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 
 interface AuthInitializerProps {
@@ -7,12 +7,25 @@ interface AuthInitializerProps {
 
 export function AuthInitializer({ children }: AuthInitializerProps) {
   const { fetchCurrentUser, isAuthenticated } = useAuthStore()
+  const [initializing, setInitializing] = useState(true)
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      fetchCurrentUser().catch(() => {})
+    if (isAuthenticated) {
+      setInitializing(false)
+      return
     }
-  }, [isAuthenticated, fetchCurrentUser])
+    fetchCurrentUser()
+      .catch(() => {})
+      .finally(() => setInitializing(false))
+  }, [fetchCurrentUser, isAuthenticated])
+
+  if (initializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      </div>
+    )
+  }
 
   return <>{children}</>
 }
