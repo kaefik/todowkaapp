@@ -60,7 +60,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       reset({
         title: currentTask.title,
         description: currentTask.description,
-        context_id: (currentTask as Record<string, unknown>).context_id as string | null ?? null,
+        context_id: currentTask.context_id ?? null,
       })
     }
   }, [currentTask, reset])

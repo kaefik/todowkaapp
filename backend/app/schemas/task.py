@@ -7,12 +7,14 @@ from pydantic import BaseModel, Field
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
+    context_id: UUID | None = None
 
 
 class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     is_completed: bool | None = None
+    context_id: UUID | None = None
 
 
 class TaskResponse(BaseModel):
@@ -22,6 +24,7 @@ class TaskResponse(BaseModel):
     description: str | None
     is_completed: bool
     completed_at: datetime | None
+    context_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

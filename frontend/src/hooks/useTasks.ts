@@ -6,6 +6,7 @@ export interface Task {
   title: string
   description: string | null
   completed: boolean
+  context_id: string | null
   user_id: string
   created_at: string
   updated_at: string
@@ -16,6 +17,7 @@ interface ApiTask {
   title: string
   description: string | null
   is_completed: boolean
+  context_id: string | null
   user_id: string
   created_at: string
   updated_at: string
@@ -31,6 +33,7 @@ export interface UpdateTask {
   title?: string
   description?: string | null
   completed?: boolean
+  context_id?: string | null
 }
 
 interface UseTasksReturn {
@@ -100,6 +103,7 @@ export function useTasks(): UseTasksReturn {
       if (data.title !== undefined) updateData.title = data.title
       if (data.description !== undefined) updateData.description = data.description
       if (data.completed !== undefined) updateData.is_completed = data.completed
+      if (data.context_id !== undefined) updateData.context_id = data.context_id
 
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
       setTasks((prev) =>
