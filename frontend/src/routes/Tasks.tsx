@@ -112,9 +112,9 @@ function TasksContent() {
     return (
       <div className="space-y-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white rounded-lg shadow-sm p-4 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 animate-pulse">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
           </div>
         ))}
       </div>
@@ -124,12 +124,12 @@ function TasksContent() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
+        <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
           <div className="flex">
-            <p className="text-sm text-red-800">{error}</p>
+            <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
             <button
               onClick={() => refetch()}
-              className="ml-auto text-sm font-medium text-red-600 hover:text-red-500"
+              className="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
             >
               Retry
             </button>
@@ -137,25 +137,27 @@ function TasksContent() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(handleAddTask)} className="bg-white rounded-lg shadow-sm p-4">
+      <form onSubmit={handleSubmit(handleAddTask)} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4">
         <div className="flex gap-2">
           <div className="flex-1">
             <input
-              ref={inputRef}
               type="text"
               placeholder="Add a new task..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isAdding || isSubmitting}
               {...register('title')}
+              ref={(e) => {
+                inputRef.current = e
+              }}
             />
             {errors.title && (
-              <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
             )}
           </div>
           <button
             type="button"
             onClick={() => setShowDescription(!showDescription)}
-            className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isAdding || isSubmitting}
           >
             {showDescription ? '−' : '+'}
@@ -163,7 +165,7 @@ function TasksContent() {
           <button
             type="submit"
             disabled={isAdding || isSubmitting}
-            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isAdding || isSubmitting ? 'Adding...' : 'Add'}
           </button>
@@ -174,12 +176,12 @@ function TasksContent() {
             <textarea
               placeholder="Add a description (optional)"
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isAdding || isSubmitting}
               {...register('description')}
             />
             {errors.description && (
-              <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
             )}
           </div>
         )}
@@ -187,50 +189,50 @@ function TasksContent() {
 
       {tasks.length === 0 && !isLoading && (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No tasks yet.</p>
-          <p className="text-gray-400 text-sm mt-1">Add your first task above!</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">No tasks yet.</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Add your first task above!</p>
         </div>
       )}
 
       {activeTasks.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Active</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Active</h2>
           <div className="space-y-2">
             {activeTasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={task.completed}
                     onChange={() => handleToggleTask(task.id)}
-                    className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-gray-900">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {task.title}
                     </h3>
                     {task.description && (
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {task.description}
                       </p>
                     )}
-                    <p className="mt-1 text-xs text-gray-400">
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                       {formatDate(task.created_at)}
                     </p>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditTask(task)}
-                      className="text-sm text-gray-500 hover:text-gray-700 focus:outline-none"
+                      className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDeleteTask(task.id)}
-                      className="text-sm text-red-500 hover:text-red-700 focus:outline-none"
+                      className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
                     >
                       Delete
                     </button>
@@ -246,7 +248,7 @@ function TasksContent() {
         <div>
           <button
             onClick={() => setIsCompletedCollapsed(!isCompletedCollapsed)}
-            className="w-full flex items-center justify-between text-lg font-semibold text-gray-900 mb-3 hover:text-gray-700 focus:outline-none focus:text-gray-700 transition-colors"
+            className="w-full flex items-center justify-between text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:text-gray-700 dark:focus:text-gray-300 transition-colors"
           >
             <span>Completed</span>
             <svg
@@ -270,38 +272,38 @@ function TasksContent() {
               {completedTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="bg-white rounded-lg shadow-sm p-4 opacity-75"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 opacity-75"
                 >
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={task.completed}
                       onChange={() => handleToggleTask(task.id)}
-                      className="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-500 line-through">
+                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 line-through">
                         {task.title}
                       </h3>
                       {task.description && (
-                        <p className="mt-1 text-sm text-gray-400 line-through">
+                        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through">
                           {task.description}
                         </p>
                       )}
-                      <p className="mt-1 text-xs text-gray-400 line-through">
+                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 line-through">
                         {formatDate(task.created_at)}
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditTask(task)}
-                        className="text-sm text-gray-400 hover:text-gray-600 focus:outline-none"
+                        className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
-                        className="text-sm text-red-400 hover:text-red-600 focus:outline-none"
+                        className="text-sm text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-300 focus:outline-none"
                       >
                         Delete
                       </button>
