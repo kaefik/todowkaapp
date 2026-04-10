@@ -38,7 +38,13 @@ class TaskService:
         return result.scalar_one_or_none()
 
     async def create_task(self, user_id: UUID, data: TaskCreate) -> Task:
-        task = Task(user_id=str(user_id), title=data.title, description=data.description)
+        task = Task(
+            user_id=str(user_id),
+            title=data.title,
+            description=data.description,
+            context_id=data.context_id,
+            area_id=data.area_id,
+        )
         self.db.add(task)
         await self.db.flush()
         await self.db.refresh(task)

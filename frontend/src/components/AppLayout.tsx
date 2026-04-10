@@ -29,6 +29,12 @@ export function AppLayout() {
                       Контексты
                     </Link>
                     <Link
+                      to="/areas"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                    >
+                      Области
+                    </Link>
+                    <Link
                       to="/profile"
                       className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                     >
@@ -100,6 +106,13 @@ export function AppLayout() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Контексты
+              </Link>
+              <Link
+                to="/areas"
+                className="block px-3 py-2 text-base font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-md"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Области
               </Link>
               <Link
                 to="/profile"

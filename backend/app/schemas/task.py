@@ -8,6 +8,7 @@ class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     context_id: str | None = Field(default=None, max_length=36)
+    area_id: str | None = Field(default=None, max_length=36)
 
 
 class TaskUpdate(BaseModel):
@@ -15,6 +16,7 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     is_completed: bool | None = None
     context_id: str | None = Field(default=None, max_length=36)
+    area_id: str | None = Field(default=None, max_length=36)
 
 
 class TaskResponse(BaseModel):
@@ -25,6 +27,7 @@ class TaskResponse(BaseModel):
     is_completed: bool
     completed_at: datetime | None
     context_id: UUID | None
+    area_id: UUID | None
     created_at: datetime
     updated_at: datetime
 

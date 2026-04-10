@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from app.api.areas import areas_router
 from app.api.auth import auth_router
 from app.api.config import config_router
 from app.api.contexts import contexts_router
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    api_router.include_router(areas_router)
     api_router.include_router(auth_router)
     api_router.include_router(config_router)
     api_router.include_router(contexts_router)
