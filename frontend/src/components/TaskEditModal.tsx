@@ -3,12 +3,21 @@ import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { Task, UpdateTask } from '../hooks/useTasks'
+import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useTasks } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
+
+const GTD_STATUS_OPTIONS: { value: GtdStatus; label: string }[] = [
+  { value: 'inbox', label: 'Inbox' },
+  { value: 'next', label: 'Next Action' },
+  { value: 'waiting', label: 'Waiting For' },
+  { value: 'someday', label: 'Someday / Maybe' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'trash', label: 'Trash' },
+]
 
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -16,6 +25,9 @@ const editTaskSchema = z.object({
   context_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   area_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   project_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  gtd_status: z.string().optional(),
+  due_date: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  notes: z.string().nullable().optional(),
 })
 
 type EditTaskFormData = z.infer<typeof editTaskSchema>
@@ -107,6 +119,9 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         context_id: currentTask.context_id ?? null,
         area_id: (currentTask as Record<string, unknown>).area_id as string | null ?? null,
         project_id: (currentTask as Record<string, unknown>).project_id as string | null ?? null,
+        gtd_status: currentTask.gtd_status,
+        due_date: currentTask.due_date ? currentTask.due_date.slice(0, 10) : null,
+        notes: currentTask.notes ?? null,
       })
     }
   }, [currentTask, reset])
@@ -235,6 +250,48 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                GTD-статус
+              </label>
+              <select
+                {...register('gtd_status')}
+                id="gtd_status"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                {GTD_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Дедлайн
+              </label>
+              <input
+                {...register('due_date')}
+                type="date"
+                id="due_date"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Заметки
+              </label>
+              <textarea
+                {...register('notes')}
+                id="notes"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                placeholder="Заметки к задаче (optional)"
+              />
             </div>
 
             <div>

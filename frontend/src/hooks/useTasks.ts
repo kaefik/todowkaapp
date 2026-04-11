@@ -61,6 +61,8 @@ export interface UpdateTask {
   context_id?: string | null
   area_id?: string | null
   project_id?: string | null
+  due_date?: string | null
+  notes?: string | null
   tag_ids?: string[]
 }
 
@@ -179,6 +181,8 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       if (data.context_id !== undefined) updateData.context_id = data.context_id
       if (data.area_id !== undefined) updateData.area_id = data.area_id
       if (data.project_id !== undefined) updateData.project_id = data.project_id
+      if (data.due_date !== undefined) updateData.due_date = data.due_date
+      if (data.notes !== undefined) updateData.notes = data.notes
       if (data.tag_ids !== undefined) updateData.tag_ids = data.tag_ids
 
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
@@ -203,9 +207,13 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     setError(null)
     try {
       const response = await httpClient.patch<ApiTask>(`/tasks/${id}/toggle`)
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? mapTask(response.data) : t))
-      )
+      const updated = mapTask(response.data)
+      setTasks((prev) => {
+        if (filters?.gtd_status && updated.gtd_status !== filters.gtd_status) {
+          return prev.filter((t) => t.id !== id)
+        }
+        return prev.map((t) => (t.id === id ? updated : t))
+      })
       notifyTasksChanged()
     } catch (err) {
       if (err instanceof ApiError) {
@@ -217,16 +225,20 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [filters?.gtd_status])
 
   const moveTask = useCallback(async (id: string, gtd_status: GtdStatus) => {
     setIsLoading(true)
     setError(null)
     try {
       const response = await httpClient.patch<ApiTask>(`/tasks/${id}/move`, { gtd_status })
-      setTasks((prev) =>
-        prev.map((t) => (t.id === id ? mapTask(response.data) : t))
-      )
+      const updated = mapTask(response.data)
+      setTasks((prev) => {
+        if (filters?.gtd_status && updated.gtd_status !== filters.gtd_status) {
+          return prev.filter((t) => t.id !== id)
+        }
+        return prev.map((t) => (t.id === id ? updated : t))
+      })
       notifyTasksChanged()
     } catch (err) {
       if (err instanceof ApiError) {
@@ -238,7 +250,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [filters?.gtd_status])
 
   const deleteTask = useCallback(async (id: string) => {
     setIsLoading(true)
