@@ -347,10 +347,18 @@
 - Клавиатурный шорткат для фокуса на Quick Capture (Ctrl+K)
 - Кнопки быстрого перемещения (→ Next, → Waiting, → Someday, → Trash)
 
-#### Подзадачи
+#### Подзадачи ✅ (Реализовано 11.04.2026)
 - Иерархия задач (parent_task_id)
-- Прогресс подзадач (subtasks_count, subtasks_completed)
-- Раскрываемый список подзадач в карточке задачи
+- Создание подзадач через API: POST /api/tasks/{id}/subtasks
+- Получение подзадач: GET /api/tasks/{id}/subtasks
+- Подсчёт подзадач: subtasks_count, subtasks_completed в TaskResponse
+- GET /api/tasks — по умолчанию только корневые, ?include_subtasks=true для всех
+- Каскадное удаление подзадач при удалении родительской задачи
+- Хук useSubtasks(parentTaskId) — CRUD подзадач
+- Раскрываемый список подзадач в карточке задачи: индикатор (3/5), toggle, добавление
+- API: GET/POST /api/tasks/{id}/subtasks, GET /api/tasks?include_subtasks=true
+- Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/hooks/useSubtasks.ts`, `frontend/src/routes/GtdTaskList.tsx`
+- Тесты: `backend/tests/test_tasks.py` (9 тестов подзадач)
 
 #### Поиск и фильтрация
 - Полнотекстовый поиск по title + description + notes
@@ -386,6 +394,11 @@
 *Последнее обновление: 11 апреля 2026 года*
 
 **11 апреля 2026:**
+- Реализованы подзадачи: иерархия задач, создание/получение через API, подсчёт (subtasks_count/subtasks_completed)
+- Хук useSubtasks(parentTaskId), раскрываемый UI подзадач в карточке с toggle и добавлением
+- 9 тестов подзадач (создание, список, counts, toggle, include_subtasks, cascade delete)
+- GET /api/tasks по умолчанию возвращает только корневые задачи, ?include_subtasks=true для всех
+- Параметр include_subtasks и поля subtasks_count/subtasks_completed в TaskResponse
 - Реализовано управление проектами: CRUD API, хук useProjects, страницы /projects и /projects/:id, dropdown в форме задач
 - 29 тестов для проектов (CRUD, уникальность, прогресс-бар, задачи проекта, права доступа)
 - Прогресс-бар: автоматический подсчёт tasks_total, tasks_completed, progress_percent

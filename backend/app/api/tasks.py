@@ -8,6 +8,7 @@ from app.dependencies import get_current_user
 from app.models.user import User
 from app.schemas.task import (
     GtdCountsResponse,
+    SubtaskCreate,
     TaskCreate,
     TaskListResponse,
     TaskMoveRequest,
@@ -45,6 +46,7 @@ async def list_tasks(
     search: str | None = Query(default=None),
     sort_by: str = Query(default='created_at'),
     sort_order: str = Query(default='desc'),
+    include_subtasks: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TaskListResponse:
@@ -71,10 +73,18 @@ async def list_tasks(
         search=search,
         sort_by=sort_by,
         sort_order=sort_order,
+        include_subtasks=include_subtasks,
         limit=limit,
         offset=offset,
     )
-    return TaskListResponse(items=tasks, total=total)
+    items = []
+    for t in tasks:
+        subtasks_count, subtasks_completed = await service.get_subtask_counts(current_user.id, t.id)
+        resp = TaskResponse.model_validate(t)
+        resp.subtasks_count = subtasks_count
+        resp.subtasks_completed = subtasks_completed
+        items.append(resp)
+    return TaskListResponse(items=items, total=total)
 
 
 @tasks_router.post("", status_code=status.HTTP_201_CREATED, response_model=TaskResponse)
@@ -103,7 +113,11 @@ async def get_task(
             detail="Task not found",
         )
 
-    return task
+    subtasks_count, subtasks_completed = await service.get_subtask_counts(current_user.id, task.id)
+    resp = TaskResponse.model_validate(task)
+    resp.subtasks_count = subtasks_count
+    resp.subtasks_completed = subtasks_completed
+    return resp
 
 
 @tasks_router.put("/{task_id}", response_model=TaskResponse)
@@ -201,3 +215,41 @@ async def delete_task(
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@tasks_router.get("/{task_id}/subtasks", response_model=list[TaskResponse])
+async def list_subtasks(
+    task_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[TaskResponse]:
+    service = TaskService(db)
+    parent = await service.get_task(user_id=current_user.id, task_id=task_id)
+    if parent is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+    subtasks = await service.get_subtasks(user_id=current_user.id, parent_task_id=task_id)
+    return [TaskResponse.model_validate(st) for st in subtasks]
+
+
+@tasks_router.post(
+    "/{task_id}/subtasks", status_code=status.HTTP_201_CREATED, response_model=TaskResponse
+)
+async def create_subtask(
+    task_id: str,
+    data: SubtaskCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TaskResponse:
+    service = TaskService(db)
+    task = await service.create_subtask(
+        user_id=current_user.id, parent_task_id=task_id, data=TaskCreate(title=data.title, description=data.description)
+    )
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+    return task

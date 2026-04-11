@@ -67,6 +67,8 @@ class TaskResponse(BaseModel):
     due_date: datetime | None
     notes: str | None
     tags: list[TagBriefResponse] = []
+    subtasks_count: int = 0
+    subtasks_completed: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -87,3 +89,8 @@ class GtdCountsResponse(BaseModel):
     someday: int = 0
     completed: int = 0
     trash: int = 0
+
+
+class SubtaskCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None

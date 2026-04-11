@@ -19,6 +19,8 @@ export interface Task {
   due_date: string | null
   notes: string | null
   tags: Tag[]
+  subtasks_count: number
+  subtasks_completed: number
   user_id: string
   created_at: string
   updated_at: string
@@ -38,6 +40,8 @@ interface ApiTask {
   due_date: string | null
   notes: string | null
   tags: Tag[]
+  subtasks_count: number
+  subtasks_completed: number
   user_id: string
   created_at: string
   updated_at: string

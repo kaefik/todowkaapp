@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import Integer, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -29,10 +29,13 @@ class TaskService:
         search: str | None = None,
         sort_by: str = 'created_at',
         sort_order: str = 'desc',
+        include_subtasks: bool = False,
         limit: int = 100,
         offset: int = 0,
     ) -> tuple[list[Task], int]:
-        base_where = [Task.user_id == user_id, Task.parent_task_id.is_(None)]
+        base_where = [Task.user_id == user_id]
+        if not include_subtasks:
+            base_where.append(Task.parent_task_id.is_(None))
 
         if gtd_status is not None:
             base_where.append(Task.gtd_status == gtd_status)
@@ -213,8 +216,59 @@ class TaskService:
         return await self.get_task(user_id, task_id)
 
     async def delete_task(self, user_id: UUID, task_id: UUID) -> bool:
-        result = await self.db.execute(
-            delete(Task).where(Task.id == task_id, Task.user_id == user_id)
+        task = await self.get_task(user_id, task_id)
+        if task is None:
+            return False
+        await self.db.execute(
+            delete(Task).where(Task.parent_task_id == str(task_id))
         )
+        await self.db.delete(task)
         await self.db.flush()
-        return result.rowcount > 0
+        return True
+
+    async def get_subtasks(self, user_id: UUID, parent_task_id: UUID | str) -> list[Task]:
+        parent = await self.get_task(user_id, parent_task_id)
+        if parent is None:
+            return []
+        result = await self.db.execute(
+            select(Task)
+            .options(selectinload(Task.tags))
+            .where(Task.parent_task_id == str(parent_task_id), Task.user_id == user_id)
+            .order_by(Task.position.asc(), Task.created_at.asc())
+        )
+        return list(result.scalars().all())
+
+    async def create_subtask(
+        self, user_id: UUID, parent_task_id: UUID | str, data: TaskCreate
+    ) -> Task | None:
+        parent = await self.get_task(user_id, parent_task_id)
+        if parent is None:
+            return None
+        task = Task(
+            user_id=str(user_id),
+            title=data.title,
+            description=data.description,
+            gtd_status=data.gtd_status.value if isinstance(data.gtd_status, GtdStatus) else data.gtd_status,
+            context_id=data.context_id,
+            area_id=data.area_id,
+            project_id=data.project_id,
+            parent_task_id=str(parent_task_id),
+            due_date=data.due_date,
+            notes=data.notes,
+        )
+        if data.tag_ids:
+            tags = await self._resolve_tags(user_id, data.tag_ids)
+            task.tags = tags
+        self.db.add(task)
+        await self.db.flush()
+        return await self.get_task(user_id, task.id)
+
+    async def get_subtask_counts(self, user_id: UUID, parent_task_id: UUID | str) -> tuple[int, int]:
+        result = await self.db.execute(
+            select(func.count(Task.id), func.sum(func.cast(Task.is_completed, Integer)))
+            .where(Task.parent_task_id == str(parent_task_id), Task.user_id == user_id)
+        )
+        row = result.one()
+        total = row[0] or 0
+        completed = row[1] or 0
+        return total, completed

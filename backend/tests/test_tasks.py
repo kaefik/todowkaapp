@@ -567,3 +567,154 @@ async def test_get_gtd_counts(client, auth_user1):
     assert data["someday"] == 0
     assert data["completed"] == 0
     assert data["trash"] == 0
+
+
+@pytest.mark.asyncio
+async def test_create_subtask(client, auth_user1, task1):
+    response = await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Subtask 1"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["title"] == "Subtask 1"
+    assert data["parent_task_id"] == task1["id"]
+    assert data["gtd_status"] == "inbox"
+
+
+@pytest.mark.asyncio
+async def test_list_subtasks(client, auth_user1, task1):
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Subtask A"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Subtask B"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks/{task1['id']}/subtasks",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["title"] == "Subtask A"
+    assert data[1]["title"] == "Subtask B"
+
+
+@pytest.mark.asyncio
+async def test_subtask_counts_in_task_response(client, auth_user1, task1):
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Sub 1"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Sub 2"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks/{task1['id']}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["subtasks_count"] == 2
+    assert data["subtasks_completed"] == 0
+
+
+@pytest.mark.asyncio
+async def test_subtask_toggle_and_counts(client, auth_user1, task1):
+    sub1 = await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Sub 1"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert sub1.status_code == 201
+    sub1_data = sub1.json()
+
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Sub 2"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    await client.patch(
+        f"/api/tasks/{sub1_data['id']}/toggle",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks/{task1['id']}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    data = response.json()
+    assert data["subtasks_count"] == 2
+    assert data["subtasks_completed"] == 1
+
+
+@pytest.mark.asyncio
+async def test_subtasks_not_in_root_list(client, auth_user1, task1):
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Hidden Subtask"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Test Task 1"
+
+
+@pytest.mark.asyncio
+async def test_include_subtasks_param(client, auth_user1, task1):
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Visible Subtask"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?include_subtasks=true",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    data = response.json()
+    assert data["total"] == 2
+
+
+@pytest.mark.asyncio
+async def test_create_subtask_not_found(client, auth_user1):
+    response = await client.post(
+        "/api/tasks/00000000-0000-0000-0000-000000000000/subtasks",
+        json={"title": "Orphan"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_cascade_delete_subtasks(client, db_session, auth_user1, task1):
+    await client.post(
+        f"/api/tasks/{task1['id']}/subtasks",
+        json={"title": "Will be deleted"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    await client.delete(
+        f"/api/tasks/{task1['id']}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    result = await db_session.execute(select(Task))
+    assert result.scalar_one_or_none() is None
