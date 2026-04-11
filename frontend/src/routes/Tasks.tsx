@@ -229,6 +229,19 @@ function TasksContent() {
                         {task.description}
                       </p>
                     )}
+                    {task.tags && task.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {task.tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
+                            style={{ backgroundColor: tag.color || '#6366f1' }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                       {formatDate(task.created_at)}
                     </p>
@@ -299,6 +312,19 @@ function TasksContent() {
                         <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through">
                           {task.description}
                         </p>
+                      )}
+                      {task.tags && task.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {task.tags.map((tag) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white opacity-60"
+                              style={{ backgroundColor: tag.color || '#6366f1' }}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
                       )}
                       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 line-through">
                         {formatDate(task.created_at)}

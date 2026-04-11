@@ -4,11 +4,22 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class TagBriefResponse(BaseModel):
+    id: UUID
+    name: str
+    color: str | None
+
+    model_config = {
+        'from_attributes': True
+    }
+
+
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     context_id: str | None = Field(default=None, max_length=36)
     area_id: str | None = Field(default=None, max_length=36)
+    tag_ids: list[str] | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -17,6 +28,7 @@ class TaskUpdate(BaseModel):
     is_completed: bool | None = None
     context_id: str | None = Field(default=None, max_length=36)
     area_id: str | None = Field(default=None, max_length=36)
+    tag_ids: list[str] | None = None
 
 
 class TaskResponse(BaseModel):
@@ -28,6 +40,7 @@ class TaskResponse(BaseModel):
     completed_at: datetime | None
     context_id: UUID | None
     area_id: UUID | None
+    tags: list[TagBriefResponse] = []
     created_at: datetime
     updated_at: datetime
 

@@ -47,6 +47,19 @@
 - Файлы: `backend/app/schemas/context.py`, `backend/app/services/context_service.py`, `backend/app/api/contexts.py`, `frontend/src/hooks/useContexts.ts`, `frontend/src/routes/Contexts.tsx`
 - Тесты: `backend/tests/test_contexts.py` (21 тест)
 
+#### Управление тегами
+- CRUD для тегов с цветовой маркировкой (создание, редактирование, удаление)
+- M:N связь тегов и задач (таблица task_tags)
+- Привязка/отвязка тегов к задачам через API
+- Проверка уникальности имени тега для каждого пользователя
+- Multi-select тегов (chips) в форме редактирования задачи
+- Цветные chips тегов в списке задач
+- Создание задач с тегами (tag_ids в TaskCreate/TaskUpdate)
+- Страница управления тегами (/tags)
+- API: GET/POST /api/tags, GET/PUT/DELETE /api/tags/{id}, POST/DELETE /api/tags/tasks/{task_id}/tags/{tag_id}
+- Файлы: `backend/app/schemas/tag.py`, `backend/app/services/tag_service.py`, `backend/app/api/tags.py`, `frontend/src/hooks/useTags.ts`, `frontend/src/routes/Tags.tsx`
+- Тесты: `backend/tests/test_tags.py` (29 тестов)
+
 #### GTD функционал (базовая реализация)
 - **Capture (Сбор задач):** быстрое создание задач в один клик
 - **Engage (Выполнение):** отметка задач как выполненных
@@ -300,11 +313,13 @@
 - Файлы: `backend/app/schemas/area.py`, `backend/app/services/area_service.py`, `backend/app/api/areas.py`, `frontend/src/hooks/useAreas.ts`, `frontend/src/routes/Areas.tsx`
 - Тесты: `backend/tests/test_areas.py` (21 тест)
 
-#### Теги
+#### Теги ✅ (Реализовано 11.04.2026)
 - CRUD для тегов с цветовой маркировкой
 - M:N связь тегов и задач (таблица task_tags)
 - Multi-select тегов в форме задачи
-- Фильтрация задач по тегам
+- Привязка/отвязка тегов через API
+- Цветные chips тегов в списке задач
+- Фильтрация задач по тегам (запланировано на Этап 6)
 
 #### Проекты
 - CRUD для проектов с прогресс-баром
@@ -361,7 +376,14 @@
 
 ## История возможностей
 
-*Последнее обновление: 10 апреля 2026 года*
+*Последнее обновление: 11 апреля 2026 года*
+
+**11 апреля 2026:**
+- Реализовано управление тегами: CRUD API, хук useTags, страница /tags, multi-select chips в форме задач
+- 29 тестов для тегов (CRUD, уникальность, привязка/отвязка к задачам, создание задач с тегами)
+- Обновлён TaskService для работы с tag_ids при создании/обновлении задач
+- Обновлён TaskResponse — включает список тегов для каждой задачи
+- Цветные chips тегов отображаются в списке задач (активных и выполненных)
 
 **10 апреля 2026:**
 - Реализовано управление контекстами: CRUD API, хук useContexts, страница /contexts, dropdown в форме задач

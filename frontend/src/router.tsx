@@ -6,6 +6,7 @@ import { Profile } from './routes/Profile'
 import { Settings } from './routes/Settings'
 import { Contexts } from './routes/Contexts'
 import { Areas } from './routes/Areas'
+import { Tags } from './routes/Tags'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 
@@ -45,6 +46,10 @@ const routes: RouteObject[] = [
       {
         path: 'areas',
         element: <Areas />,
+      },
+      {
+        path: 'tags',
+        element: <Tags />,
       },
     ],
   },

@@ -230,6 +230,7 @@ describe('TaskEditModal', () => {
           description: 'Updated description',
           context_id: null,
           area_id: null,
+          tag_ids: [],
         })
       })
     })
@@ -255,6 +256,7 @@ describe('TaskEditModal', () => {
           description: 'Test description',
           context_id: null,
           area_id: null,
+          tag_ids: [],
         })
       })
     })

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { httpClient, ApiError } from '../api/httpClient'
+import type { Tag } from './useTags'
 
 export interface Task {
   id: string
@@ -8,6 +9,7 @@ export interface Task {
   completed: boolean
   context_id: string | null
   area_id: string | null
+  tags: Tag[]
   user_id: string
   created_at: string
   updated_at: string
@@ -20,6 +22,7 @@ interface ApiTask {
   is_completed: boolean
   context_id: string | null
   area_id: string | null
+  tags: Tag[]
   user_id: string
   created_at: string
   updated_at: string
@@ -29,6 +32,7 @@ export interface CreateTask {
   title: string
   description?: string
   completed?: boolean
+  tag_ids?: string[]
 }
 
 export interface UpdateTask {
@@ -37,6 +41,7 @@ export interface UpdateTask {
   completed?: boolean
   context_id?: string | null
   area_id?: string | null
+  tag_ids?: string[]
 }
 
 interface UseTasksReturn {
@@ -51,6 +56,10 @@ interface UseTasksReturn {
   refetch: () => Promise<void>
 }
 
+function mapTask(t: ApiTask): Task {
+  return { ...t, completed: t.is_completed }
+}
+
 export function useTasks(): UseTasksReturn {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -61,7 +70,7 @@ export function useTasks(): UseTasksReturn {
     setError(null)
     try {
       const response = await httpClient.get<{ items: ApiTask[]; total: number }>('/tasks')
-      setTasks(response.data.items.map(t => ({ ...t, completed: t.is_completed })))
+      setTasks(response.data.items.map(mapTask))
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -81,12 +90,9 @@ export function useTasks(): UseTasksReturn {
     setIsLoading(true)
     setError(null)
     try {
-      console.log('Sending task data:', data)
       const response = await httpClient.post<ApiTask>('/tasks', data)
-      console.log('Task created:', response.data)
-      setTasks((prev) => [...prev, { ...response.data, completed: response.data.is_completed }])
+      setTasks((prev) => [...prev, mapTask(response.data)])
     } catch (err) {
-      console.error('Failed to add task:', err)
       if (err instanceof ApiError) {
         setError(err.message)
         throw err
@@ -108,10 +114,11 @@ export function useTasks(): UseTasksReturn {
       if (data.completed !== undefined) updateData.is_completed = data.completed
       if (data.context_id !== undefined) updateData.context_id = data.context_id
       if (data.area_id !== undefined) updateData.area_id = data.area_id
+      if (data.tag_ids !== undefined) updateData.tag_ids = data.tag_ids
 
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
       setTasks((prev) =>
-        prev.map((task) => (task.id === id ? { ...response.data, completed: response.data.is_completed } : task))
+        prev.map((task) => (task.id === id ? mapTask(response.data) : task))
       )
     } catch (err) {
       if (err instanceof ApiError) {
@@ -126,15 +133,12 @@ export function useTasks(): UseTasksReturn {
   }, [])
 
   const toggleTask = useCallback(async (id: string) => {
-    const task = tasks.find((t) => t.id === id)
-    if (!task) return
-
     setIsLoading(true)
     setError(null)
     try {
       const response = await httpClient.patch<ApiTask>(`/tasks/${id}/toggle`)
       setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...response.data, completed: response.data.is_completed } : t))
+        prev.map((t) => (t.id === id ? mapTask(response.data) : t))
       )
     } catch (err) {
       if (err instanceof ApiError) {
@@ -146,7 +150,7 @@ export function useTasks(): UseTasksReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [tasks])
+  }, [])
 
   const deleteTask = useCallback(async (id: string) => {
     setIsLoading(true)
@@ -171,7 +175,7 @@ export function useTasks(): UseTasksReturn {
     setError(null)
     try {
       const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
-      return { ...response.data, completed: response.data.is_completed }
+      return mapTask(response.data)
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)

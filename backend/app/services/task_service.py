@@ -3,7 +3,9 @@ from uuid import UUID
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.models.tag import Tag
 from app.models.task import Task
 from app.schemas.task import TaskCreate, TaskUpdate
 
@@ -22,6 +24,7 @@ class TaskService:
 
         result = await self.db.execute(
             select(Task)
+            .options(selectinload(Task.tags))
             .where(Task.user_id == user_id)
             .order_by(Task.created_at.desc())
             .limit(limit)
@@ -31,11 +34,23 @@ class TaskService:
 
         return tasks, total
 
-    async def get_task(self, user_id: UUID, task_id: UUID) -> Task | None:
+    async def get_task(self, user_id: UUID, task_id: UUID | str) -> Task | None:
         result = await self.db.execute(
-            select(Task).where(Task.id == task_id, Task.user_id == user_id)
+            select(Task)
+            .options(selectinload(Task.tags))
+            .where(Task.id == task_id, Task.user_id == user_id)
+            .execution_options(populate_existing=True)
         )
         return result.scalar_one_or_none()
+
+    async def _resolve_tags(self, user_id: UUID, tag_ids: list[str]) -> list[Tag]:
+        result = await self.db.execute(
+            select(Tag).where(
+                Tag.user_id == user_id,
+                Tag.id.in_(tag_ids),
+            )
+        )
+        return list(result.scalars().all())
 
     async def create_task(self, user_id: UUID, data: TaskCreate) -> Task:
         task = Task(
@@ -45,10 +60,12 @@ class TaskService:
             context_id=data.context_id,
             area_id=data.area_id,
         )
+        if data.tag_ids:
+            tags = await self._resolve_tags(user_id, data.tag_ids)
+            task.tags = tags
         self.db.add(task)
         await self.db.flush()
-        await self.db.refresh(task)
-        return task
+        return await self.get_task(user_id, task.id)
 
     async def update_task(
         self, user_id: UUID, task_id: UUID, data: TaskUpdate
@@ -58,12 +75,17 @@ class TaskService:
             return None
 
         update_data = data.model_dump(exclude_unset=True)
+
+        tag_ids = update_data.pop('tag_ids', None)
+        if tag_ids is not None:
+            tags = await self._resolve_tags(user_id, tag_ids)
+            task.tags = tags
+
         for field, value in update_data.items():
             setattr(task, field, value)
 
         await self.db.flush()
-        await self.db.refresh(task)
-        return task
+        return await self.get_task(user_id, task_id)
 
     async def toggle_task(self, user_id: UUID, task_id: UUID) -> Task | None:
         from datetime import datetime
@@ -78,8 +100,7 @@ class TaskService:
         else:
             task.completed_at = None
         await self.db.flush()
-        await self.db.refresh(task)
-        return task
+        return await self.get_task(user_id, task_id)
 
     async def delete_task(self, user_id: UUID, task_id: UUID) -> bool:
         result = await self.db.execute(

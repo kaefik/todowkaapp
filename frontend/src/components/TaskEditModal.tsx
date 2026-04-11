@@ -7,6 +7,7 @@ import type { Task, UpdateTask } from '../hooks/useTasks'
 import { useTasks } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
+import { useTags, type Tag } from '../hooks/useTags'
 
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -24,13 +25,49 @@ interface TaskEditModalProps {
   onSave: (id: string, data: UpdateTask) => void
 }
 
+function TagChips({ tags, selectedTagIds, onToggle }: {
+  tags: Tag[]
+  selectedTagIds: string[]
+  onToggle: (tagId: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {tags.map((tag) => {
+        const isSelected = selectedTagIds.includes(tag.id)
+        return (
+          <button
+            key={tag.id}
+            type="button"
+            onClick={() => onToggle(tag.id)}
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              isSelected
+                ? 'text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+            style={isSelected ? { backgroundColor: tag.color || '#6366f1' } : undefined}
+          >
+            {tag.name}
+          </button>
+        )
+      })}
+      {tags.length === 0 && (
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+          Нет тегов. Создайте их на странице «Теги».
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalProps) {
   const { fetchTask } = useTasks()
   const { contexts } = useContexts()
   const { areas } = useAreas()
+  const { tags } = useTags()
   const [currentTask, setCurrentTask] = useState<Task | null>(task)
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
 
   const {
     register,
@@ -48,6 +85,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       fetchTask(task.id)
         .then((data) => {
           setCurrentTask(data)
+          setSelectedTagIds(data.tags.map((t: Tag) => t.id))
           setLoading(false)
         })
         .catch((err) => {
@@ -69,9 +107,15 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     }
   }, [currentTask, reset])
 
+  const handleTagToggle = (tagId: string) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+    )
+  }
+
   const onSubmit = (data: EditTaskFormData) => {
     if (!currentTask) return
-    onSave(currentTask.id, data)
+    onSave(currentTask.id, { ...data, tag_ids: selectedTagIds })
     onClose()
   }
 
@@ -169,6 +213,17 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Теги
+              </label>
+              <TagChips
+                tags={tags}
+                selectedTagIds={selectedTagIds}
+                onToggle={handleTagToggle}
+              />
             </div>
 
             <div className="flex gap-3 justify-end">
