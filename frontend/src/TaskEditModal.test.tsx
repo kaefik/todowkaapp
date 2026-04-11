@@ -8,7 +8,27 @@ vi.mock('./hooks/useTasks', () => ({
   useTasks: vi.fn(),
 }))
 
+vi.mock('./hooks/useContexts', () => ({
+  useContexts: vi.fn(),
+}))
+
+vi.mock('./hooks/useAreas', () => ({
+  useAreas: vi.fn(),
+}))
+
+vi.mock('./hooks/useTags', () => ({
+  useTags: vi.fn(),
+}))
+
+vi.mock('./hooks/useProjects', () => ({
+  useProjects: vi.fn(),
+}))
+
 import { useTasks } from './hooks/useTasks'
+import { useContexts } from './hooks/useContexts'
+import { useAreas } from './hooks/useAreas'
+import { useTags } from './hooks/useTags'
+import { useProjects } from './hooks/useProjects'
 
 describe('TaskEditModal', () => {
   const mockFetchTask = vi.fn()
@@ -20,9 +40,15 @@ describe('TaskEditModal', () => {
     title: 'Test Task',
     description: 'Test description',
     completed: false,
+    gtd_status: 'inbox',
     context_id: null,
     area_id: null,
     project_id: null,
+    parent_task_id: null,
+    position: 0,
+    due_date: null,
+    notes: null,
+    tags: [],
     user_id: 'user1',
     created_at: '2024-01-01',
     updated_at: '2024-01-01',
@@ -38,9 +64,46 @@ describe('TaskEditModal', () => {
       addTask: vi.fn(),
       updateTask: vi.fn(),
       toggleTask: vi.fn(),
+      moveTask: vi.fn(),
       deleteTask: vi.fn(),
       refetch: vi.fn(),
       fetchTask: mockFetchTask,
+    })
+    vi.mocked(useContexts).mockReturnValue({
+      contexts: [],
+      isLoading: false,
+      error: null,
+      addContext: vi.fn(),
+      updateContext: vi.fn(),
+      deleteContext: vi.fn(),
+      refetch: vi.fn(),
+    })
+    vi.mocked(useAreas).mockReturnValue({
+      areas: [],
+      isLoading: false,
+      error: null,
+      addArea: vi.fn(),
+      updateArea: vi.fn(),
+      deleteArea: vi.fn(),
+      refetch: vi.fn(),
+    })
+    vi.mocked(useTags).mockReturnValue({
+      tags: [],
+      isLoading: false,
+      error: null,
+      addTag: vi.fn(),
+      updateTag: vi.fn(),
+      deleteTag: vi.fn(),
+      refetch: vi.fn(),
+    })
+    vi.mocked(useProjects).mockReturnValue({
+      projects: [],
+      isLoading: false,
+      error: null,
+      addProject: vi.fn(),
+      updateProject: vi.fn(),
+      deleteProject: vi.fn(),
+      refetch: vi.fn(),
     })
   })
 
@@ -234,6 +297,9 @@ describe('TaskEditModal', () => {
           context_id: null,
           area_id: null,
           project_id: null,
+          gtd_status: 'inbox',
+          due_date: null,
+          notes: null,
           tag_ids: [],
         })
       })
@@ -261,6 +327,9 @@ describe('TaskEditModal', () => {
           context_id: null,
           area_id: null,
           project_id: null,
+          gtd_status: 'inbox',
+          due_date: null,
+          notes: null,
           tag_ids: [],
         })
       })

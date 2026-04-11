@@ -17,6 +17,7 @@ describe('Tasks', () => {
   const mockAddTask = vi.fn()
   const mockToggleTask = vi.fn()
   const mockDeleteTask = vi.fn()
+  const mockMoveTask = vi.fn()
   const mockRefetch = vi.fn()
 
   beforeEach(() => {
@@ -28,6 +29,7 @@ describe('Tasks', () => {
       addTask: mockAddTask,
       updateTask: vi.fn(),
       toggleTask: mockToggleTask,
+      moveTask: mockMoveTask,
       deleteTask: mockDeleteTask,
       refetch: mockRefetch,
     })
@@ -59,6 +61,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
@@ -78,6 +81,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
@@ -99,6 +103,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
@@ -180,6 +185,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
@@ -194,7 +200,7 @@ describe('Tasks', () => {
   })
 
   describe('deleting tasks', () => {
-    it('deletes task after confirmation', async () => {
+    it('moves task to trash when delete is clicked', async () => {
       const user = userEvent.setup()
       vi.mocked(useTasks).mockReturnValue({
         tasks: [
@@ -205,22 +211,20 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
-
-      global.confirm = vi.fn(() => true)
 
       renderTasks()
 
       const deleteButton = screen.getByRole('button', { name: 'Delete' })
       await user.click(deleteButton)
 
-      expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to delete this task?')
-      expect(mockDeleteTask).toHaveBeenCalledWith('1')
+      expect(mockMoveTask).toHaveBeenCalledWith('1', 'trash')
     })
 
-    it('does not delete task when cancelled', async () => {
+    it('does not call deleteTask directly', async () => {
       const user = userEvent.setup()
       vi.mocked(useTasks).mockReturnValue({
         tasks: [
@@ -231,18 +235,16 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
-
-      global.confirm = vi.fn(() => false)
 
       renderTasks()
 
       const deleteButton = screen.getByRole('button', { name: 'Delete' })
       await user.click(deleteButton)
 
-      expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to delete this task?')
       expect(mockDeleteTask).not.toHaveBeenCalled()
     })
   })
@@ -257,6 +259,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
@@ -281,6 +284,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: vi.fn(),
+        moveTask: vi.fn(),
         deleteTask: vi.fn(),
         refetch: mockRefetch,
       })
@@ -332,6 +336,7 @@ describe('Tasks', () => {
         addTask: mockAddTask,
         updateTask: vi.fn(),
         toggleTask: mockToggleTask,
+        moveTask: mockMoveTask,
         deleteTask: mockDeleteTask,
         refetch: mockRefetch,
       })
