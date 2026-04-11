@@ -62,8 +62,21 @@ async def test_create_task_success(client, auth_user1):
     assert data["title"] == "New Task"
     assert data["description"] == "Task description"
     assert data["is_completed"] is False
+    assert data["gtd_status"] == "inbox"
     assert "id" in data
     assert "created_at" in data
+
+
+@pytest.mark.asyncio
+async def test_create_task_with_gtd_status(client, auth_user1):
+    response = await client.post(
+        "/api/tasks",
+        json={"title": "Next Task", "gtd_status": "next"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["gtd_status"] == "next"
 
 
 @pytest.mark.asyncio
@@ -242,6 +255,7 @@ async def test_toggle_task_success(client, auth_user1, task1):
     assert response.status_code == 200
     data = response.json()
     assert data["is_completed"] is True
+    assert data["gtd_status"] == "completed"
     assert data["id"] == task1["id"]
 
     response = await client.patch(
@@ -250,6 +264,7 @@ async def test_toggle_task_success(client, auth_user1, task1):
     )
     data = response.json()
     assert data["is_completed"] is False
+    assert data["gtd_status"] == "inbox"
 
 
 @pytest.mark.asyncio
@@ -341,3 +356,214 @@ async def test_user_sees_only_own_tasks(client, db_session, auth_user1, auth_use
     )
     assert len(user2_tasks.json()["items"]) == 1
     assert user2_tasks.json()["items"][0]["title"] == "User2 Task"
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_next(client, auth_user1, task1):
+    assert task1["gtd_status"] == "inbox"
+
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/move",
+        json={"gtd_status": "next"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["gtd_status"] == "next"
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_waiting(client, auth_user1, task1):
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/move",
+        json={"gtd_status": "waiting"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["gtd_status"] == "waiting"
+    assert data["is_completed"] is False
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_completed(client, auth_user1, task1):
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/move",
+        json={"gtd_status": "completed"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["gtd_status"] == "completed"
+    assert data["is_completed"] is True
+    assert data["completed_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_someday(client, auth_user1, task1):
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/move",
+        json={"gtd_status": "someday"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["gtd_status"] == "someday"
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_trash(client, auth_user1, task1):
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/move",
+        json={"gtd_status": "trash"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["gtd_status"] == "trash"
+
+
+@pytest.mark.asyncio
+async def test_move_task_not_found(client, auth_user1):
+    response = await client.patch(
+        "/api/tasks/00000000-0000-0000-0000-000000000000/move",
+        json={"gtd_status": "next"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_move_task_not_owner(client, auth_user1, task1, auth_user2):
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/move",
+        json={"gtd_status": "next"},
+        headers={"Authorization": f"Bearer {auth_user2['token']}"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_reorder_task(client, auth_user1, task1):
+    response = await client.patch(
+        f"/api/tasks/{task1['id']}/reorder",
+        json={"position": 5},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["position"] == 5
+
+
+@pytest.mark.asyncio
+async def test_reorder_task_not_found(client, auth_user1):
+    response = await client.patch(
+        "/api/tasks/00000000-0000-0000-0000-000000000000/reorder",
+        json={"position": 1},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_filter_tasks_by_gtd_status(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Inbox Task", "gtd_status": "inbox"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Next Task", "gtd_status": "next"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Waiting Task", "gtd_status": "waiting"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?gtd_status=inbox",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Inbox Task"
+
+    response = await client.get(
+        "/api/tasks?gtd_status=next",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Next Task"
+
+    response = await client.get(
+        "/api/tasks?gtd_status=waiting",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Waiting Task"
+
+
+@pytest.mark.asyncio
+async def test_search_tasks(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Buy groceries"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Read book"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?search=groceries",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Buy groceries"
+
+
+@pytest.mark.asyncio
+async def test_get_gtd_counts(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Inbox 1", "gtd_status": "inbox"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Inbox 2", "gtd_status": "inbox"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Next 1", "gtd_status": "next"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Waiting 1", "gtd_status": "waiting"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks/counts",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["inbox"] == 2
+    assert data["next"] == 1
+    assert data["waiting"] == 1
+    assert data["someday"] == 0
+    assert data["completed"] == 0
+    assert data["trash"] == 0

@@ -20,6 +20,9 @@ describe('TaskEditModal', () => {
     title: 'Test Task',
     description: 'Test description',
     completed: false,
+    context_id: null,
+    area_id: null,
+    project_id: null,
     user_id: 'user1',
     created_at: '2024-01-01',
     updated_at: '2024-01-01',
@@ -230,6 +233,7 @@ describe('TaskEditModal', () => {
           description: 'Updated description',
           context_id: null,
           area_id: null,
+          project_id: null,
           tag_ids: [],
         })
       })
@@ -256,6 +260,7 @@ describe('TaskEditModal', () => {
           description: 'Test description',
           context_id: null,
           area_id: null,
+          project_id: null,
           tag_ids: [],
         })
       })

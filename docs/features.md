@@ -321,11 +321,18 @@
 - Цветные chips тегов в списке задач
 - Фильтрация задач по тегам (запланировано на Этап 6)
 
-#### Проекты
+#### Проекты ✅ (Реализовано 11.04.2026)
 - CRUD для проектов с прогресс-баром
 - Привязка задач к проекту (project_id)
 - Автоматический подсчёт прогресса (tasks_total, tasks_completed, progress_percent)
-- Страницы списка проектов и деталей проекта
+- Привязка проекта к области (area_id)
+- Архивация проектов (is_active)
+- Страница списка проектов (/projects) с карточками и прогресс-барами
+- Страница деталей проекта (/projects/:id) с прогрессом и списком задач
+- Dropdown выбора проекта в форме редактирования задачи
+- API: GET/POST /api/projects, GET/PUT/DELETE /api/projects/{id}, GET /api/projects/{id}/tasks
+- Файлы: `backend/app/schemas/project.py`, `backend/app/services/project_service.py`, `backend/app/api/projects.py`, `frontend/src/hooks/useProjects.ts`, `frontend/src/routes/Projects.tsx`, `frontend/src/routes/ProjectDetail.tsx`
+- Тесты: `backend/tests/test_projects.py` (29 тестов)
 
 #### GTD-статусы
 - Статусы: inbox, next_action, waiting_for, someday_maybe, reference, trash
@@ -379,6 +386,13 @@
 *Последнее обновление: 11 апреля 2026 года*
 
 **11 апреля 2026:**
+- Реализовано управление проектами: CRUD API, хук useProjects, страницы /projects и /projects/:id, dropdown в форме задач
+- 29 тестов для проектов (CRUD, уникальность, прогресс-бар, задачи проекта, права доступа)
+- Прогресс-бар: автоматический подсчёт tasks_total, tasks_completed, progress_percent
+- Страница деталей проекта с прогрессом и списком задач (активные/выполненные)
+- Добавлено поле project_id в TaskCreate, TaskUpdate, TaskResponse
+- Добавлен dropdown проекта в TaskEditModal
+- Ссылка «Проекты» добавлена в навигацию (десктоп и мобильная)
 - Реализовано управление тегами: CRUD API, хук useTags, страница /tags, multi-select chips в форме задач
 - 29 тестов для тегов (CRUD, уникальность, привязка/отвязка к задачам, создание задач с тегами)
 - Обновлён TaskService для работы с tag_ids при создании/обновлении задач

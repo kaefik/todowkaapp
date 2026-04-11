@@ -8,12 +8,14 @@ import { useTasks } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
+import { useProjects } from '../hooks/useProjects'
 
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().nullable().optional(),
   context_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   area_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  project_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
 })
 
 type EditTaskFormData = z.infer<typeof editTaskSchema>
@@ -64,6 +66,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const { contexts } = useContexts()
   const { areas } = useAreas()
   const { tags } = useTags()
+  const { projects } = useProjects()
   const [currentTask, setCurrentTask] = useState<Task | null>(task)
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -103,6 +106,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         description: currentTask.description,
         context_id: currentTask.context_id ?? null,
         area_id: (currentTask as Record<string, unknown>).area_id as string | null ?? null,
+        project_id: (currentTask as Record<string, unknown>).project_id as string | null ?? null,
       })
     }
   }, [currentTask, reset])
@@ -210,6 +214,24 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 {areas.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Проект
+              </label>
+              <select
+                {...register('project_id')}
+                id="project_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">Без проекта</option>
+                {projects.filter((p) => p.is_active).map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
                   </option>
                 ))}
               </select>

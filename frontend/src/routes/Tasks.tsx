@@ -20,7 +20,7 @@ function TasksContent() {
     addTask,
     updateTask,
     toggleTask,
-    deleteTask,
+    moveTask,
     refetch,
   } = useTasks()
 
@@ -94,9 +94,8 @@ function TasksContent() {
   }
 
   const handleDeleteTask = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this task?')) return
     try {
-      await deleteTask(id)
+      await moveTask(id, 'trash')
     } catch {
     }
   }

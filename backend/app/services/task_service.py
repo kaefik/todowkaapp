@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -6,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.tag import Tag
-from app.models.task import Task
+from app.models.task import GtdStatus, Task
 from app.schemas.task import TaskCreate, TaskUpdate
 
 
@@ -15,21 +16,84 @@ class TaskService:
         self.db = db
 
     async def get_tasks(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
+        self,
+        user_id: UUID,
+        gtd_status: str | None = None,
+        context_id: str | None = None,
+        area_id: str | None = None,
+        project_id: str | None = None,
+        tag_id: str | None = None,
+        is_completed: bool | None = None,
+        due_date_from: datetime | None = None,
+        due_date_to: datetime | None = None,
+        search: str | None = None,
+        sort_by: str = 'created_at',
+        sort_order: str = 'desc',
+        limit: int = 100,
+        offset: int = 0,
     ) -> tuple[list[Task], int]:
-        count_result = await self.db.execute(
-            select(func.count(Task.id)).where(Task.user_id == user_id)
-        )
+        base_where = [Task.user_id == user_id, Task.parent_task_id.is_(None)]
+
+        if gtd_status is not None:
+            base_where.append(Task.gtd_status == gtd_status)
+        if context_id is not None:
+            base_where.append(Task.context_id == context_id)
+        if area_id is not None:
+            base_where.append(Task.area_id == area_id)
+        if project_id is not None:
+            base_where.append(Task.project_id == project_id)
+        if is_completed is not None:
+            base_where.append(Task.is_completed == is_completed)
+        if due_date_from is not None:
+            base_where.append(Task.due_date >= due_date_from)
+        if due_date_to is not None:
+            base_where.append(Task.due_date <= due_date_to)
+        if search is not None:
+            base_where.append(
+                (Task.title.ilike(f'%{search}%'))
+                | (Task.description.ilike(f'%{search}%'))
+                | (Task.notes.ilike(f'%{search}%'))
+            )
+
+        if tag_id is not None:
+            from app.models.tag import task_tags
+
+            count_stmt = (
+                select(func.count(Task.id))
+                .select_from(Task)
+                .join(task_tags, Task.id == task_tags.c.task_id)
+                .where(task_tags.c.tag_id == tag_id, *base_where)
+            )
+        else:
+            count_stmt = select(func.count(Task.id)).where(*base_where)
+
+        count_result = await self.db.execute(count_stmt)
         total = count_result.scalar() or 0
 
-        result = await self.db.execute(
-            select(Task)
-            .options(selectinload(Task.tags))
-            .where(Task.user_id == user_id)
-            .order_by(Task.created_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        sort_column = getattr(Task, sort_by, Task.created_at)
+        order = sort_column.desc() if sort_order == 'desc' else sort_column.asc()
+
+        if tag_id is not None:
+            from app.models.tag import task_tags
+
+            result = await self.db.execute(
+                select(Task)
+                .options(selectinload(Task.tags))
+                .join(task_tags, Task.id == task_tags.c.task_id)
+                .where(task_tags.c.tag_id == tag_id, *base_where)
+                .order_by(order)
+                .limit(limit)
+                .offset(offset)
+            )
+        else:
+            result = await self.db.execute(
+                select(Task)
+                .options(selectinload(Task.tags))
+                .where(*base_where)
+                .order_by(order)
+                .limit(limit)
+                .offset(offset)
+            )
         tasks = list(result.scalars().all())
 
         return tasks, total
@@ -57,8 +121,13 @@ class TaskService:
             user_id=str(user_id),
             title=data.title,
             description=data.description,
+            gtd_status=data.gtd_status.value if isinstance(data.gtd_status, GtdStatus) else data.gtd_status,
             context_id=data.context_id,
             area_id=data.area_id,
+            project_id=data.project_id,
+            parent_task_id=data.parent_task_id,
+            due_date=data.due_date,
+            notes=data.notes,
         )
         if data.tag_ids:
             tags = await self._resolve_tags(user_id, data.tag_ids)
@@ -81,15 +150,54 @@ class TaskService:
             tags = await self._resolve_tags(user_id, tag_ids)
             task.tags = tags
 
+        if 'gtd_status' in update_data:
+            val = update_data.pop('gtd_status')
+            update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val
+
         for field, value in update_data.items():
             setattr(task, field, value)
 
         await self.db.flush()
         return await self.get_task(user_id, task_id)
 
-    async def toggle_task(self, user_id: UUID, task_id: UUID) -> Task | None:
-        from datetime import datetime
+    async def move_task(self, user_id: UUID, task_id: UUID, gtd_status: GtdStatus) -> Task | None:
+        task = await self.get_task(user_id, task_id)
+        if task is None:
+            return None
 
+        task.gtd_status = gtd_status.value
+        if gtd_status == GtdStatus.COMPLETED:
+            task.is_completed = True
+            task.completed_at = datetime.now()
+        elif task.gtd_status != GtdStatus.COMPLETED.value:
+            task.is_completed = False
+            task.completed_at = None
+
+        await self.db.flush()
+        return await self.get_task(user_id, task_id)
+
+    async def reorder_task(self, user_id: UUID, task_id: UUID, position: int) -> Task | None:
+        task = await self.get_task(user_id, task_id)
+        if task is None:
+            return None
+
+        task.position = position
+        await self.db.flush()
+        return await self.get_task(user_id, task_id)
+
+    async def get_gtd_counts(self, user_id: UUID) -> dict[str, int]:
+        result = await self.db.execute(
+            select(Task.gtd_status, func.count(Task.id))
+            .where(Task.user_id == user_id)
+            .group_by(Task.gtd_status)
+        )
+        rows = result.all()
+        counts = {s.value: 0 for s in GtdStatus}
+        for status_val, cnt in rows:
+            counts[status_val] = cnt
+        return counts
+
+    async def toggle_task(self, user_id: UUID, task_id: UUID) -> Task | None:
         task = await self.get_task(user_id, task_id)
         if task is None:
             return None
@@ -97,8 +205,10 @@ class TaskService:
         task.is_completed = not task.is_completed
         if task.is_completed:
             task.completed_at = datetime.now()
+            task.gtd_status = GtdStatus.COMPLETED.value
         else:
             task.completed_at = None
+            task.gtd_status = GtdStatus.INBOX.value
         await self.db.flush()
         return await self.get_task(user_id, task_id)
 
