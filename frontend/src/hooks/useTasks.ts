@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { httpClient, ApiError } from '../api/httpClient'
 import type { Tag } from './useTags'
 import { notifyTasksChanged } from './useGtdCounts'
@@ -93,32 +93,44 @@ function mapTask(t: ApiTask): Task {
   return { ...t, completed: t.is_completed }
 }
 
+function buildQueryString(filters?: TaskFilters): string {
+  if (!filters) return ''
+  const params = new URLSearchParams()
+  if (filters.gtd_status) params.set('gtd_status', filters.gtd_status)
+  if (filters.context_id) params.set('context_id', filters.context_id)
+  if (filters.area_id) params.set('area_id', filters.area_id)
+  if (filters.project_id) params.set('project_id', filters.project_id)
+  if (filters.tag_id) params.set('tag_id', filters.tag_id)
+  if (filters.is_completed !== undefined) params.set('is_completed', String(filters.is_completed))
+  if (filters.search) params.set('search', filters.search)
+  if (filters.sort_by) params.set('sort_by', filters.sort_by)
+  if (filters.sort_order) params.set('sort_order', filters.sort_order)
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
 export function useTasks(filters?: TaskFilters): UseTasksReturn {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const buildQueryString = useCallback(() => {
-    if (!filters) return ''
-    const params = new URLSearchParams()
-    if (filters.gtd_status) params.set('gtd_status', filters.gtd_status)
-    if (filters.context_id) params.set('context_id', filters.context_id)
-    if (filters.area_id) params.set('area_id', filters.area_id)
-    if (filters.project_id) params.set('project_id', filters.project_id)
-    if (filters.tag_id) params.set('tag_id', filters.tag_id)
-    if (filters.is_completed !== undefined) params.set('is_completed', String(filters.is_completed))
-    if (filters.search) params.set('search', filters.search)
-    if (filters.sort_by) params.set('sort_by', filters.sort_by)
-    if (filters.sort_order) params.set('sort_order', filters.sort_order)
-    const qs = params.toString()
-    return qs ? `?${qs}` : ''
-  }, [filters])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const qs = useMemo(() => buildQueryString(filters), [
+    filters?.gtd_status,
+    filters?.context_id,
+    filters?.area_id,
+    filters?.project_id,
+    filters?.tag_id,
+    filters?.is_completed,
+    filters?.search,
+    filters?.sort_by,
+    filters?.sort_order,
+  ])
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const qs = buildQueryString()
       const response = await httpClient.get<{ items: ApiTask[]; total: number }>(`/tasks${qs}`)
       setTasks(response.data.items.map(mapTask))
     } catch (err) {
@@ -130,7 +142,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     } finally {
       setIsLoading(false)
     }
-  }, [buildQueryString])
+  }, [qs])
 
   useEffect(() => {
     refetch()
