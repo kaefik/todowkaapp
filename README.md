@@ -5,9 +5,15 @@ A modern, full-stack Todo application with user authentication, task management,
 ## Features
 
 - **User Authentication**: Registration and login with JWT-based authentication
-- **Task Management**: Full CRUD operations for tasks (Create, Read, Update, Delete)
+- **Task Management**: Full CRUD operations with GTD methodology (inbox, next actions, waiting, someday)
+- **Projects**: Organize tasks into projects with automatic progress tracking
+- **Contexts**: Assign contexts to tasks (Office, Home, Phone, etc.)
+- **Areas**: Group tasks and projects by areas of responsibility
+- **Tags**: Multi-select color-coded tags with M:N relationship to tasks
+- **Subtasks**: Hierarchical task structure with progress indicators
+- **Search & Filters**: Full-text search, combined filters, sorting, URL state sync
 - **Refresh Tokens**: Secure token rotation with HttpOnly cookies
-- **Responsive UI**: Clean, mobile-friendly interface built with Tailwind CSS
+- **Responsive UI**: Clean, mobile-friendly interface with sidebar navigation
 - **PWA Support**: Installable as a desktop/mobile app with offline capabilities
 - **Real-time Updates**: Instant UI updates using React state management
 - **Type Safety**: Full TypeScript support on frontend, Python type hints on backend
@@ -265,6 +271,9 @@ ruff check .
 ruff check --fix .
 
 # Run type checker
+mypy . --ignore-missing-imports
+
+# Check import sorting
 ruff check --select I .
 ```
 
@@ -280,7 +289,7 @@ npm run lint
 npm run lint -- --fix
 
 # Run type checker
-npx tsc --noEmit -p frontend/
+npx tsc --noEmit
 ```
 
 ## CI/CD
@@ -297,7 +306,7 @@ The project uses GitHub Actions for continuous integration. The CI pipeline runs
 2. Set up Python 3.12
 3. Install dependencies (with pip caching)
 4. Run linter (ruff check)
-5. Run type checker (ruff check --select I)
+5. Run type checker (mypy)
 6. Run tests (pytest)
 
 **Frontend Job:**
@@ -306,7 +315,8 @@ The project uses GitHub Actions for continuous integration. The CI pipeline runs
 3. Install dependencies (with npm caching)
 4. Run linter (eslint)
 5. Run type checker (tsc --noEmit)
-6. Run build (npm run build)
+6. Run tests (vitest)
+7. Run build (npm run build)
 
 Both jobs run in parallel for faster feedback.
 
@@ -326,12 +336,52 @@ Once the backend is running, visit:
 - `GET /api/auth/me` - Get current user info
 
 **Tasks:**
-- `GET /api/tasks` - List tasks (with pagination)
+- `GET /api/tasks` - List tasks (with pagination, filters, search, sorting)
 - `POST /api/tasks` - Create new task
 - `GET /api/tasks/{id}` - Get single task
 - `PUT /api/tasks/{id}` - Update task
 - `PATCH /api/tasks/{id}/toggle` - Toggle task completion
+- `PATCH /api/tasks/{id}/move` - Move task to another GTD status
+- `PATCH /api/tasks/{id}/reorder` - Change task position
 - `DELETE /api/tasks/{id}` - Delete task
+- `GET /api/tasks/counts` - Get GTD status counts
+- `GET /api/tasks/{id}/subtasks` - List subtasks
+- `POST /api/tasks/{id}/subtasks` - Create subtask
+
+**Contexts:**
+- `GET /api/contexts` - List contexts
+- `POST /api/contexts` - Create context
+- `GET /api/contexts/{id}` - Get context
+- `PUT /api/contexts/{id}` - Update context
+- `DELETE /api/contexts/{id}` - Delete context
+
+**Areas:**
+- `GET /api/areas` - List areas
+- `POST /api/areas` - Create area
+- `GET /api/areas/{id}` - Get area
+- `PUT /api/areas/{id}` - Update area
+- `DELETE /api/areas/{id}` - Delete area
+
+**Tags:**
+- `GET /api/tags` - List tags
+- `POST /api/tags` - Create tag
+- `GET /api/tags/{id}` - Get tag
+- `PUT /api/tags/{id}` - Update tag
+- `DELETE /api/tags/{id}` - Delete tag
+- `POST /api/tags/tasks/{task_id}/tags/{tag_id}` - Add tag to task
+- `DELETE /api/tags/tasks/{task_id}/tags/{tag_id}` - Remove tag from task
+
+**Projects:**
+- `GET /api/projects` - List projects
+- `POST /api/projects` - Create project
+- `GET /api/projects/{id}` - Get project (with progress)
+- `PUT /api/projects/{id}` - Update project
+- `DELETE /api/projects/{id}` - Delete project
+- `GET /api/projects/{id}/tasks` - List project tasks
+
+**Stats & Config:**
+- `GET /api/stats` - Task statistics
+- `GET /api/config` - App configuration
 
 ## Project Structure
 
@@ -342,22 +392,40 @@ todowkaapp/
 │   │   ├── api/            # API routers
 │   │   │   ├── auth.py     # Authentication endpoints
 │   │   │   ├── router.py   # Main API router
-│   │   │   └── tasks.py    # Task endpoints
+│   │   │   ├── tasks.py    # Task endpoints (CRUD, move, toggle, subtasks)
+│   │   │   ├── contexts.py # Context endpoints
+│   │   │   ├── areas.py    # Area endpoints
+│   │   │   ├── tags.py     # Tag endpoints
+│   │   │   ├── projects.py # Project endpoints
+│   │   │   ├── users.py    # User management (admin)
+│   │   │   └── stats.py    # Statistics endpoint
 │   │   ├── models/         # SQLAlchemy ORM models
-│   │   │   ├── task.py     # Task model
-│   │   │   └── user.py     # User model
+│   │   │   ├── task.py     # Task model (GTD fields, subtasks)
+│   │   │   ├── user.py     # User model
+│   │   │   ├── context.py  # Context model
+│   │   │   ├── area.py     # Area model
+│   │   │   ├── tag.py      # Tag model + task_tags
+│   │   │   └── project.py  # Project model
 │   │   ├── schemas/        # Pydantic schemas
 │   │   │   ├── auth.py     # Auth schemas
-│   │   │   └── task.py     # Task schemas
+│   │   │   ├── task.py     # Task schemas (Create/Update/Response)
+│   │   │   ├── context.py  # Context schemas
+│   │   │   ├── area.py     # Area schemas
+│   │   │   ├── tag.py      # Tag schemas
+│   │   │   └── project.py  # Project schemas (with progress)
 │   │   ├── services/       # Business logic
-│   │   │   └── task_service.py
+│   │   │   ├── task_service.py
+│   │   │   ├── context_service.py
+│   │   │   ├── area_service.py
+│   │   │   ├── tag_service.py
+│   │   │   └── project_service.py
 │   │   ├── config.py       # Application configuration
 │   │   ├── database.py     # Database setup
 │   │   ├── dependencies.py # FastAPI dependencies
 │   │   ├── main.py         # Application entry point
 │   │   └── security.py     # Security utilities
 │   ├── alembic/            # Database migrations
-│   ├── tests/              # Backend tests
+│   ├── tests/              # Backend tests (174 tests)
 │   ├── data/               # SQLite database (created at runtime)
 │   ├── pyproject.toml      # Python dependencies
 │   └── .env.example        # Environment variables template
@@ -365,27 +433,50 @@ todowkaapp/
 ├── frontend/                # React frontend application
 │   ├── src/
 │   │   ├── api/            # API client
-│   │   │   └── httpClient.ts
+│   │   │   ├── httpClient.ts
+│   │   │   └── users.ts
 │   │   ├── components/     # React components
-│   │   │   ├── AppLayout.tsx
-│   │   │   ├── InstallPrompt.tsx
+│   │   │   ├── AppLayout.tsx      # Layout + Sidebar
+│   │   │   ├── InstallPrompt.tsx  # PWA install prompt
 │   │   │   ├── ProtectedRoute.tsx
-│   │   │   └── TaskEditModal.tsx
+│   │   │   ├── TaskEditModal.tsx  # Extended task form
+│   │   │   └── TaskFilterPanel.tsx # Search + filters + sort
 │   │   ├── hooks/          # Custom React hooks
-│   │   │   └── useTasks.ts
+│   │   │   ├── useTasks.ts       # Task CRUD + filters
+│   │   │   ├── useContexts.ts    # Context CRUD
+│   │   │   ├── useAreas.ts       # Area CRUD
+│   │   │   ├── useTags.ts        # Tag CRUD
+│   │   │   ├── useProjects.ts    # Project CRUD
+│   │   │   ├── useSubtasks.ts    # Subtask CRUD
+│   │   │   ├── useGtdCounts.ts   # GTD status counts
+│   │   │   ├── useTaskFilter.ts  # Filter state + URL sync
+│   │   │   └── useDebounce.ts
 │   │   ├── routes/         # Page components
 │   │   │   ├── Login.tsx
 │   │   │   ├── Register.tsx
-│   │   │   └── Tasks.tsx
+│   │   │   ├── Tasks.tsx
+│   │   │   ├── GtdTaskList.tsx  # Universal GTD list
+│   │   │   ├── Projects.tsx     # Project cards + progress
+│   │   │   ├── ProjectDetail.tsx
+│   │   │   ├── Contexts.tsx
+│   │   │   ├── Areas.tsx
+│   │   │   ├── Tags.tsx
+│   │   │   ├── Profile.tsx
+│   │   │   └── Settings.tsx
 │   │   ├── stores/         # Zustand stores
 │   │   │   └── authStore.ts
-│   │   ├── App.tsx         # Root component
+│   │   ├── router.tsx      # React Router config
 │   │   └── main.tsx        # Entry point
 │   ├── public/             # Static assets
 │   │   └── manifest.json   # PWA manifest
 │   ├── package.json        # Node dependencies
 │   ├── vite.config.ts      # Vite configuration
+│   ├── vitest.config.ts    # Test configuration
 │   └── .env.example        # Environment variables template
+│
+├── docs/                    # Documentation
+│   ├── features.md         # Feature tracking
+│   └── plans/              # Implementation plans
 │
 ├── docker/                  # Docker configuration
 │   ├── docker-compose.yml  # Multi-container setup
@@ -394,15 +485,8 @@ todowkaapp/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # GitHub Actions CI/CD
-│
-├── tasks/                  # Task management (Kanban)
-│   └── 2026-04-07/         # Task cards by date
-│       ├── 00-guide.md
-│       ├── backlog/
-│       ├── ready/
-│       ├── in_progress/
-│       └── done/
+│       ├── ci.yml          # CI: lint + typecheck + test
+│       └── deploy.yml      # CD: deploy to production
 │
 ├── .gitignore              # Git ignore rules
 ├── README.md               # This file

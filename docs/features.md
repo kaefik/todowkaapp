@@ -334,18 +334,23 @@
 - Файлы: `backend/app/schemas/project.py`, `backend/app/services/project_service.py`, `backend/app/api/projects.py`, `frontend/src/hooks/useProjects.ts`, `frontend/src/routes/Projects.tsx`, `frontend/src/routes/ProjectDetail.tsx`
 - Тесты: `backend/tests/test_projects.py` (29 тестов)
 
-#### GTD-статусы
-- Статусы: inbox, next_action, waiting_for, someday_maybe, reference, trash
+#### GTD-статусы ✅ (Реализовано 11.04.2026)
+- Статусы: inbox, next, waiting, someday, completed, trash
 - Поле gtd_status в модели tasks (default: inbox)
-- Перемещение задач между статусами (move)
-- Страницы для каждого GTD-статуса (/inbox, /next, /waiting, /someday, /completed)
-- Счётчики задач по статусам в sidebar
+- Перемещение задач между статусами (PATCH /api/tasks/{id}/move)
+- Страницы для каждого GTD-статуса (/inbox, /next, /waiting, /someday, /completed, /trash)
+- Счётчики задач по статусам в sidebar (GET /api/tasks/counts)
+- Хук useGtdCounts() с автообновлением через кастомное событие todowka:tasks-changed
+- Компонент GtdTaskList — универсальный список для всех GTD-статусов
+- Тесты: `backend/tests/test_tasks.py` (7 тестов move_task + 1 тест counts)
 
-#### Inbox — быстрый захват
-- Quick Capture Bar — быстрое добавление в Inbox (input + Enter)
-- Inline-форма уточнения задачи (контекст, проект, дедлайн, статус)
-- Клавиатурный шорткат для фокуса на Quick Capture (Ctrl+K)
+#### Inbox — быстрый захват ✅ (Реализовано 11.04.2026 — частично)
+- Inline-форма добавления задач на странице Inbox (input + Add)
+- Задачи по умолчанию создаются с gtd_status=inbox
 - Кнопки быстрого перемещения (→ Next, → Waiting, → Someday, → Trash)
+- Inline-форма уточнения через расширенный TaskEditModal
+- ~Quick Capture Bar~ — не реализовано, не планируется
+- ~Клавиатурный шорткат (Ctrl+K)~ — не реализовано, не планируется
 
 #### Подзадачи ✅ (Реализовано 11.04.2026)
 - Иерархия задач (parent_task_id)
@@ -374,31 +379,50 @@
 - Файлы: `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/hooks/useDebounce.ts`, `frontend/src/hooks/useTaskFilterSync.ts`
 - Интегрировано в GtdTaskList и Tasks
 
-#### Sidebar навигация
-- GTD-секции с badges-счётчиками
-- Список проектов с мини-прогрессбарами
-- Контексты, области, теги
+#### Sidebar навигация ✅ (Реализовано 12.04.2026 — частично)
+- GTD-секции с badges-счётчиками (Inbox, Next, Waiting, Someday)
+- Completed и Trash с счётчиками
+- Секция «Управление»: Проекты, Контексты, Области, Теги
+- Профиль пользователя, Настройки, Выход
 - Mobile: slide-over через бургер-меню
-- Desktop: collapsible (свернуть в иконки)
+- Desktop: фиксированный sidebar (w-64)
+- Компонент AppLayout с SidebarContent
+- Хук useGtdCounts() для счётчиков
+- ~Мини-прогрессбар у проектов~ — не реализовано, не планируется
+- ~Desktop collapsible~ — не реализовано, не планируется
 
-#### Расширенная форма задачи
-- Поля: gtd_status, контекст, проект, область, дедлайн, теги, заметки
-- Progressive disclosure (базовые поля + «Дополнительно»)
-- Автозаполнение при создании из контекста sidebar
+#### Расширенная форма задачи ✅ (Реализовано 12.04.2026)
+- Поля: title, description, gtd_status, контекст, проект, область, дедлайн, теги, заметки
+- GTD статус: select (inbox, next, waiting, someday, completed, trash)
+- Контекст: dropdown с CRUD через useContexts()
+- Проект: dropdown (только is_active) через useProjects()
+- Область: dropdown через useAreas()
+- Дедлайн: date input
+- Заметки: textarea
+- Теги: TagChips — multi-select с цветовой индикацией
+- Zod валидация (title обязателен)
+- Автозаполнение при редактировании (fetchTask)
 
-#### Новые модели БД
-- Таблица `contexts` (id, user_id, name, created_at)
-- Таблица `areas` (id, user_id, name, created_at)
+#### Новые модели БД ✅ (Реализовано 10-11.04.2026)
+- Таблица `contexts` (id, user_id, name, color, icon, created_at)
+- Таблица `areas` (id, user_id, name, description, color, created_at)
 - Таблица `tags` (id, user_id, name, color, created_at)
-- Таблица `task_tags` (task_id, tag_id)
-- Таблица `projects` (id, user_id, name, description, area_id, status, created_at, updated_at)
+- Таблица `task_tags` (task_id, tag_id) — M:N связь
+- Таблица `projects` (id, user_id, name, description, color, area_id, is_active, created_at, updated_at)
 - Расширение `tasks` (gtd_status, context_id, area_id, project_id, parent_task_id, position, due_date, notes)
+- 8 индексов для оптимизации запросов
+- Миграции: 002_add_contexts_areas_tags, 003_add_projects, 004_extend_tasks_gtd
 
 ---
 
 ## История возможностей
 
 *Последнее обновление: 12 апреля 2026 года*
+
+**12 апреля 2026 (Этап 8 — Финализация):**
+- Написаны frontend тесты: AppLayout/Sidebar (15), TaskEditModal extended (23), TaskFilterPanel + HighlightText (16), Projects (16), Subtasks (17)
+- Итого frontend: 236 тестов (12 файлов)
+- Обновлены статусы в docs/features.md: GTD-статусы, Inbox, Sidebar, Extended Task Form, New DB Models отмечены как реализованные
 
 **12 апреля 2026:**
 - Реализован поиск и фильтрация (Этап 6): панель фильтров, поиск с debounce, сортировка, URL sync, highlight
