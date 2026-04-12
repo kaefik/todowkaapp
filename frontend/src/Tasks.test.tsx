@@ -1,10 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { Tasks } from './routes/Tasks'
 
 vi.mock('./hooks/useTasks', () => ({
   useTasks: vi.fn(),
+}))
+
+vi.mock('./hooks/useContexts', () => ({
+  useContexts: vi.fn(() => ({ contexts: [], isLoading: false, error: null, addContext: vi.fn(), updateContext: vi.fn(), deleteContext: vi.fn(), refetch: vi.fn() })),
+}))
+
+vi.mock('./hooks/useAreas', () => ({
+  useAreas: vi.fn(() => ({ areas: [], isLoading: false, error: null, addArea: vi.fn(), updateArea: vi.fn(), deleteArea: vi.fn(), refetch: vi.fn() })),
+}))
+
+vi.mock('./hooks/useProjects', () => ({
+  useProjects: vi.fn(() => ({ projects: [], isLoading: false, error: null, addProject: vi.fn(), updateProject: vi.fn(), deleteProject: vi.fn(), refetch: vi.fn() })),
+}))
+
+vi.mock('./hooks/useTags', () => ({
+  useTags: vi.fn(() => ({ tags: [], isLoading: false, error: null, addTag: vi.fn(), updateTag: vi.fn(), deleteTag: vi.fn(), refetch: vi.fn() })),
 }))
 
 vi.mock('./components/ProtectedRoute', () => ({
@@ -36,7 +53,11 @@ describe('Tasks', () => {
   })
 
   const renderTasks = () => {
-    return render(<Tasks />)
+    return render(
+      <MemoryRouter>
+        <Tasks />
+      </MemoryRouter>
+    )
   }
 
   describe('rendering', () => {
@@ -289,7 +310,11 @@ describe('Tasks', () => {
         refetch: mockRefetch,
       })
 
-      render(<Tasks />)
+      render(
+        <MemoryRouter>
+          <Tasks />
+        </MemoryRouter>
+      )
 
       act(() => {
         vi.advanceTimersByTime(100)

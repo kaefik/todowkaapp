@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
-import { useTasks, type Task, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { useTasks, type Task, type UpdateTask, type GtdStatus, type TaskFilters } from '../hooks/useTasks'
 import { useSubtasks } from '../hooks/useSubtasks'
 import { TaskEditModal } from '../components/TaskEditModal'
+import { TaskFilterPanel, HighlightText } from '../components/TaskFilterPanel'
+import { useTaskFilter } from '../hooks/useTaskFilter'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -117,6 +119,19 @@ function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtask
 
 export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
   const {
+    filters,
+    searchInput,
+    setSearchInput,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+  } = useTaskFilter({ gtd_status: gtdStatus })
+
+  const activeFilters: TaskFilters = useMemo(() => {
+    return { ...filters, gtd_status: gtdStatus }
+  }, [filters, gtdStatus])
+
+  const {
     tasks,
     isLoading,
     error,
@@ -126,7 +141,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     moveTask,
     deleteTask,
     refetch,
-  } = useTasks({ gtd_status: gtdStatus })
+  } = useTasks(activeFilters)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const [showDescription, setShowDescription] = useState(false)
@@ -241,6 +256,17 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+
+        <TaskFilterPanel
+          filters={activeFilters}
+          searchInput={searchInput}
+          onSearchInput={setSearchInput}
+          onUpdateFilter={updateFilter}
+          onClearFilters={clearFilters}
+          hasActiveFilters={hasActiveFilters}
+          hideGtdStatus
+        />
+
         {[...Array(3)].map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 animate-pulse">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
@@ -254,6 +280,16 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+
+      <TaskFilterPanel
+        filters={activeFilters}
+        searchInput={searchInput}
+        onSearchInput={setSearchInput}
+        onUpdateFilter={updateFilter}
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+        hideGtdStatus
+      />
 
       {error && (
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
@@ -341,11 +377,11 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className={`text-sm font-medium ${task.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
-                    {task.title}
+                    <HighlightText text={task.title} query={filters.search} />
                   </h3>
                   {task.description && (
                     <p className={`mt-1 text-sm ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {task.description}
+                      <HighlightText text={task.description} query={filters.search} />
                     </p>
                   )}
                   {task.tags && task.tags.length > 0 && (

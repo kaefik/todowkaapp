@@ -197,19 +197,14 @@ export function AppLayout() {
         </div>
       )}
 
-      <div className="hidden lg:flex">
-        <aside className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
-          <Link to="/" className="block text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mb-6">
-            Todowka
-          </Link>
-          <SidebarContent />
-        </aside>
-        <main className="ml-64 flex-1 p-8">
-          <Outlet />
-        </main>
-      </div>
+      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
+        <Link to="/" className="block text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mb-6">
+          Todowka
+        </Link>
+        <SidebarContent />
+      </aside>
 
-      <main className="lg:hidden p-4">
+      <main className="p-4 lg:ml-64 lg:p-8">
         <Outlet />
       </main>
 

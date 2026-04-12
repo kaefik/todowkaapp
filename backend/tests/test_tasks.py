@@ -718,3 +718,388 @@ async def test_cascade_delete_subtasks(client, db_session, auth_user1, task1):
 
     result = await db_session.execute(select(Task))
     assert result.scalar_one_or_none() is None
+
+
+@pytest.mark.asyncio
+async def test_filter_by_context(client, auth_user1):
+    ctx = await client.post(
+        "/api/contexts",
+        json={"name": "Work"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    ctx_id = ctx.json()["id"]
+
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task with context", "context_id": ctx_id},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task without context"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks?context_id={ctx_id}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Task with context"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_area(client, auth_user1):
+    area = await client.post(
+        "/api/areas",
+        json={"name": "Health"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    area_id = area.json()["id"]
+
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task with area", "area_id": area_id},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task without area"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks?area_id={area_id}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Task with area"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_project(client, auth_user1):
+    proj = await client.post(
+        "/api/projects",
+        json={"name": "My Project"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    proj_id = proj.json()["id"]
+
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task in project", "project_id": proj_id},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task without project"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks?project_id={proj_id}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Task in project"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_tag(client, auth_user1):
+    tag = await client.post(
+        "/api/tags",
+        json={"name": "urgent"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    tag_id = tag.json()["id"]
+
+    await client.post(
+        "/api/tasks",
+        json={"title": "Tagged task", "tag_ids": [tag_id]},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Untagged task"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks?tag_id={tag_id}",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Tagged task"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_is_completed(client, auth_user1):
+    t = await client.post(
+        "/api/tasks",
+        json={"title": "To complete"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.patch(
+        f"/api/tasks/{t.json()['id']}/toggle",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Still active"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?is_completed=true",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "To complete"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_due_date_range(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Due soon", "due_date": "2026-05-01"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Due later", "due_date": "2026-12-01"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "No due date"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?due_date_from=2026-04-01&due_date_to=2026-06-01",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Due soon"
+
+
+@pytest.mark.asyncio
+async def test_sort_by_title_asc(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Zebra task"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Alpha task"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?sort_by=title&sort_order=asc",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["items"][0]["title"] == "Alpha task"
+    assert data["items"][1]["title"] == "Zebra task"
+
+
+@pytest.mark.asyncio
+async def test_sort_by_title_desc(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Alpha task"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Zebra task"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?sort_by=title&sort_order=desc",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["items"][0]["title"] == "Zebra task"
+    assert data["items"][1]["title"] == "Alpha task"
+
+
+@pytest.mark.asyncio
+async def test_sort_by_due_date(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Later", "due_date": "2026-12-01"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Sooner", "due_date": "2026-05-01"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?sort_by=due_date&sort_order=asc",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["items"][0]["title"] == "Sooner"
+    assert data["items"][1]["title"] == "Later"
+
+
+@pytest.mark.asyncio
+async def test_combined_filters(client, auth_user1):
+    ctx = await client.post(
+        "/api/contexts",
+        json={"name": "Office"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    ctx_id = ctx.json()["id"]
+
+    await client.post(
+        "/api/tasks",
+        json={
+            "title": "Important report",
+            "gtd_status": "next",
+            "context_id": ctx_id,
+            "due_date": "2026-05-15",
+        },
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={
+            "title": "Important report draft",
+            "gtd_status": "inbox",
+            "context_id": ctx_id,
+            "due_date": "2026-05-10",
+        },
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={
+            "title": "Important call",
+            "gtd_status": "next",
+            "due_date": "2026-06-01",
+        },
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        f"/api/tasks?gtd_status=next&context_id={ctx_id}&search=report",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Important report"
+
+
+@pytest.mark.asyncio
+async def test_search_case_insensitive(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Buy Groceries"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?search=groceries",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+
+    response = await client.get(
+        "/api/tasks?search=GROCERIES",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+
+
+@pytest.mark.asyncio
+async def test_search_in_description_and_notes(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task A", "description": "secret keyword here"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task B", "notes": "another SECRET note"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Task C"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?search=secret",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 2
+
+
+@pytest.mark.asyncio
+async def test_search_with_sort_and_pagination(client, auth_user1):
+    await client.post(
+        "/api/tasks",
+        json={"title": "Alpha search item"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Beta search item"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    await client.post(
+        "/api/tasks",
+        json={"title": "Gamma search item"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+
+    response = await client.get(
+        "/api/tasks?search=search&sort_by=title&sort_order=asc&limit=2&offset=0",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 3
+    assert len(data["items"]) == 2
+    assert data["items"][0]["title"] == "Alpha search item"
+    assert data["items"][1]["title"] == "Beta search item"
+
+    response = await client.get(
+        "/api/tasks?search=search&sort_by=title&sort_order=asc&limit=2&offset=2",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 3
+    assert len(data["items"]) == 1
+    assert data["items"][0]["title"] == "Gamma search item"

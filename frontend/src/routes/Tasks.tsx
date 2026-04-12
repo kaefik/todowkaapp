@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTasks, type Task, type UpdateTask } from '../hooks/useTasks'
 import { TaskEditModal } from '../components/TaskEditModal'
+import { TaskFilterPanel, HighlightText } from '../components/TaskFilterPanel'
+import { useTaskFilter } from '../hooks/useTaskFilter'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -14,6 +16,15 @@ type TaskCreateFormData = z.infer<typeof taskCreateSchema>
 
 function TasksContent() {
   const {
+    filters,
+    searchInput,
+    setSearchInput,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+  } = useTaskFilter()
+
+  const {
     tasks,
     isLoading,
     error,
@@ -22,7 +33,7 @@ function TasksContent() {
     toggleTask,
     moveTask,
     refetch,
-  } = useTasks()
+  } = useTasks(filters)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const [showDescription, setShowDescription] = useState(false)
@@ -131,6 +142,15 @@ function TasksContent() {
 
   return (
     <div className="space-y-6">
+      <TaskFilterPanel
+        filters={filters}
+        searchInput={searchInput}
+        onSearchInput={setSearchInput}
+        onUpdateFilter={updateFilter}
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+      />
+
       {error && (
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
           <div className="flex">
@@ -221,11 +241,11 @@ function TasksContent() {
                   />
                   <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {task.title}
+                      <HighlightText text={task.title} query={filters.search} />
                     </h3>
                     {task.description && (
                       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {task.description}
+                        <HighlightText text={task.description} query={filters.search} />
                       </p>
                     )}
                     {task.tags && task.tags.length > 0 && (
@@ -305,11 +325,11 @@ function TasksContent() {
                     />
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 line-through">
-                        {task.title}
+                        <HighlightText text={task.title} query={filters.search} />
                       </h3>
                       {task.description && (
                         <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through">
-                          {task.description}
+                          <HighlightText text={task.description} query={filters.search} />
                         </p>
                       )}
                       {task.tags && task.tags.length > 0 && (

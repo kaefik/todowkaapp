@@ -360,12 +360,19 @@
 - Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/hooks/useSubtasks.ts`, `frontend/src/routes/GtdTaskList.tsx`
 - Тесты: `backend/tests/test_tasks.py` (9 тестов подзадач)
 
-#### Поиск и фильтрация
-- Полнотекстовый поиск по title + description + notes
-- Комбинированные фильтры (GTD-статус, контекст, область, проект, теги, дедлайн)
-- Сортировка (по позиции, дате, дедлайну, названию)
-- Сохранение фильтров в URL query params
-- Подсветка результатов поиска
+#### Поиск и фильтрация ✅ (Реализовано 12.04.2026)
+- Полнотекстовый поиск по title + description + notes (регистронезависимый, ILIKE)
+- Комбинированные фильтры: GTD-статус, контекст, область, проект, тег, дедлайн (от/до)
+- Сортировка: по позиции, дате создания, дедлайну, названию + asc/desc
+- Панель фильтров с dropdowns, date range picker, кнопкой сброса
+- Строка поиска с debounce 300ms, иконка лупы, кнопка очистки
+- Dropdown сортировки + toggle asc/desc
+- Сохранение фильтров в URL query params (shareable links)
+- Подсветка найденного текста (HighlightText) в заголовках и описаниях задач
+- 13 query params в GET /api/tasks (gtd_status, context_id, area_id, project_id, tag_id, is_completed, due_date_from, due_date_to, search, sort_by, sort_order, include_subtasks, limit/offset)
+- 13 новых тестов: фильтрация по context/area/project/tag/is_completed/due_date_range, сортировка по title/due_date, комбинированные фильтры, case-insensitive поиск, поиск в description/notes
+- Файлы: `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/hooks/useDebounce.ts`, `frontend/src/hooks/useTaskFilterSync.ts`
+- Интегрировано в GtdTaskList и Tasks
 
 #### Sidebar навигация
 - GTD-секции с badges-счётчиками
@@ -391,7 +398,14 @@
 
 ## История возможностей
 
-*Последнее обновление: 11 апреля 2026 года*
+*Последнее обновление: 12 апреля 2026 года*
+
+**12 апреля 2026:**
+- Реализован поиск и фильтрация (Этап 6): панель фильтров, поиск с debounce, сортировка, URL sync, highlight
+- 13 новых тестов backend: фильтрация по context/area/project/tag/is_completed/due_date_range, сортировка, комбинированные фильтры, case-insensitive поиск
+- Компоненты: TaskFilterPanel (панель фильтров + HighlightText), хуки useDebounce, useTaskFilterSync
+- Добавлены due_date_from/due_date_to в TaskFilters и buildQueryString
+- Интеграция в GtdTaskList и Tasks
 
 **11 апреля 2026:**
 - Реализованы подзадачи: иерархия задач, создание/получение через API, подсчёт (subtasks_count/subtasks_completed)
