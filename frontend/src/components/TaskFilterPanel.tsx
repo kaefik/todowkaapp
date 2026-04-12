@@ -29,6 +29,7 @@ interface TaskFilterPanelProps {
   onClearFilters: () => void
   hasActiveFilters: boolean
   hideGtdStatus?: boolean
+  hideProject?: boolean
 }
 
 export function TaskFilterPanel({
@@ -39,6 +40,7 @@ export function TaskFilterPanel({
   onClearFilters,
   hasActiveFilters,
   hideGtdStatus,
+  hideProject,
 }: TaskFilterPanelProps) {
   const { contexts } = useContexts()
   const { areas } = useAreas()
@@ -199,23 +201,25 @@ export function TaskFilterPanel({
               </select>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Проект
-              </label>
-              <select
-                value={filters.project_id || ''}
-                onChange={(e) => onUpdateFilter('project_id', e.target.value || undefined)}
-                className={selectClass}
-              >
-                <option value="">Все проекты</option>
-                {projects.filter((p) => p.is_active).map((proj) => (
-                  <option key={proj.id} value={proj.id}>
-                    {proj.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!hideProject && (
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Проект
+                </label>
+                <select
+                  value={filters.project_id || ''}
+                  onChange={(e) => onUpdateFilter('project_id', e.target.value || undefined)}
+                  className={selectClass}
+                >
+                  <option value="">Все проекты</option>
+                  {projects.filter((p) => p.is_active).map((proj) => (
+                    <option key={proj.id} value={proj.id}>
+                      {proj.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">

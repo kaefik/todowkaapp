@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -176,6 +177,7 @@ function ProjectForm({
 }
 
 function ProjectsContent() {
+  const navigate = useNavigate()
   const { projects, isLoading, error, addProject, updateProject, deleteProject, refetch } = useProjects()
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -213,7 +215,7 @@ function ProjectsContent() {
   }
 
   const handleClickProject = (id: string) => {
-    window.location.hash = `/projects/${id}`
+    navigate(`/projects/${id}`)
   }
 
   if (isLoading && projects.length === 0) {

@@ -83,7 +83,7 @@ ProjectDetail
 
 ## Пошаговый план
 
-### Шаг 1. Создать `TaskListView` — извлечь из `GtdTaskList`
+### Шаг 1. Создать `TaskListView` — извлечь из `GtdTaskList` ✅ ВЫПОЛНЕНО
 
 **Файл:** `frontend/src/components/TaskListView.tsx`
 
@@ -137,7 +137,7 @@ interface TaskListViewProps {
 
 ---
 
-### Шаг 2. Рефакторинг `GtdTaskList.tsx` — тонкая обёртка
+### Шаг 2. Рефакторинг `GtdTaskList.tsx` — тонкая обёртка ✅ ВЫПОЛНЕНО
 
 **Файл:** `frontend/src/routes/GtdTaskList.tsx`
 
@@ -219,7 +219,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
 
 ---
 
-### Шаг 3. Переработка `ProjectDetail.tsx` — полноценная страница проекта
+### Шаг 3. Переработка `ProjectDetail.tsx` — полноценная страница проекта ✅ ВЫПОЛНЕНО
 
 **Файл:** `frontend/src/routes/ProjectDetail.tsx`
 
@@ -282,7 +282,7 @@ export function ProjectDetail() {
 
 ---
 
-### Шаг 4. Обновить `TaskFilterPanel` — добавить `hideProject` prop
+### Шаг 4. Обновить `TaskFilterPanel` — добавить `hideProject` prop ✅ ВЫПОЛНЕНО
 
 **Файл:** `frontend/src/components/TaskFilterPanel.tsx`
 
@@ -297,7 +297,7 @@ export function ProjectDetail() {
 
 ---
 
-### Шаг 5. Обновить `useTaskFilter` — поддержку `project_id`
+### Шаг 5. Обновить `useTaskFilter` — поддержку `project_id` ✅ ВЫПОЛНЕНО
 
 **Файл:** `frontend/src/hooks/useTaskFilter.ts`
 

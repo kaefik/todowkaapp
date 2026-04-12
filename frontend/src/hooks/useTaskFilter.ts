@@ -57,18 +57,18 @@ export function useTaskFilter(
   }, [])
 
   const hasActiveFilters = useMemo(() => {
-    return !!(
-      filters.context_id ||
-      filters.area_id ||
-      filters.project_id ||
-      filters.tag_id ||
-      filters.is_completed !== undefined ||
-      filters.due_date_from ||
-      filters.due_date_to ||
-      filters.search ||
-      (filters.sort_by && filters.sort_by !== 'created_at') ||
-      filters.sort_order === 'asc'
-    )
+    const defaults = defaultsRef.current ?? {}
+    const hasNonDefault =
+      (filters.context_id && filters.context_id !== defaults.context_id) ||
+      (filters.area_id && filters.area_id !== defaults.area_id) ||
+      (filters.project_id && filters.project_id !== defaults.project_id) ||
+      (filters.tag_id && filters.tag_id !== defaults.tag_id) ||
+      (filters.is_completed !== undefined && filters.is_completed !== defaults.is_completed) ||
+      (filters.search && filters.search !== defaults.search)
+    const hasSort =
+      (filters.sort_by && filters.sort_by !== 'created_at' && filters.sort_by !== defaults.sort_by) ||
+      (filters.sort_order === 'asc' && filters.sort_order !== defaults.sort_order)
+    return !!(hasNonDefault || hasSort)
   }, [filters])
 
   return { filters, searchInput, setSearchInput, updateFilter, clearFilters, hasActiveFilters }
