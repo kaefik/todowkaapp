@@ -7,14 +7,14 @@ from pydantic import BaseModel, Field
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=1000)
-    color: str | None = Field(default=None, max_length=7)
+    color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
     area_id: str | None = Field(default=None, max_length=36)
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=1000)
-    color: str | None = Field(default=None, max_length=7)
+    color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
     area_id: str | None = Field(default=None, max_length=36)
     is_active: bool | None = None
 

@@ -1,13 +1,19 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useProjects, type Project } from '../hooks/useProjects'
+import { ColorPickerField } from '../components/ColorPickerField'
+
+const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
 const projectSchema = z.object({
   name: z.string().min(1, 'Название обязательно').max(200, 'Максимум 200 символов'),
   description: z.string().nullable().optional(),
-  color: z.string().nullable().optional(),
+  color: z.string().nullable().optional().refine(
+    (val) => val === null || val === undefined || val === '' || colorHexRegex.test(val),
+    { message: 'Формат: #RRGGBB' }
+  ),
 })
 
 type ProjectFormData = z.infer<typeof projectSchema>
@@ -103,6 +109,7 @@ function ProjectForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
@@ -129,12 +136,13 @@ function ProjectForm({
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
             )}
           </div>
-          <div className="w-20">
-            <input
-              {...register('color')}
-              type="text"
-              placeholder="#FFF"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm"
+          <div className="w-28">
+            <Controller
+              name="color"
+              control={control}
+              render={({ field }) => (
+                <ColorPickerField value={field.value} onChange={field.onChange} />
+              )}
             />
           </div>
         </div>

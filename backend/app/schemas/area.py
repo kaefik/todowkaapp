@@ -7,13 +7,13 @@ from pydantic import BaseModel, Field
 class AreaCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=500)
-    color: str | None = Field(default=None, max_length=7)
+    color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 
 class AreaUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     description: str | None = Field(default=None, max_length=500)
-    color: str | None = Field(default=None, max_length=7)
+    color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 
 class AreaResponse(BaseModel):
