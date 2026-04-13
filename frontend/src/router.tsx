@@ -17,6 +17,7 @@ import { Projects } from './routes/Projects'
 import { ProjectDetail } from './routes/ProjectDetail'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
+import { Notifications } from './routes/Notifications'
 
 const routes: RouteObject[] = [
   {
@@ -90,6 +91,10 @@ const routes: RouteObject[] = [
       {
         path: 'projects',
         element: <Projects />,
+      },
+      {
+        path: 'notifications',
+        element: <Notifications />,
       },
       {
         path: 'projects/:id',

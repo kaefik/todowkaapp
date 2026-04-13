@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { InstallPrompt } from './InstallPrompt'
+import { NotificationBell } from './NotificationBell'
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
@@ -172,6 +173,9 @@ export function AppLayout() {
           <Link to="/" className="ml-3 text-xl font-bold text-indigo-600 dark:text-indigo-400">
             Todowka
           </Link>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
       </header>
 
@@ -198,9 +202,12 @@ export function AppLayout() {
       )}
 
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
-        <Link to="/" className="block text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 mb-6">
-          Todowka
-        </Link>
+        <div className="flex items-center justify-between mb-6">
+          <Link to="/" className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
+            Todowka
+          </Link>
+          <NotificationBell />
+        </div>
         <SidebarContent />
       </aside>
 
