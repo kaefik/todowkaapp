@@ -20,6 +20,7 @@ from app.schemas.task import (
     TaskUpdate,
 )
 from app.services.recurrence_service import RecurrenceService
+from app.services.reminder_service import ReminderService
 from app.services.task_service import TaskService
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -150,9 +151,11 @@ async def move_task(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaskResponse:
-    service = TaskService(db)
+    recurrence_service = RecurrenceService(db)
+    reminder_service = ReminderService(db)
+    service = TaskService(db, recurrence_service=recurrence_service, reminder_service=reminder_service)
     task = await service.move_task(
-        user_id=current_user.id, task_id=task_id, gtd_status=data.gtd_status
+        user_id=current_user.id, task_id=task_id, gtd_status=data.gtd_status, user=current_user
     )
 
     if task is None:
@@ -191,8 +194,10 @@ async def toggle_task(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaskResponse:
-    service = TaskService(db)
-    task = await service.toggle_task(user_id=current_user.id, task_id=task_id)
+    recurrence_service = RecurrenceService(db)
+    reminder_service = ReminderService(db)
+    service = TaskService(db, recurrence_service=recurrence_service, reminder_service=reminder_service)
+    task = await service.toggle_task(user_id=current_user.id, task_id=task_id, user=current_user)
 
     if task is None:
         raise HTTPException(

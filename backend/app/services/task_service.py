@@ -1,4 +1,5 @@
 from datetime import datetime
+from datetime import time as time_type
 from typing import Annotated
 from uuid import UUID
 
@@ -8,13 +9,22 @@ from sqlalchemy.orm import selectinload
 
 from app.models.tag import Tag
 from app.models.task import GtdStatus, Task
+from app.models.user import User
 from app.schemas.task import TaskCreate, TaskUpdate
 
 
 class TaskService:
-    def __init__(self, db: Annotated[AsyncSession, "Async database session"], recurrence_service=None):
+    def __init__(self, db: Annotated[AsyncSession, "Async database session"], recurrence_service=None, reminder_service=None):
         self.db = db
         self.recurrence_service = recurrence_service
+        self.reminder_service = reminder_service
+
+    @staticmethod
+    def _parse_reminder_time(reminder_time_str: str | None) -> time_type | None:
+        if reminder_time_str is None:
+            return None
+        parts = reminder_time_str.split(':')
+        return time_type(int(parts[0]), int(parts[1]))
 
     async def get_tasks(
         self,
@@ -132,6 +142,11 @@ class TaskService:
             parent_task_id=data.parent_task_id,
             due_date=data.due_date,
             notes=data.notes,
+            recurrence_type=data.recurrence_type,
+            recurrence_config=data.recurrence_config,
+            recurrence_end_date=data.recurrence_end_date,
+            reminder_time=self._parse_reminder_time(data.reminder_time),
+            reminder_days_before=data.reminder_days_before,
         )
         if data.tag_ids:
             tags = await self._resolve_tags(user_id, data.tag_ids)
@@ -158,13 +173,16 @@ class TaskService:
             val = update_data.pop('gtd_status')
             update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val
 
+        if 'reminder_time' in update_data:
+            update_data['reminder_time'] = self._parse_reminder_time(update_data['reminder_time'])
+
         for field, value in update_data.items():
             setattr(task, field, value)
 
         await self.db.flush()
         return await self.get_task(user_id, task_id)
 
-    async def move_task(self, user_id: UUID, task_id: UUID, gtd_status: GtdStatus) -> Task | None:
+    async def move_task(self, user_id: UUID, task_id: UUID, gtd_status: GtdStatus, user: User | None = None) -> Task | None:
         task = await self.get_task(user_id, task_id)
         if task is None:
             return None
@@ -183,8 +201,16 @@ class TaskService:
 
         if gtd_status == GtdStatus.COMPLETED and self.recurrence_service and not was_recurring_and_completed:
             if self.recurrence_service.should_generate_task(task):
-                await self.recurrence_service.generate_next_task(task)
+                new_task = await self.recurrence_service.generate_next_task(task)
                 await self.db.flush()
+
+                if self.reminder_service and new_task and user:
+                    await self.reminder_service.create_notification(
+                        user=user,
+                        task=new_task,
+                        type='recurrence_created',
+                        message=f'Создана повторяющаяся задача: "{new_task.title}"'
+                    )
 
         return await self.get_task(user_id, task_id)
 
@@ -209,7 +235,7 @@ class TaskService:
             counts[status_val] = cnt
         return counts
 
-    async def toggle_task(self, user_id: UUID, task_id: UUID) -> Task | None:
+    async def toggle_task(self, user_id: UUID, task_id: UUID, user: User | None = None) -> Task | None:
         task = await self.get_task(user_id, task_id)
         if task is None:
             return None
@@ -228,8 +254,16 @@ class TaskService:
 
         if task.is_completed and not was_recurring_and_completed and self.recurrence_service:
             if self.recurrence_service.should_generate_task(task):
-                await self.recurrence_service.generate_next_task(task)
+                new_task = await self.recurrence_service.generate_next_task(task)
                 await self.db.flush()
+
+                if self.reminder_service and new_task and user:
+                    await self.reminder_service.create_notification(
+                        user=user,
+                        task=new_task,
+                        type='recurrence_created',
+                        message=f'Создана повторяющаяся задача: "{new_task.title}"'
+                    )
 
         return await self.get_task(user_id, task_id)
 
