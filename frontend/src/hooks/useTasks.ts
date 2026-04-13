@@ -5,6 +5,15 @@ import { notifyTasksChanged } from './useGtdCounts'
 
 export type GtdStatus = 'inbox' | 'next' | 'waiting' | 'someday' | 'completed' | 'trash'
 
+export interface RecurrenceConfig {
+  type: 'daily' | 'weekly' | 'monthly'
+  interval: number
+  days?: number[]
+  day_of_month?: number
+  week_of_month?: number
+  day_of_week?: number
+}
+
 export interface ProjectBrief {
   id: string
   name: string
@@ -34,6 +43,12 @@ export interface Task {
   position: number
   due_date: string | null
   notes: string | null
+  recurrence_type: string | null
+  recurrence_config: RecurrenceConfig | null
+  recurrence_end_date: string | null
+  reminder_time: string | null
+  reminder_days_before: number | null
+  is_recurring: boolean
   tags: Tag[]
   subtasks_count: number
   subtasks_completed: number
@@ -57,6 +72,12 @@ interface ApiTask {
   position: number
   due_date: string | null
   notes: string | null
+  recurrence_type: string | null
+  recurrence_config: RecurrenceConfig | null
+  recurrence_end_date: string | null
+  reminder_time: string | null
+  reminder_days_before: number | null
+  is_recurring: boolean
   tags: Tag[]
   subtasks_count: number
   subtasks_completed: number
@@ -86,6 +107,11 @@ export interface UpdateTask {
   due_date?: string | null
   notes?: string | null
   tag_ids?: string[]
+  recurrence_type?: string | null
+  recurrence_config?: RecurrenceConfig | null
+  recurrence_end_date?: string | null
+  reminder_time?: string | null
+  reminder_days_before?: number | null
 }
 
 export interface TaskFilters {
@@ -206,6 +232,11 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       if (data.due_date !== undefined) updateData.due_date = data.due_date
       if (data.notes !== undefined) updateData.notes = data.notes
       if (data.tag_ids !== undefined) updateData.tag_ids = data.tag_ids
+      if (data.recurrence_type !== undefined) updateData.recurrence_type = data.recurrence_type
+      if (data.recurrence_config !== undefined) updateData.recurrence_config = data.recurrence_config
+      if (data.recurrence_end_date !== undefined) updateData.recurrence_end_date = data.recurrence_end_date
+      if (data.reminder_time !== undefined) updateData.reminder_time = data.reminder_time
+      if (data.reminder_days_before !== undefined) updateData.reminder_days_before = data.reminder_days_before
 
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
       setTasks((prev) =>
