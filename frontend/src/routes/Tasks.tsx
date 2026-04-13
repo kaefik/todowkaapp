@@ -3,6 +3,7 @@ import { useTasks, type Task, type UpdateTask } from '../hooks/useTasks'
 import { TaskEditModal } from '../components/TaskEditModal'
 import { TaskFilterPanel, HighlightText } from '../components/TaskFilterPanel'
 import { useTaskFilter } from '../hooks/useTaskFilter'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -38,7 +39,10 @@ function TasksContent() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [showDescription, setShowDescription] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
-  const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(false)
+  const [isCompletedCollapsed, setIsCompletedCollapsed] = useLocalStorage(
+    'ui-tasks-completed-collapsed',
+    false
+  )
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const {

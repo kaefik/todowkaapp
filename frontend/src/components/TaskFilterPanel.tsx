@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useRef, useEffect } from 'react'
 import type { TaskFilters as TaskFiltersType, GtdStatus } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useProjects } from '../hooks/useProjects'
 import { useTags } from '../hooks/useTags'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 
 const GTD_OPTIONS: { value: GtdStatus; label: string }[] = [
   { value: 'inbox', label: 'Inbox' },
@@ -46,8 +47,14 @@ export function TaskFilterPanel({
   const { areas } = useAreas()
   const { projects } = useProjects()
   const { tags } = useTags()
-  const [expanded, setExpanded] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [expanded, setExpanded] = useLocalStorage(
+    'ui-filter-panel-expanded',
+    false
+  )
+  const [searchOpen, setSearchOpen] = useLocalStorage(
+    'ui-filter-search-open',
+    false
+  )
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {

@@ -25,6 +25,17 @@ import { useAreas } from './hooks/useAreas'
 import { useProjects } from './hooks/useProjects'
 import { useTags } from './hooks/useTags'
 
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  get length() { return 0 },
+  key: vi.fn(),
+}
+
+vi.stubGlobal('localStorage', localStorageMock)
+
 const defaultFilters: TaskFilters = {}
 
 describe('TaskFilterPanel', () => {
@@ -34,6 +45,8 @@ describe('TaskFilterPanel', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorageMock.getItem.mockReturnValue(null)
+    localStorageMock.clear()
     vi.mocked(useContexts).mockReturnValue({
       contexts: [{ id: 'ctx1', name: 'Office', color: '#000', icon: null, user_id: 'u1', created_at: '' }],
       isLoading: false,

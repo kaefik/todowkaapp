@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useSubtasks } from '../hooks/useSubtasks'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { TaskEditModal } from './TaskEditModal'
 import { HighlightText } from './TaskFilterPanel'
 import { useForm } from 'react-hook-form'
@@ -44,7 +45,8 @@ export interface TaskListViewProps {
 
 function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtaskChange: () => void }) {
   const { subtasks, isLoading, addSubtask, toggleSubtask, deleteSubtask } = useSubtasks(taskId)
-  const [expanded, setExpanded] = useState(false)
+  const storageKey = `ui-subtask-expanded-${taskId}`
+  const [expanded, setExpanded] = useLocalStorage(storageKey, false)
   const [newTitle, setNewTitle] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
@@ -167,7 +169,10 @@ export function TaskListView({
   emptyMessage = 'Нет задач.',
 }: TaskListViewProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [showDescription, setShowDescription] = useState(false)
+  const [showDescription, setShowDescription] = useLocalStorage(
+    'ui-tasklist-show-description',
+    false
+  )
   const [isAdding, setIsAdding] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 

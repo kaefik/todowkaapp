@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 
@@ -8,7 +9,10 @@ type Tab = 'general' | 'users'
 
 function SettingsContent() {
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<Tab>('general')
+  const [activeTab, setActiveTab] = useLocalStorage<Tab>(
+    'ui-settings-active-tab',
+    'general'
+  )
 
   const savedTheme = localStorage.getItem('theme') as Theme | null
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -105,6 +109,29 @@ function SettingsContent() {
               <p><strong>Версия:</strong> 1.0.0</p>
               <p><strong>Название:</strong> Todowka</p>
               <p>Приложение для управления задачами с поддержкой PWA</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Управление данными</h2>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Сбросить все настройки интерфейса (фильтры, сворачивание разделов, открытые вкладки и т.д.)
+                </p>
+                <button
+                  onClick={() => {
+                    if (confirm('Сбросить все настройки интерфейса?')) {
+                      Object.keys(localStorage)
+                        .filter(key => key.startsWith('ui-'))
+                        .forEach(key => localStorage.removeItem(key))
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+                >
+                  Сбросить настройки интерфейса
+                </button>
+              </div>
             </div>
           </div>
         </>

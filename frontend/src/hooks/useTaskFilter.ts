@@ -2,6 +2,43 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { TaskFilters } from './useTasks'
 import { useDebounce } from './useDebounce'
 
+interface StoredFilters {
+  gtd_status?: string
+  context_id?: string
+  area_id?: string
+  project_id?: string
+  tag_id?: string
+  is_completed?: boolean
+  due_date_from?: string
+  due_date_to?: string
+  sort_by?: string
+  sort_order?: 'asc' | 'desc'
+}
+
+interface StoredUiState {
+  filters: StoredFilters
+  searchQuery: string
+}
+
+const STORAGE_KEY = 'ui-task-filters'
+
+const loadStoredFilters = (): StoredUiState => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored ? JSON.parse(stored) : { filters: {}, searchQuery: '' }
+  } catch {
+    return { filters: {}, searchQuery: '' }
+  }
+}
+
+const saveFilters = (filters: TaskFilters, searchQuery: string) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ filters, searchQuery }))
+  } catch (error) {
+    console.error('Error saving filters to localStorage:', error)
+  }
+}
+
 interface UseTaskFilterReturn {
   filters: TaskFilters
   searchInput: string
@@ -17,10 +54,13 @@ export function useTaskFilter(
   const defaultsRef = useRef(defaultFilters)
   defaultsRef.current = defaultFilters
 
+  const stored = loadStoredFilters()
+
   const [filters, setFilters] = useState<TaskFilters>(() => ({
     ...defaultFilters,
+    ...stored.filters,
   }))
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(stored.searchQuery)
 
   const debouncedSearch = useDebounce(searchInput, 300)
 
@@ -35,6 +75,10 @@ export function useTaskFilter(
       return next
     })
   }, [debouncedSearch])
+
+  useEffect(() => {
+    saveFilters(filters, searchInput)
+  }, [filters, searchInput])
 
   const updateFilter = useCallback(
     <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => {
@@ -54,6 +98,7 @@ export function useTaskFilter(
   const clearFilters = useCallback(() => {
     setFilters({ ...defaultsRef.current })
     setSearchInput('')
+    localStorage.removeItem(STORAGE_KEY)
   }, [])
 
   const hasActiveFilters = useMemo(() => {

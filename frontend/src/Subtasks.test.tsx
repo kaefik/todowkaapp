@@ -55,6 +55,17 @@ const mockTask: Task = {
   updated_at: '2026-04-12T00:00:00',
 }
 
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  get length() { return 0 },
+  key: vi.fn(),
+}
+
+vi.stubGlobal('localStorage', localStorageMock)
+
 describe('GtdTaskList — subtasks', () => {
   const mockToggleTask = vi.fn()
   const mockMoveTask = vi.fn()
@@ -69,6 +80,8 @@ describe('GtdTaskList — subtasks', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorageMock.getItem.mockReturnValue(null)
+    localStorageMock.clear()
     vi.mocked(useTasks).mockReturnValue({
       tasks: [mockTask],
       isLoading: false,
