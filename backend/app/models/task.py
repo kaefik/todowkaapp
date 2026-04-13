@@ -1,8 +1,8 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, time
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Time, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base as Base
@@ -44,6 +44,12 @@ class Task(Base):
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recurrence_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    recurrence_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recurrence_end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminder_time: Mapped[time | None] = mapped_column(Time, nullable=True)
+    reminder_days_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -54,6 +60,7 @@ class Task(Base):
     parent_task = relationship('Task', remote_side='Task.id', back_populates='subtasks')
     subtasks = relationship('Task', back_populates='parent_task', cascade='all, delete-orphan')
     tags = relationship('Tag', secondary='task_tags', back_populates='tasks', lazy='selectin')
+    recurrences = relationship('TaskRecurrence', back_populates='task', cascade='all, delete-orphan', foreign_keys='TaskRecurrence.task_id')
 
     __table_args__ = (
         Index('ix_tasks_user_id_is_completed', 'user_id', 'is_completed'),
@@ -65,6 +72,10 @@ class Task(Base):
         Index('ix_tasks_user_due_date', 'user_id', 'due_date'),
         Index('ix_tasks_user_position', 'user_id', 'position'),
     )
+
+    @property
+    def is_recurring(self) -> bool:
+        return self.recurrence_type is not None
 
     def __repr__(self) -> str:
         return f'<Task(id={self.id}, title={self.title}, user_id={self.user_id}, gtd_status={self.gtd_status})>'

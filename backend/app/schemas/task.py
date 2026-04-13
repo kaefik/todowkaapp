@@ -39,6 +39,11 @@ class TaskCreate(BaseModel):
     due_date: datetime | None = None
     notes: str | None = None
     tag_ids: list[str] | None = None
+    recurrence_type: str | None = None
+    recurrence_config: dict | None = None
+    recurrence_end_date: datetime | None = None
+    reminder_time: str | None = None
+    reminder_days_before: int | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -53,6 +58,12 @@ class TaskUpdate(BaseModel):
     due_date: datetime | None = None
     notes: str | None = None
     tag_ids: list[str] | None = None
+    recurrence_type: str | None = None
+    recurrence_config: dict | None = None
+    recurrence_end_date: datetime | None = None
+    reminder_time: str | None = None
+    reminder_days_before: int | None = None
+    last_reminder_sent_at: datetime | None = None
 
 
 class TaskMoveRequest(BaseModel):
@@ -78,6 +89,13 @@ class TaskResponse(BaseModel):
     position: int
     due_date: datetime | None
     notes: str | None
+    recurrence_type: str | None = None
+    recurrence_config: dict | None = None
+    recurrence_end_date: datetime | None = None
+    reminder_time: str | None = None
+    reminder_days_before: int | None = None
+    last_reminder_sent_at: datetime | None = None
+    is_recurring: bool = False
     tags: list[TagBriefResponse] = []
     project: ProjectBriefResponse | None = None
     context: ContextBriefResponse | None = None

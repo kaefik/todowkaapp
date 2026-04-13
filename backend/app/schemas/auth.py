@@ -11,6 +11,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     is_active: bool
     is_admin: bool
+    timezone: str | None = None
     created_at: datetime
 
     model_config = {
