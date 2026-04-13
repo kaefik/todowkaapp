@@ -1,11 +1,14 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.models.task import Task
 from app.models.user import User
+from app.schemas.recurrence import TaskRecurrenceListResponse
 from app.schemas.task import (
     GtdCountsResponse,
     SubtaskCreate,
@@ -16,6 +19,7 @@ from app.schemas.task import (
     TaskResponse,
     TaskUpdate,
 )
+from app.services.recurrence_service import RecurrenceService
 from app.services.task_service import TaskService
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -253,3 +257,65 @@ async def create_subtask(
             detail="Task not found",
         )
     return task
+
+
+@tasks_router.get("/{task_id}/recurrences", response_model=TaskRecurrenceListResponse)
+async def get_task_recurrences(
+    task_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> TaskRecurrenceListResponse:
+    from app.schemas.recurrence import TaskRecurrenceResponse
+
+    result = await db.execute(select(Task).where(Task.id == task_id, Task.user_id == current_user.id))
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+
+    recurrence_service = RecurrenceService(db)
+    recurrences, total = await recurrence_service.get_recurrence_history(task_id, limit=limit, offset=offset)
+
+    items = [TaskRecurrenceResponse.model_validate(r) for r in recurrences]
+    return TaskRecurrenceListResponse(items=items, total=total)
+
+
+@tasks_router.post("/{task_id}/stop-recurrence", response_model=TaskResponse)
+async def stop_task_recurrence(
+    task_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> TaskResponse:
+    result = await db.execute(select(Task).where(Task.id == task_id, Task.user_id == current_user.id))
+    task = result.scalar_one_or_none()
+
+    if task is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Task not found",
+        )
+
+    if not task.is_recurring:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Task is not recurring",
+        )
+
+    await db.execute(
+        update(Task)
+        .where(Task.id == task_id)
+        .values(
+            recurrence_type=None,
+            recurrence_config=None,
+            recurrence_end_date=None
+        )
+    )
+    await db.commit()
+    await db.refresh(task)
+
+    return TaskResponse.model_validate(task)

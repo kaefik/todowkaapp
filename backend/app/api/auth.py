@@ -11,7 +11,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.revoked_token import RevokedToken
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from app.schemas.user import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
     clear_refresh_cookie,
     create_access_token,

@@ -5,9 +5,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.dependencies import get_current_admin_user
+from app.dependencies import get_current_admin_user, get_current_user
 from app.models.user import User
-from app.schemas.auth import UserResponse
+from app.schemas.user import UserResponse, UserUpdate
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
@@ -115,3 +115,29 @@ async def delete_user(
 
     await db.execute(delete(User).where(User.id == user_id))
     await db.commit()
+
+
+@users_router.patch("/me", response_model=UserResponse)
+async def update_current_user(
+    data: UserUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> User:
+    update_data = data.model_dump(exclude_unset=True)
+
+    if data.password:
+        from app.security import get_password_hash
+        update_data['password_hash'] = get_password_hash(data.password)
+        if 'password' in update_data:
+            del update_data['password']
+
+    if update_data:
+        await db.execute(
+            update(User)
+            .where(User.id == current_user.id)
+            .values(**update_data)
+        )
+        await db.commit()
+        await db.refresh(current_user)
+
+    return current_user
