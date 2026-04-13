@@ -22,6 +22,7 @@ function mapApiTask(t: Record<string, unknown>): Task {
     context_id: (t.context_id as string | null) ?? null,
     area_id: (t.area_id as string | null) ?? null,
     project_id: (t.project_id as string | null) ?? null,
+    project: (t.project as Task['project']) ?? null,
     parent_task_id: (t.parent_task_id as string | null) ?? null,
     position: (t.position as number) ?? 0,
     due_date: (t.due_date as string | null) ?? null,

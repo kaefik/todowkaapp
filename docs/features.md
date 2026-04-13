@@ -339,7 +339,9 @@
 - Страница списка проектов (/projects) с карточками и прогресс-барами
 - Страница деталей проекта (/projects/:id) с прогрессом и списком задач
 - Dropdown выбора проекта в форме редактирования задачи
+- Отображение названия проекта в карточке задачи с цветовым индикатором и кликабельной ссылкой на проект
 - API: GET/POST /api/projects, GET/PUT/DELETE /api/projects/{id}, GET /api/projects/{id}/tasks
+- ProjectBriefResponse в TaskResponse (id, name, color, is_active)
 - Файлы: `backend/app/schemas/project.py`, `backend/app/services/project_service.py`, `backend/app/api/projects.py`, `frontend/src/hooks/useProjects.ts`, `frontend/src/routes/Projects.tsx`, `frontend/src/routes/ProjectDetail.tsx`
 - Тесты: `backend/tests/test_projects.py` (29 тестов)
 

@@ -16,6 +16,17 @@ class TagBriefResponse(BaseModel):
     }
 
 
+class ProjectBriefResponse(BaseModel):
+    id: UUID
+    name: str
+    color: str | None
+    is_active: bool
+
+    model_config = {
+        'from_attributes': True
+    }
+
+
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
@@ -67,6 +78,7 @@ class TaskResponse(BaseModel):
     due_date: datetime | None
     notes: str | None
     tags: list[TagBriefResponse] = []
+    project: ProjectBriefResponse | None = None
     subtasks_count: int = 0
     subtasks_completed: int = 0
     created_at: datetime

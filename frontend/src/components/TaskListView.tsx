@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useSubtasks } from '../hooks/useSubtasks'
 import { TaskEditModal } from './TaskEditModal'
@@ -330,6 +331,19 @@ export function TaskListView({
                           {tag.name}
                         </span>
                       ))}
+                    </div>
+                  )}
+                  {task.project && (
+                    <div className="mt-1">
+                      <Link
+                        to={`/projects/${task.project.id}`}
+                        className="inline-flex items-center gap-1 text-[10px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline"
+                      >
+                        {task.project.color && (
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.project.color }} />
+                        )}
+                        <span className={task.completed ? 'opacity-60' : ''}>{task.project.name}</span>
+                      </Link>
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
