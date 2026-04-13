@@ -50,6 +50,16 @@ async def task1(client, db_session, auth_user1):
     return response.json()
 
 
+@pytest_asyncio.fixture
+async def test_context(client, auth_user1):
+    response = await client.post(
+        "/api/contexts",
+        json={"name": "Дом", "color": "#FF5733"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    return response.json()
+
+
 @pytest.mark.asyncio
 async def test_create_task_success(client, auth_user1):
     response = await client.post(
@@ -1103,3 +1113,27 @@ async def test_search_with_sort_and_pagination(client, auth_user1):
     assert data["total"] == 3
     assert len(data["items"]) == 1
     assert data["items"][0]["title"] == "Gamma search item"
+
+
+@pytest.mark.asyncio
+async def test_task_includes_context(client, auth_user1, test_context):
+    """Проверка, что TaskResponse включает объект context"""
+    task_response = await client.post(
+        "/api/tasks",
+        json={"title": "Task with context", "context_id": test_context["id"]},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert task_response.status_code == 201
+    task = task_response.json()
+
+    response = await client.get(
+        "/api/tasks",
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 200
+    tasks = response.json()["items"]
+    task_with_context = next((t for t in tasks if t["id"] == task["id"]), None)
+    assert task_with_context is not None
+    assert task_with_context["context"]["id"] == test_context["id"]
+    assert task_with_context["context"]["name"] == test_context["name"]
+    assert task_with_context["context"]["color"] == test_context["color"]

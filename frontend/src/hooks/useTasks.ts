@@ -12,6 +12,13 @@ export interface ProjectBrief {
   is_active: boolean
 }
 
+export interface ContextBrief {
+  id: string
+  name: string
+  color: string | null
+  icon: string | null
+}
+
 export interface Task {
   id: string
   title: string
@@ -22,6 +29,7 @@ export interface Task {
   area_id: string | null
   project_id: string | null
   project: ProjectBrief | null
+  context: ContextBrief | null
   parent_task_id: string | null
   position: number
   due_date: string | null
@@ -44,6 +52,7 @@ interface ApiTask {
   area_id: string | null
   project_id: string | null
   project: ProjectBrief | null
+  context: ContextBrief | null
   parent_task_id: string | null
   position: number
   due_date: string | null

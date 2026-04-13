@@ -81,7 +81,7 @@ class TaskService:
 
             result = await self.db.execute(
                 select(Task)
-                .options(selectinload(Task.tags), selectinload(Task.project))
+                .options(selectinload(Task.tags), selectinload(Task.project), selectinload(Task.context))
                 .join(task_tags, Task.id == task_tags.c.task_id)
                 .where(task_tags.c.tag_id == tag_id, *base_where)
                 .order_by(order)
@@ -91,7 +91,7 @@ class TaskService:
         else:
             result = await self.db.execute(
                 select(Task)
-                .options(selectinload(Task.tags), selectinload(Task.project))
+                .options(selectinload(Task.tags), selectinload(Task.project), selectinload(Task.context))
                 .where(*base_where)
                 .order_by(order)
                 .limit(limit)
@@ -104,7 +104,7 @@ class TaskService:
     async def get_task(self, user_id: UUID, task_id: UUID | str) -> Task | None:
         result = await self.db.execute(
             select(Task)
-            .options(selectinload(Task.tags), selectinload(Task.project))
+            .options(selectinload(Task.tags), selectinload(Task.project), selectinload(Task.context))
             .where(Task.id == task_id, Task.user_id == user_id)
             .execution_options(populate_existing=True)
         )
@@ -232,7 +232,7 @@ class TaskService:
             return []
         result = await self.db.execute(
             select(Task)
-            .options(selectinload(Task.tags), selectinload(Task.project))
+            .options(selectinload(Task.tags), selectinload(Task.project), selectinload(Task.context))
             .where(Task.parent_task_id == str(parent_task_id), Task.user_id == user_id)
             .order_by(Task.position.asc(), Task.created_at.asc())
         )

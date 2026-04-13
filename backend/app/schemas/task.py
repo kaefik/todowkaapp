@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.models.task import GtdStatus
+from app.schemas.context import ContextBriefResponse
 
 
 class TagBriefResponse(BaseModel):
@@ -79,6 +80,7 @@ class TaskResponse(BaseModel):
     notes: str | None
     tags: list[TagBriefResponse] = []
     project: ProjectBriefResponse | None = None
+    context: ContextBriefResponse | None = None
     subtasks_count: int = 0
     subtasks_completed: int = 0
     created_at: datetime

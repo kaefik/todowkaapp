@@ -351,6 +351,16 @@ export function TaskListView({
                       </Link>
                     </div>
                   )}
+                  {task.context && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-400">
+                        {task.context.color && (
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.context.color }} />
+                        )}
+                        <span className={task.completed ? 'opacity-60' : ''}>{task.context.name}</span>
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-xs text-gray-400 dark:text-gray-500">
                       {formatDate(task.created_at)}

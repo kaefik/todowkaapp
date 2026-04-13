@@ -30,6 +30,17 @@ class ContextResponse(BaseModel):
     }
 
 
+class ContextBriefResponse(BaseModel):
+    id: UUID
+    name: str
+    color: str | None
+    icon: str | None
+
+    model_config = {
+        'from_attributes': True
+    }
+
+
 class ContextListResponse(BaseModel):
     items: list[ContextResponse]
     total: int
