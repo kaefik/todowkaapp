@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 interface ReminderEditorProps {
   reminderOffsets: number[] | null
@@ -22,31 +22,20 @@ export function ReminderEditor({
   const [enabled, setEnabled] = useState(!!reminderOffsets?.length)
   const [selected, setSelected] = useState<number[]>(reminderOffsets || [])
 
-  const initialized = useRef(false)
-
-  const emitChange = () => {
-    if (!enabled || selected.length === 0) {
-      onChange({ reminder_offsets: null })
-      return
-    }
-    onChange({ reminder_offsets: [...selected].sort((a, b) => a - b) })
-  }
-
   useEffect(() => {
-    if (initialized.current) return
-    initialized.current = true
-    emitChange()
-  })
+    setEnabled(!!reminderOffsets?.length)
+    setSelected(reminderOffsets || [])
+  }, [reminderOffsets])
 
   const handleToggleEnabled = () => {
     const next = !enabled
     setEnabled(next)
     if (!next) {
       onChange({ reminder_offsets: null })
-    } else if (selected.length > 0) {
-      onChange({ reminder_offsets: [...selected].sort((a, b) => a - b) })
     } else {
-      onChange({ reminder_offsets: null })
+      const offsets = selected.length > 0 ? selected : [0]
+      setSelected(offsets)
+      onChange({ reminder_offsets: [...offsets].sort((a, b) => a - b) })
     }
   }
 

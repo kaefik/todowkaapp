@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import type { RecurrenceConfig } from '../hooks/useTasks'
 
 interface RecurrenceEditorProps {
@@ -67,46 +67,18 @@ export function RecurrenceEditor({
   const [endType, setEndType] = useState<'never' | 'on_date'>(recurrenceEndDate ? 'on_date' : 'never')
   const [endDate, setEndDate] = useState(recurrenceEndDate ? recurrenceEndDate.slice(0, 10) : '')
 
-  const initialized = useRef(false)
-
-  const emitChange = () => {
-    if (!enabled) {
-      onChange({
-        recurrence_type: null,
-        recurrence_config: null,
-        recurrence_end_date: null,
-      })
-      return
-    }
-
-    const config: RecurrenceConfig = {
-      type: type as RecurrenceConfig['type'],
-      interval,
-    }
-
-    if (type === 'weekly') {
-      config.days = selectedDays.length > 0 ? selectedDays : [1]
-    } else if (type === 'monthly') {
-      if (monthlyMode === 'day') {
-        config.day_of_month = dayOfMonth
-      } else {
-        config.week_of_month = weekOfMonth
-        config.day_of_week = dayOfWeek
-      }
-    }
-
-    onChange({
-      recurrence_type: type,
-      recurrence_config: config,
-      recurrence_end_date: endType === 'on_date' && endDate ? `${endDate}T00:00:00Z` : null,
-    })
-  }
-
   useEffect(() => {
-    if (initialized.current) return
-    initialized.current = true
-    emitChange()
-  })
+    setEnabled(!!recurrenceType)
+    setType(recurrenceType || 'daily')
+    setIntervalValue(recurrenceConfig?.interval || 1)
+    setSelectedDays(recurrenceConfig?.days || [])
+    setMonthlyMode(recurrenceConfig?.week_of_month ? 'weekday' : 'day')
+    setDayOfMonth(recurrenceConfig?.day_of_month || 1)
+    setWeekOfMonth(recurrenceConfig?.week_of_month || 1)
+    setDayOfWeek(recurrenceConfig?.day_of_week || 1)
+    setEndType(recurrenceEndDate ? 'on_date' : 'never')
+    setEndDate(recurrenceEndDate ? recurrenceEndDate.slice(0, 10) : '')
+  }, [recurrenceType, recurrenceConfig, recurrenceEndDate])
 
   const handleToggleEnabled = () => {
     const next = !enabled

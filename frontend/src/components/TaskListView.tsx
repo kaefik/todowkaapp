@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useSubtasks } from '../hooks/useSubtasks'
+import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { TaskEditModal } from './TaskEditModal'
 import { HighlightText } from './TaskFilterPanel'
@@ -152,6 +153,60 @@ function formatDate(dateString: string) {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 }
 
+function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 ml-2 flex-shrink-0">
+      {task.is_recurring && (
+        <button
+          type="button"
+          onClick={onHistoryClick}
+          className="text-sm hover:opacity-70 focus:outline-none"
+          title="Повторяющаяся задача — показать историю"
+        >
+          &#x1F504;
+        </button>
+      )}
+      {task.reminder_offsets && task.reminder_offsets.length > 0 && (
+        <span className="text-sm" title="Есть напоминание">&#x1F514;</span>
+      )}
+    </span>
+  )
+}
+
+function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+  const { recurrences, isLoading, error, fetchRecurrences } = useRecurrences()
+
+  useEffect(() => {
+    fetchRecurrences(taskId)
+  }, [taskId, fetchRecurrences])
+
+  return (
+    <div className="absolute z-50 left-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">История повторений</span>
+        <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs focus:outline-none">
+          &#x2715;
+        </button>
+      </div>
+      {isLoading && <p className="text-xs text-gray-400">Загрузка...</p>}
+      {error && <p className="text-xs text-red-500">{error}</p>}
+      {!isLoading && !error && recurrences.length === 0 && (
+        <p className="text-xs text-gray-400">Нет повторений</p>
+      )}
+      {!isLoading && recurrences.length > 0 && (
+        <ul className="space-y-1 max-h-40 overflow-y-auto">
+          {recurrences.map((r) => (
+            <li key={r.id} className="text-xs text-gray-600 dark:text-gray-400 flex justify-between">
+              <span>{r.due_date_of_generated_task ? new Date(r.due_date_of_generated_task).toLocaleDateString('ru-RU') : '—'}</span>
+              <span className="text-gray-400">{r.status}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export function TaskListView({
   tasks,
   isLoading,
@@ -175,6 +230,7 @@ export function TaskListView({
   )
   const [isAdding, setIsAdding] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [historyTaskId, setHistoryTaskId] = useState<string | null>(null)
 
   const {
     register,
@@ -317,8 +373,14 @@ export function TaskListView({
                   className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className={`text-sm font-medium ${task.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
-                    <HighlightText text={task.title} query={searchQuery} />
+                  <h3 className={`text-sm font-medium relative ${task.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className="inline-flex items-center">
+                      <HighlightText text={task.title} query={searchQuery} />
+                      <TaskIcons task={task} onHistoryClick={() => setHistoryTaskId(task.id)} />
+                    </span>
+                    {historyTaskId === task.id && (
+                      <RecurrenceHistoryPopup taskId={task.id} onClose={() => setHistoryTaskId(null)} />
+                    )}
                   </h3>
                   {task.description && (
                     <p className={`mt-1 text-sm ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-500 dark:text-gray-400'}`}>
