@@ -1,5 +1,4 @@
 from datetime import datetime
-from datetime import time as time_type
 from typing import Annotated
 from uuid import UUID
 
@@ -18,13 +17,6 @@ class TaskService:
         self.db = db
         self.recurrence_service = recurrence_service
         self.reminder_service = reminder_service
-
-    @staticmethod
-    def _parse_reminder_time(reminder_time_str: str | None) -> time_type | None:
-        if reminder_time_str is None:
-            return None
-        parts = reminder_time_str.split(':')
-        return time_type(int(parts[0]), int(parts[1]))
 
     async def get_tasks(
         self,
@@ -145,8 +137,7 @@ class TaskService:
             recurrence_type=data.recurrence_type,
             recurrence_config=data.recurrence_config,
             recurrence_end_date=data.recurrence_end_date,
-            reminder_time=self._parse_reminder_time(data.reminder_time),
-            reminder_days_before=data.reminder_days_before,
+            reminder_offsets=data.reminder_offsets,
         )
         if data.tag_ids:
             tags = await self._resolve_tags(user_id, data.tag_ids)
@@ -172,9 +163,6 @@ class TaskService:
         if 'gtd_status' in update_data:
             val = update_data.pop('gtd_status')
             update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val
-
-        if 'reminder_time' in update_data:
-            update_data['reminder_time'] = self._parse_reminder_time(update_data['reminder_time'])
 
         for field, value in update_data.items():
             setattr(task, field, value)

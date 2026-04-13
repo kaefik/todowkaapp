@@ -48,7 +48,16 @@ describe('TaskEditModal', () => {
     position: 0,
     due_date: null,
     notes: null,
+    recurrence_type: null,
+    recurrence_config: null,
+    recurrence_end_date: null,
+    reminder_offsets: null,
+    is_recurring: false,
+    project: null,
+    context: null,
     tags: [],
+    subtasks_count: 0,
+    subtasks_completed: 0,
     user_id: 'user1',
     created_at: '2024-01-01',
     updated_at: '2024-01-01',
@@ -301,6 +310,10 @@ describe('TaskEditModal', () => {
           due_date: null,
           notes: null,
           tag_ids: [],
+          recurrence_type: null,
+          recurrence_config: null,
+          recurrence_end_date: null,
+          reminder_offsets: null,
         })
       })
     })
@@ -331,6 +344,10 @@ describe('TaskEditModal', () => {
           due_date: null,
           notes: null,
           tag_ids: [],
+          recurrence_type: null,
+          recurrence_config: null,
+          recurrence_end_date: null,
+          reminder_offsets: null,
         })
       })
     })

@@ -3,12 +3,14 @@ import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
+import type { Task, UpdateTask, GtdStatus, RecurrenceConfig } from '../hooks/useTasks'
 import { useTasks } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
+import { RecurrenceEditor } from './RecurrenceEditor'
+import { ReminderEditor } from './ReminderEditor'
 
 function Accordion({ title, isOpen, onToggle, children }: {
   title: string
@@ -114,10 +116,25 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [isMobile, setIsMobile] = useState(false)
+  const [recurrenceData, setRecurrenceData] = useState<{
+    recurrence_type: string | null
+    recurrence_config: RecurrenceConfig | null
+    recurrence_end_date: string | null
+  }>({
+    recurrence_type: null,
+    recurrence_config: null,
+    recurrence_end_date: null,
+  })
+  const [reminderData, setReminderData] = useState<{
+    reminder_offsets: number[] | null
+  }>({
+    reminder_offsets: null,
+  })
   const [accordionStates, setAccordionStates] = useState({
     tags: true,
     categorization: false,
     datesAndNotes: false,
+    recurrence: false,
   })
 
   const {
@@ -172,6 +189,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         due_date: currentTask.due_date ? currentTask.due_date.slice(0, 10) : null,
         notes: currentTask.notes ?? null,
       })
+      setRecurrenceData({
+        recurrence_type: currentTask.recurrence_type,
+        recurrence_config: currentTask.recurrence_config,
+        recurrence_end_date: currentTask.recurrence_end_date,
+      })
+      setReminderData({
+        reminder_offsets: currentTask.reminder_offsets,
+      })
     }
   }, [currentTask, reset])
 
@@ -183,7 +208,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   const onSubmit = (data: EditTaskFormData) => {
     if (!currentTask) return
-    onSave(currentTask.id, { ...data, tag_ids: selectedTagIds })
+    onSave(currentTask.id, {
+      ...data,
+      tag_ids: selectedTagIds,
+      recurrence_type: recurrenceData.recurrence_type,
+      recurrence_config: recurrenceData.recurrence_config,
+      recurrence_end_date: recurrenceData.recurrence_end_date,
+      reminder_offsets: reminderData.reminder_offsets,
+    })
     onClose()
   }
 
@@ -203,7 +235,11 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Edit Task</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            Edit Task
+            {currentTask?.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
+            {currentTask?.reminder_offsets?.length && <span title="Есть напоминание">&#x1F514;</span>}
+          </h2>
         </div>
 
         {fetchError && (
@@ -371,6 +407,25 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                     placeholder="Заметки к задаче (optional)"
+                  />
+                </div>
+              </Accordion>
+
+              <Accordion
+                title={`Повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${reminderData.reminder_offsets?.length ? ' \u{1F514}' : ''}`}
+                isOpen={accordionStates.recurrence}
+                onToggle={() => toggleAccordion('recurrence')}
+              >
+                <ReminderEditor
+                  reminderOffsets={reminderData.reminder_offsets}
+                  onChange={setReminderData}
+                />
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <RecurrenceEditor
+                    recurrenceType={recurrenceData.recurrence_type}
+                    recurrenceConfig={recurrenceData.recurrence_config}
+                    recurrenceEndDate={recurrenceData.recurrence_end_date}
+                    onChange={setRecurrenceData}
                   />
                 </div>
               </Accordion>

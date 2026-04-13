@@ -26,7 +26,7 @@ class ReminderService:
             .where(
                 Task.due_date.isnot(None),
                 not Task.is_completed,
-                Task.reminder_time.isnot(None)
+                Task.reminder_offsets.isnot(None)
             )
         )
         tasks = list(result.scalars().all())
@@ -35,23 +35,14 @@ class ReminderService:
         for task in tasks:
             if not task.user:
                 continue
+            if not task.reminder_offsets:
+                continue
 
-            user_timezone = task.user.timezone or 'UTC'
-            due_date_local = self.convert_to_user_timezone(task.due_date, user_timezone)
-
-            reminder_datetime = datetime.combine(
-                due_date_local.date(),
-                task.reminder_time
-            )
-
-            reminder_days_before = task.reminder_days_before or 0
-            if reminder_days_before > 0:
-                reminder_datetime = reminder_datetime - timedelta(days=reminder_days_before)
-
-            reminder_datetime_utc = reminder_datetime.replace(tzinfo=None)
-
-            if now_utc >= reminder_datetime_utc:
-                due_tasks.append(task)
+            for offset_minutes in task.reminder_offsets:
+                reminder_dt = task.due_date.replace(tzinfo=None) - timedelta(minutes=offset_minutes)
+                if now_utc >= reminder_dt:
+                    due_tasks.append(task)
+                    break
 
         return due_tasks
 

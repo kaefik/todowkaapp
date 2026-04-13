@@ -1,34 +1,35 @@
 import { useState, useEffect, useRef } from 'react'
 
 interface ReminderEditorProps {
-  reminderTime: string | null
-  reminderDaysBefore: number | null
+  reminderOffsets: number[] | null
   onChange: (data: {
-    reminder_time: string | null
-    reminder_days_before: number | null
+    reminder_offsets: number[] | null
   }) => void
 }
 
-const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400'
-const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
+const REMINDER_PRESETS = [
+  { value: 0, label: 'Во время' },
+  { value: 5, label: 'За 5 минут' },
+  { value: 15, label: 'За 15 минут' },
+  { value: 60, label: 'За 1 час' },
+  { value: 1440, label: 'За 1 день' },
+]
 
 export function ReminderEditor({
-  reminderTime,
-  reminderDaysBefore,
+  reminderOffsets,
   onChange,
 }: ReminderEditorProps) {
-  const [enabled, setEnabled] = useState(!!reminderTime)
-  const [time, setTime] = useState(reminderTime || '09:00')
-  const [daysBefore, setDaysBefore] = useState(reminderDaysBefore ?? 1)
+  const [enabled, setEnabled] = useState(!!reminderOffsets?.length)
+  const [selected, setSelected] = useState<number[]>(reminderOffsets || [])
 
   const initialized = useRef(false)
 
   const emitChange = () => {
-    if (!enabled) {
-      onChange({ reminder_time: null, reminder_days_before: null })
+    if (!enabled || selected.length === 0) {
+      onChange({ reminder_offsets: null })
       return
     }
-    onChange({ reminder_time: time, reminder_days_before: daysBefore })
+    onChange({ reminder_offsets: [...selected].sort((a, b) => a - b) })
   }
 
   useEffect(() => {
@@ -37,40 +38,30 @@ export function ReminderEditor({
     emitChange()
   })
 
-  const emitChangeWith = (overrides: Partial<{
-    enabled: boolean
-    time: string
-    daysBefore: number
-  }>) => {
-    const e = overrides.enabled ?? enabled
-    if (!e) {
-      onChange({ reminder_time: null, reminder_days_before: null })
-      return
-    }
-    const t = overrides.time ?? time
-    const d = overrides.daysBefore ?? daysBefore
-    onChange({ reminder_time: t, reminder_days_before: d })
-  }
-
   const handleToggleEnabled = () => {
     const next = !enabled
     setEnabled(next)
     if (!next) {
-      onChange({ reminder_time: null, reminder_days_before: null })
+      onChange({ reminder_offsets: null })
+    } else if (selected.length > 0) {
+      onChange({ reminder_offsets: [...selected].sort((a, b) => a - b) })
     } else {
-      emitChangeWith({ enabled: next })
+      onChange({ reminder_offsets: null })
     }
   }
 
-  const handleTimeChange = (newTime: string) => {
-    setTime(newTime)
-    emitChangeWith({ time: newTime })
-  }
-
-  const handleDaysBeforeChange = (newDays: number) => {
-    const val = Math.max(0, Math.min(365, newDays))
-    setDaysBefore(val)
-    emitChangeWith({ daysBefore: val })
+  const handleTogglePreset = (value: number) => {
+    setSelected(prev => {
+      const next = prev.includes(value)
+        ? prev.filter(v => v !== value)
+        : [...prev, value]
+      if (!enabled || next.length === 0) {
+        onChange({ reminder_offsets: null })
+      } else {
+        onChange({ reminder_offsets: [...next].sort((a, b) => a - b) })
+      }
+      return next
+    })
   }
 
   return (
@@ -88,30 +79,21 @@ export function ReminderEditor({
       </label>
 
       {enabled && (
-        <div className="space-y-3 pl-6 border-l-2 border-indigo-200 dark:border-indigo-800">
-          <div>
-            <label className={labelClass}>Время напоминания</label>
-            <input
-              type="time"
-              value={time}
-              onChange={e => handleTimeChange(e.target.value)}
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>
-              Напомнить за {daysBefore} {daysBefore === 1 ? 'день' : daysBefore < 5 ? 'дня' : 'дней'} до дедлайна
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={365}
-              value={daysBefore}
-              onChange={e => handleDaysBeforeChange(parseInt(e.target.value) || 0)}
-              className={inputClass}
-            />
-          </div>
+        <div className="space-y-2 pl-6 border-l-2 border-indigo-200 dark:border-indigo-800">
+          {REMINDER_PRESETS.map(preset => {
+            const active = selected.includes(preset.value)
+            return (
+              <label key={preset.value} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={() => handleTogglePreset(preset.value)}
+                  className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{preset.label}</span>
+              </label>
+            )
+          })}
         </div>
       )}
     </div>
