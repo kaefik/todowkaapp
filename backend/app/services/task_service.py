@@ -12,8 +12,9 @@ from app.schemas.task import TaskCreate, TaskUpdate
 
 
 class TaskService:
-    def __init__(self, db: Annotated[AsyncSession, "Async database session"]):
+    def __init__(self, db: Annotated[AsyncSession, "Async database session"], recurrence_service=None):
         self.db = db
+        self.recurrence_service = recurrence_service
 
     async def get_tasks(
         self,
@@ -168,6 +169,8 @@ class TaskService:
         if task is None:
             return None
 
+        was_recurring_and_completed = task.is_recurring and task.is_completed
+
         task.gtd_status = gtd_status.value
         if gtd_status == GtdStatus.COMPLETED:
             task.is_completed = True
@@ -177,6 +180,12 @@ class TaskService:
             task.completed_at = None
 
         await self.db.flush()
+
+        if gtd_status == GtdStatus.COMPLETED and self.recurrence_service and not was_recurring_and_completed:
+            if self.recurrence_service.should_generate_task(task):
+                await self.recurrence_service.generate_next_task(task)
+                await self.db.flush()
+
         return await self.get_task(user_id, task_id)
 
     async def reorder_task(self, user_id: UUID, task_id: UUID, position: int) -> Task | None:
@@ -205,6 +214,9 @@ class TaskService:
         if task is None:
             return None
 
+        was_completed = task.is_completed
+        was_recurring_and_completed = task.is_recurring and was_completed
+
         task.is_completed = not task.is_completed
         if task.is_completed:
             task.completed_at = datetime.now()
@@ -213,6 +225,12 @@ class TaskService:
             task.completed_at = None
             task.gtd_status = GtdStatus.INBOX.value
         await self.db.flush()
+
+        if task.is_completed and not was_recurring_and_completed and self.recurrence_service:
+            if self.recurrence_service.should_generate_task(task):
+                await self.recurrence_service.generate_next_task(task)
+                await self.db.flush()
+
         return await self.get_task(user_id, task_id)
 
     async def delete_task(self, user_id: UUID, task_id: UUID) -> bool:

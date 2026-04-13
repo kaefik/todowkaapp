@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -33,11 +34,21 @@ def get_client_ip(request: Request) -> str:
 limiter = Limiter(key_func=get_client_ip, enabled=settings.app_env != "test")
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from app.scheduler import task_scheduler
+
+    await task_scheduler.startup()
+    yield
+    await task_scheduler.shutdown()
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Todowka API",
         description="Todo application with authentication",
         version="0.1.0",
+        lifespan=lifespan,
     )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
