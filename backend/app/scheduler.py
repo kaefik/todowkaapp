@@ -117,6 +117,14 @@ class TaskScheduler:
                                 notification = await reminder_service.send_reminder(task, user)
                                 logger.info(f"Sent reminder for task '{task.title}' to user {user.username}")
                                 await session.commit()
+
+                                from app.event_bus import event_bus
+                                await event_bus.publish(str(user.id), "notification_created", {
+                                    "notification_id": str(notification.id),
+                                    "type": notification.type,
+                                    "message": notification.message,
+                                    "task_id": str(task.id) if task.id else None,
+                                })
                     except Exception as e:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()

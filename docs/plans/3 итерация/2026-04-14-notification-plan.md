@@ -19,41 +19,25 @@
 
 ---
 
-## Этап 1 — Backend: Event Bus (инфраструктура)
+## ~~Этап 1~~ — Backend: Event Bus (инфраструктура) ✅ ВЫПОЛНЕН
 
-### 1.1 Создать `backend/app/event_bus.py`
+### 1.1 Создать `backend/app/event_bus.py` ✅
 
-In-process pub/sub на asyncio.Queue:
+**Файл создан:** `backend/app/event_bus.py`
 
-```
-class EventBus:
-    _subscribers: dict[str, list[asyncio.Queue]]  # key = user_id
-
-    subscribe(user_id) -> asyncio.Queue
-        - Создаёт Queue, добавляет в _subscribers[user_id]
-        - Возвращает queue
-
-    unsubscribe(user_id, queue)
-        - Удаляет queue из _subscribers[user_id]
-
-    async publish(user_id, event_type, data)
-        - Кладёт {"type": event_type, "data": data} во все очереди user_id
-
-    get_subscriber_count(user_id) -> int
-        - Возвращает количество активных подписок (для rate limiting)
-
-    cleanup_user(user_id)
-        - Удаляет все подписки пользователя
-```
-
+Реализован EventBus с:
+- `subscribe(user_id)` → asyncio.Queue с maxlen=10
+- `unsubscribe(user_id, queue)` — удаление подписки
+- `publish(user_id, event_type, data)` — отправка во все очереди пользователя
+- `get_subscriber_count(user_id)` — для rate limiting
+- `cleanup_user(user_id)` — удаление всех подписок
 - Singleton: `event_bus = EventBus()`
-- Queue размер: maxlen=10 (защита от memory leak если consumer медленный)
 
-### 1.2 Интегрировать EventBus в scheduler
+### 1.2 Интегрировать EventBus в scheduler ✅
 
-**Файл:** `backend/app/scheduler.py`
+**Файл изменён:** `backend/app/scheduler.py`
 
-В `_job_send_due_reminders()` после успешного `send_reminder()`:
+В `_job_send_due_reminders()` после успешного `send_reminder()` и `commit()`:
 ```python
 from app.event_bus import event_bus
 await event_bus.publish(str(user.id), "notification_created", {
@@ -63,6 +47,8 @@ await event_bus.publish(str(user.id), "notification_created", {
     "task_id": str(task.id) if task.id else None,
 })
 ```
+
+**Тестирование пройдено:** импорт, subscribe/unsubscribe/publish, queue full handling, cleanup
 
 ---
 
