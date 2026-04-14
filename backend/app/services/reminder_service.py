@@ -25,8 +25,7 @@ class ReminderService:
             .options(selectinload(Task.user))
             .where(
                 Task.due_date.isnot(None),
-                not Task.is_completed,
-                Task.reminder_offsets.isnot(None)
+                not Task.is_completed
             )
         )
         tasks = list(result.scalars().all())
@@ -35,14 +34,24 @@ class ReminderService:
         for task in tasks:
             if not task.user:
                 continue
-            if not task.reminder_offsets:
+
+            reminder_dt = None
+
+            if task.reminder_time:
+                due_date = task.due_date.replace(tzinfo=None)
+                reminder_dt = datetime.combine(due_date.date(), task.reminder_time)
+                if reminder_dt > due_date:
+                    reminder_dt = reminder_dt - timedelta(days=1)
+            elif task.reminder_offsets:
+                for offset_minutes in task.reminder_offsets:
+                    reminder_dt = task.due_date.replace(tzinfo=None) - timedelta(minutes=offset_minutes)
+                    if now_utc >= reminder_dt:
+                        due_tasks.append(task)
+                        break
                 continue
 
-            for offset_minutes in task.reminder_offsets:
-                reminder_dt = task.due_date.replace(tzinfo=None) - timedelta(minutes=offset_minutes)
-                if now_utc >= reminder_dt:
-                    due_tasks.append(task)
-                    break
+            if reminder_dt and now_utc >= reminder_dt:
+                due_tasks.append(task)
 
         return due_tasks
 

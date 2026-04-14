@@ -125,6 +125,19 @@
 - Файлы: `frontend/src/components/NotificationBell.tsx`, `frontend/src/routes/Notifications.tsx`, `frontend/src/hooks/useNotifications.ts`, `frontend/src/hooks/useSSE.ts`, `frontend/src/api/notifications.ts`, `backend/app/api/sse.py`
 - Тесты: бэкенд тесты для пользователей проходят успешно, фронтенд линтинг и type checking без ошибок
 
+#### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
+- Два режима напоминаний: конкретное время дня или смещение от дедлайна
+- Режим "конкретное время": напоминать в указанное время (например, 09:00) в день дедлайна
+- Режим "смещение от дедлайна": напоминать за X минут/часов/дней до дедлайна (за 5 мин, 15 мин, 1 час, 1 день)
+- Поле reminder_time (TIME) в модели Task для хранения конкретного времени напоминания
+- Компонент ReminderEditor с переключением между режимами
+- Иконка 🕐 в списке задач для указания наличия напоминания
+- Обновлена логика ReminderService для работы с reminder_time
+- Напоминания создаются в reminder_time дня due_date (если reminder_time > due_date, то за день до)
+- Миграция: alembic/versions/20260414_1113_add_reminder_time_field_42dc15b81a10.py
+- Файлы: `backend/app/models/task.py`, `backend/app/schemas/task.py`, `backend/app/services/reminder_service.py`, `backend/app/services/task_service.py`, `backend/app/services/recurrence_service.py`, `frontend/src/components/ReminderEditor.tsx`, `frontend/src/hooks/useTasks.ts`
+- Линтеры и type checking: ruff (backend) и ESLint + TypeScript (frontend) без ошибок
+
 ---
 
 ### Техническая реализация
@@ -460,7 +473,16 @@
 
 ## История возможностей
 
-*Последнее обновление: 13 апреля 2026 года*
+*Последнее обновление: 14 апреля 2026 года*
+
+**14 апреля 2026:**
+- Реализованы напоминания задач с конкретным временем (reminder_time)
+- Добавлен режим выбора между конкретным временем и смещением от дедлайна
+- Обновлён ReminderEditor с radio-переключением и time input
+- Поле reminder_time (TIME) добавлено в модель Task, схемы и сервисы
+- Обновлена логика ReminderService для обработки reminder_time
+- Миграция: 20260414_1113_add_reminder_time_field_42dc15b81a10.py
+- Обновлена документация в docs/features.md
 
 **13 апреля 2026:**
 - Реализовано сохранение состояния UI между сессиями (Этап 1-7): хук useLocalStorage, сохранение всех UI-состояний

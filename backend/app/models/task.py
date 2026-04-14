@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, Time, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base as Base
@@ -47,6 +47,7 @@ class Task(Base):
     recurrence_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recurrence_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     recurrence_end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminder_time: Mapped[datetime | None] = mapped_column(Time, nullable=True)
     reminder_offsets: Mapped[list | None] = mapped_column(JSON, nullable=True)
     last_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -126,10 +126,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     recurrence_end_date: null,
   })
   const [reminderData, setReminderData] = useState<{
+    reminder_time: string | null
     reminder_offsets: number[] | null
   }>({
+    reminder_time: null,
     reminder_offsets: null,
   })
+  const [isTodayDue, setIsTodayDue] = useState(false)
   const [accordionStates, setAccordionStates] = useState({
     tags: true,
     categorization: false,
@@ -179,6 +182,10 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   useEffect(() => {
     if (currentTask) {
+      const dueDateStr = currentTask.due_date ? currentTask.due_date.slice(0, 10) : null
+      const today = new Date().toISOString().slice(0, 10)
+      const isToday = dueDateStr === today
+
       reset({
         title: currentTask.title,
         description: currentTask.description,
@@ -186,7 +193,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         area_id: (currentTask as Record<string, unknown>).area_id as string | null ?? null,
         project_id: (currentTask as Record<string, unknown>).project_id as string | null ?? null,
         gtd_status: currentTask.gtd_status,
-        due_date: currentTask.due_date ? currentTask.due_date.slice(0, 10) : null,
+        due_date: dueDateStr,
         notes: currentTask.notes ?? null,
       })
       setRecurrenceData({
@@ -195,8 +202,10 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         recurrence_end_date: currentTask.recurrence_end_date,
       })
       setReminderData({
+        reminder_time: currentTask.reminder_time ? currentTask.reminder_time.slice(0, 5) : null,
         reminder_offsets: currentTask.reminder_offsets,
       })
+      setIsTodayDue(isToday)
     }
   }, [currentTask, reset])
 
@@ -204,6 +213,20 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     )
+  }
+
+  const handleTodayToggle = (checked: boolean) => {
+    setIsTodayDue(checked)
+    if (checked) {
+      const today = new Date().toISOString().slice(0, 10)
+      reset(prev => ({ ...prev, due_date: today }))
+    }
+  }
+
+  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value
+    const today = new Date().toISOString().slice(0, 10)
+    setIsTodayDue(newDate === today)
   }
 
   const onSubmit = (data: EditTaskFormData) => {
@@ -238,7 +261,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             Edit Task
             {currentTask?.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
-            {currentTask?.reminder_offsets?.length && <span title="Есть напоминание">&#x1F514;</span>}
+            {(currentTask?.reminder_time || currentTask?.reminder_offsets?.length) && <span title="Есть напоминание">&#x1F514;</span>}
           </h2>
         </div>
 
@@ -381,22 +404,56 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               </Accordion>
 
               <Accordion
-                title="Даты и заметки"
-                isOpen={accordionStates.datesAndNotes}
-                onToggle={() => toggleAccordion('datesAndNotes')}
+                title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${reminderData.reminder_time || reminderData.reminder_offsets?.length ? ' \u{1F514}' : ''}`}
+                isOpen={accordionStates.recurrence}
+                onToggle={() => toggleAccordion('recurrence')}
               >
                 <div>
                   <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Дедлайн
                   </label>
+                  <label className="flex items-center gap-2 cursor-pointer mb-2">
+                    <input
+                      type="checkbox"
+                      checked={isTodayDue}
+                      onChange={(e) => handleTodayToggle(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Сегодня</span>
+                  </label>
                   <input
-                    {...register('due_date')}
+                    {...register('due_date', {
+                      onChange: handleDueDateChange
+                    })}
                     type="date"
                     id="due_date"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                   />
                 </div>
 
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <ReminderEditor
+                    reminderTime={reminderData.reminder_time}
+                    reminderOffsets={reminderData.reminder_offsets}
+                    onChange={setReminderData}
+                  />
+                </div>
+
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                  <RecurrenceEditor
+                    recurrenceType={recurrenceData.recurrence_type}
+                    recurrenceConfig={recurrenceData.recurrence_config}
+                    recurrenceEndDate={recurrenceData.recurrence_end_date}
+                    onChange={setRecurrenceData}
+                  />
+                </div>
+              </Accordion>
+
+              <Accordion
+                title="Заметки"
+                isOpen={accordionStates.datesAndNotes}
+                onToggle={() => toggleAccordion('datesAndNotes')}
+              >
                 <div>
                   <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Заметки
@@ -407,25 +464,6 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                     placeholder="Заметки к задаче (optional)"
-                  />
-                </div>
-              </Accordion>
-
-              <Accordion
-                title={`Повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${reminderData.reminder_offsets?.length ? ' \u{1F514}' : ''}`}
-                isOpen={accordionStates.recurrence}
-                onToggle={() => toggleAccordion('recurrence')}
-              >
-                <ReminderEditor
-                  reminderOffsets={reminderData.reminder_offsets}
-                  onChange={setReminderData}
-                />
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <RecurrenceEditor
-                    recurrenceType={recurrenceData.recurrence_type}
-                    recurrenceConfig={recurrenceData.recurrence_config}
-                    recurrenceEndDate={recurrenceData.recurrence_end_date}
-                    onChange={setRecurrenceData}
                   />
                 </div>
               </Accordion>

@@ -46,6 +46,7 @@ export interface Task {
   recurrence_type: string | null
   recurrence_config: RecurrenceConfig | null
   recurrence_end_date: string | null
+  reminder_time: string | null
   reminder_offsets: number[] | null
   is_recurring: boolean
   tags: Tag[]
@@ -74,6 +75,7 @@ interface ApiTask {
   recurrence_type: string | null
   recurrence_config: RecurrenceConfig | null
   recurrence_end_date: string | null
+  reminder_time: string | null
   reminder_offsets: number[] | null
   is_recurring: boolean
   tags: Tag[]
@@ -108,6 +110,7 @@ export interface UpdateTask {
   recurrence_type?: string | null
   recurrence_config?: RecurrenceConfig | null
   recurrence_end_date?: string | null
+  reminder_time?: string | null
   reminder_offsets?: number[] | null
 }
 
@@ -232,6 +235,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       if (data.recurrence_type !== undefined) updateData.recurrence_type = data.recurrence_type
       if (data.recurrence_config !== undefined) updateData.recurrence_config = data.recurrence_config
       if (data.recurrence_end_date !== undefined) updateData.recurrence_end_date = data.recurrence_end_date
+      if (data.reminder_time !== undefined) updateData.reminder_time = data.reminder_time
       if (data.reminder_offsets !== undefined) updateData.reminder_offsets = data.reminder_offsets
 
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)

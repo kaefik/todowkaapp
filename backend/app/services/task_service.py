@@ -137,6 +137,7 @@ class TaskService:
             recurrence_type=data.recurrence_type,
             recurrence_config=data.recurrence_config,
             recurrence_end_date=data.recurrence_end_date,
+            reminder_time=data.reminder_time,
             reminder_offsets=data.reminder_offsets,
         )
         if data.tag_ids:

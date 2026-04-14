@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -42,6 +42,7 @@ class TaskCreate(BaseModel):
     recurrence_type: str | None = None
     recurrence_config: dict | None = None
     recurrence_end_date: datetime | None = None
+    reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
 
 
@@ -60,6 +61,7 @@ class TaskUpdate(BaseModel):
     recurrence_type: str | None = None
     recurrence_config: dict | None = None
     recurrence_end_date: datetime | None = None
+    reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
     last_reminder_sent_at: datetime | None = None
 
@@ -90,6 +92,7 @@ class TaskResponse(BaseModel):
     recurrence_type: str | None = None
     recurrence_config: dict | None = None
     recurrence_end_date: datetime | None = None
+    reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
     last_reminder_sent_at: datetime | None = None
     is_recurring: bool = False

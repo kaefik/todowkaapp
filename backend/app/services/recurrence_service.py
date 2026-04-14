@@ -42,6 +42,7 @@ class RecurrenceService:
             recurrence_type=task.recurrence_type,
             recurrence_config=task.recurrence_config,
             recurrence_end_date=task.recurrence_end_date,
+            reminder_time=task.reminder_time,
             reminder_offsets=task.reminder_offsets,
         )
 
@@ -221,6 +222,7 @@ class RecurrenceService:
                     recurrence_type=task.recurrence_type,
                     recurrence_config=task.recurrence_config,
                     recurrence_end_date=task.recurrence_end_date,
+                    reminder_time=task.reminder_time,
                     reminder_offsets=task.reminder_offsets,
                 )
 
