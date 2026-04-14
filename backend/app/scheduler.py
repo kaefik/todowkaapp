@@ -15,27 +15,15 @@ logger = logging.getLogger(__name__)
 
 class TaskScheduler:
     def __init__(self):
-        self.scheduler = None
-
-    def setup_scheduler(self, lifespan_context):
         jobstores = {
             'default': SQLAlchemyJobStore(url=settings.database_url.replace('+aiosqlite', ''))
         }
-
         self.scheduler = AsyncIOScheduler(jobstores=jobstores, timezone='UTC')
-
-        @asynccontextmanager
-        async def lifespan(app):
-            await self.startup()
-            yield
-            await self.shutdown()
-
-        lifespan_context(lifespan)
 
     async def startup(self):
         if self.scheduler:
             self.scheduler.add_job(
-                self.job_generate_recurring_tasks,
+                self._job_generate_recurring_tasks,
                 'interval',
                 minutes=5,
                 id='generate_recurring_tasks',
@@ -43,7 +31,7 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
-                self.job_send_due_reminders,
+                self._job_send_due_reminders,
                 'interval',
                 minutes=1,
                 id='send_due_reminders',
@@ -51,7 +39,7 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
-                self.job_cleanup_old_notifications,
+                self._job_cleanup_old_notifications,
                 'interval',
                 days=1,
                 id='cleanup_old_notifications',
@@ -59,7 +47,7 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
-                self.job_startup_recovery,
+                self._job_startup_recovery,
                 'date',
                 run_date=datetime.now(),
                 id='startup_recovery',
@@ -74,7 +62,8 @@ class TaskScheduler:
             self.scheduler.shutdown(wait=True)
             logger.info("Scheduler shut down")
 
-    async def job_generate_recurring_tasks(self):
+    @staticmethod
+    async def _job_generate_recurring_tasks():
         logger.info("Running job: generate_recurring_tasks")
 
         try:
@@ -101,35 +90,44 @@ class TaskScheduler:
         except Exception as e:
             logger.error(f"Error in job_generate_recurring_tasks: {e}")
 
-    async def job_send_due_reminders(self):
+    @staticmethod
+    async def _job_send_due_reminders():
         logger.info("Running job: send_due_reminders")
 
         try:
             from app.services.reminder_service import ReminderService
+            from sqlalchemy.orm import selectinload
 
             async with AsyncSessionLocal() as session:
                 reminder_service = ReminderService(session)
 
                 due_tasks = await reminder_service.find_due_tasks()
+                logger.info(f"Found {len(due_tasks)} tasks with due reminders")
 
                 for task in due_tasks:
-                    if reminder_service.should_send_reminder(task):
-                        from app.models.user import User
-                        result = await session.execute(
-                            select(User).where(User.id == task.user_id)
-                        )
-                        user = result.scalar_one_or_none()
+                    try:
+                        if reminder_service.should_send_reminder(task):
+                            from app.models.user import User
+                            result = await session.execute(
+                                select(User).where(User.id == task.user_id)
+                            )
+                            user = result.scalar_one_or_none()
 
-                        if user:
-                            await reminder_service.send_reminder(task, user)
-                            await session.commit()
+                            if user:
+                                notification = await reminder_service.send_reminder(task, user)
+                                logger.info(f"Sent reminder for task '{task.title}' to user {user.username}")
+                                await session.commit()
+                    except Exception as e:
+                        logger.error(f"Error sending reminder for task '{task.title}': {e}")
+                        await session.rollback()
 
                 logger.info(f"Processed {len(due_tasks)} due tasks for reminders")
 
         except Exception as e:
             logger.error(f"Error in job_send_due_reminders: {e}")
 
-    async def job_cleanup_old_notifications(self):
+    @staticmethod
+    async def _job_cleanup_old_notifications():
         logger.info("Running job: cleanup_old_notifications")
 
         try:
@@ -144,9 +142,10 @@ class TaskScheduler:
                 logger.info(f"Deleted {deleted_count} old notifications")
 
         except Exception as e:
-            logger.error(f"Error in job_cleanup_old_notifications: {e}")
+            logger.error(f"Error in cleanup_old_notifications: {e}")
 
-    async def job_startup_recovery(self):
+    @staticmethod
+    async def _job_startup_recovery():
         logger.info("Running job: startup_recovery")
 
         try:

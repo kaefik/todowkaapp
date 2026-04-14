@@ -65,17 +65,7 @@ export function useNotifications(): UseNotificationsReturn {
       user.id,
       (message) => {
         if (message.event === 'notification') {
-          try {
-            const notification = JSON.parse(message.data)
-            setNotifications((prev) => [notification, ...prev])
-            setTotal((prev) => prev + 1)
-            if (!notification.is_read) {
-              setUnreadCount((prev) => prev + 1)
-            }
-            notifyNotificationsChanged()
-          } catch (error) {
-            console.error('Failed to parse notification:', error)
-          }
+          refetch()
         }
       },
       (error) => {
@@ -88,7 +78,7 @@ export function useNotifications(): UseNotificationsReturn {
         unsubscribe()
       }
     }
-  }, [user, subscribeToNotifications])
+  }, [user, subscribeToNotifications, refetch])
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
@@ -97,6 +87,7 @@ export function useNotifications(): UseNotificationsReturn {
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
       )
       setUnreadCount((prev) => Math.max(0, prev - 1))
+      notifyNotificationsChanged()
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -110,6 +101,7 @@ export function useNotifications(): UseNotificationsReturn {
       await notificationsApi.markAllAsRead()
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
       setUnreadCount(0)
+      notifyNotificationsChanged()
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)

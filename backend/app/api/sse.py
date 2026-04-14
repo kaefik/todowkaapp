@@ -24,8 +24,10 @@ async def notification_stream(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StreamingResponse:
+    from collections import defaultdict
 
     async def event_generator() -> AsyncIterator[dict]:
+        sent_notifications = defaultdict(set)
         try:
             while True:
                 result = await db.execute(
@@ -36,20 +38,23 @@ async def notification_stream(
                 notifications = result.scalars().all()
 
                 for notification in notifications:
-                    yield {
-                        "event": "notification",
-                        "data": json.dumps({
-                            "id": notification.id,
-                            "user_id": notification.user_id,
-                            "task_id": notification.task_id,
-                            "type": notification.type,
-                            "message": notification.message,
-                            "is_read": notification.is_read,
-                            "created_at": notification.created_at.isoformat(),
-                            "read_at": notification.read_at.isoformat() if notification.read_at else None,
-                            "expires_at": notification.expires_at.isoformat() if notification.expires_at else None,
-                        })
-                    }
+                    notification_id = str(notification.id)
+                    if notification_id not in sent_notifications[current_user.id]:
+                        sent_notifications[current_user.id].add(notification_id)
+                        yield {
+                            "event": "notification",
+                            "data": json.dumps({
+                                "id": notification.id,
+                                "user_id": notification.user_id,
+                                "task_id": notification.task_id,
+                                "type": notification.type,
+                                "message": notification.message,
+                                "is_read": notification.is_read,
+                                "created_at": notification.created_at.isoformat(),
+                                "read_at": notification.read_at.isoformat() if notification.read_at else None,
+                                "expires_at": notification.expires_at.isoformat() if notification.expires_at else None,
+                            })
+                        }
 
                 await asyncio.sleep(1)
         except Exception as e:

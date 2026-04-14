@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,20 +28,20 @@ async def get_notifications(
     query = select(Notification).where(Notification.user_id == current_user.id)
 
     if unread_only:
-        query = query.where(not Notification.is_read)
+        query = query.where(Notification.is_read == False)
 
-    count_result = await db.execute(
-        select(Notification.id)
-        .where(Notification.user_id == current_user.id)
-        .where(not Notification.is_read if unread_only else True)
+    unread_count_result = await db.execute(
+        select(func.count(Notification.id)).where(
+            Notification.user_id == current_user.id,
+            Notification.is_read == False
+        )
     )
-    unread_count = len(count_result.scalars().all())
+    unread_count = unread_count_result.scalar() or 0
 
-    count_stmt = select(Notification).where(Notification.user_id == current_user.id)
-    if unread_only:
-        count_stmt = count_stmt.where(not Notification.is_read)
-    total_result = await db.execute(count_stmt)
-    total = len(list(total_result.scalars().all()))
+    total_count_result = await db.execute(
+        select(func.count(Notification.id)).where(Notification.user_id == current_user.id)
+    )
+    total = total_count_result.scalar() or 0
 
     result = await db.execute(
         query
@@ -96,7 +96,7 @@ async def mark_all_notifications_as_read(
         update(Notification)
         .where(
             Notification.user_id == current_user.id,
-            not Notification.is_read
+            Notification.is_read == False
         )
         .values(is_read=True, read_at=datetime.now(UTC))
     )
