@@ -1,16 +1,29 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications, notifyNotificationsChanged } from '../hooks/useNotifications'
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const navigate = useNavigate()
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotifications()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      })
+    }
+  }, [isOpen])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) && buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
         setIsOpen(false)
       }
     }
@@ -91,24 +104,31 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-      >
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
+    <>
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+      {isOpen && createPortal(
+        <div 
+          ref={dropdownRef}
+          className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[9999] overflow-hidden"
+          style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Уведомления</h3>
             {unreadCount > 0 && (
@@ -175,8 +195,9 @@ export function NotificationBell() {
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }

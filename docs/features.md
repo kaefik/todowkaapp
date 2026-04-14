@@ -106,6 +106,25 @@
 - Баннер приглашения к установке при поддержке браузером
 - Запуск в отдельном окне (standalone режим)
 
+#### Уведомления и Real-time синхронизация ✅ (Реализовано 14.04.2026)
+- Компонент NotificationBell с иконкой колокольчика и badge (количество непрочитанных)
+- Dropdown со списком последних 5 уведомлений
+- Страница уведомлений (/notifications) с полной историей и пагинацией
+- Фильтр уведомлений: все / непрочитанные
+- Кнопка "отметить все как прочитанные"
+- Клик на уведомление → перейти к задаче / отметить как прочитанное
+- Удаление отдельных уведомлений
+- SSE (Server-Sent Events) для real-time получения уведомлений
+- SSE для real-time синхронизации изменений задач между клиентами
+- Автоматическое переподключение SSE с exponential backoff (1s → 30s max)
+- Индикация состояния подключения: connecting / connected / disconnected / error
+- Авто-refresh через polling (30 сек) как fallback для NotificationBell
+- Event-driven обновление через NOTIFICATIONS_CHANGED_EVENT
+- API уведомлений: GET /api/notifications, PATCH /api/notifications/{id}/read, PATCH /api/notifications/read-all, DELETE /api/notifications/{id}
+- SSE эндпоинты: GET /api/sse/notifications, GET /api/sse/sync
+- Файлы: `frontend/src/components/NotificationBell.tsx`, `frontend/src/routes/Notifications.tsx`, `frontend/src/hooks/useNotifications.ts`, `frontend/src/hooks/useSSE.ts`, `frontend/src/api/notifications.ts`, `backend/app/api/sse.py`
+- Тесты: бэкенд тесты для пользователей проходят успешно, фронтенд линтинг и type checking без ошибок
+
 ---
 
 ### Техническая реализация

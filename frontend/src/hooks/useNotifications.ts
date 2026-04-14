@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { ApiError } from '../api/httpClient'
 import { notificationsApi } from '../api/notifications'
 import type { Notification } from '../api/notifications'
+import { useSSE } from './useSSE'
+import { useAuthStore } from '../stores/authStore'
 
 export const NOTIFICATIONS_CHANGED_EVENT = 'todowka:notifications-changed'
 
@@ -27,6 +29,8 @@ export function useNotifications(): UseNotificationsReturn {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const user = useAuthStore((state) => state.user)
+  const { subscribeToNotifications } = useSSE()
 
   const refetch = useCallback(async (params?: { unread_only?: boolean; limit?: number; offset?: number }) => {
     setIsLoading(true)
@@ -53,6 +57,38 @@ export function useNotifications(): UseNotificationsReturn {
     window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, handler)
     return () => window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, handler)
   }, [refetch])
+
+  useEffect(() => {
+    if (!user) return
+
+    const unsubscribe = subscribeToNotifications(
+      user.id,
+      (message) => {
+        if (message.event === 'notification') {
+          try {
+            const notification = JSON.parse(message.data)
+            setNotifications((prev) => [notification, ...prev])
+            setTotal((prev) => prev + 1)
+            if (!notification.is_read) {
+              setUnreadCount((prev) => prev + 1)
+            }
+            notifyNotificationsChanged()
+          } catch (error) {
+            console.error('Failed to parse notification:', error)
+          }
+        }
+      },
+      (error) => {
+        console.error('SSE notification error:', error)
+      }
+    )
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [user, subscribeToNotifications])
 
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
