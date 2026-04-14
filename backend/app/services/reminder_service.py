@@ -75,9 +75,13 @@ class ReminderService:
             due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
         
         due_date_local = self.convert_to_user_timezone(due_date, user_timezone)
-        due_date_str = due_date_local.strftime('%d.%m.%Y %H:%M')
 
-        message = f'Напоминание: "{task.title}" истекает {due_date_str}'
+        if due_date_local.time() == time(0, 0):
+            due_date_str = due_date_local.strftime('%d.%m.%Y')
+        else:
+            due_date_str = due_date_local.strftime('%d.%m.%Y %H:%M')
+
+        message = f'Напоминание о задаче "{task.title}"'
 
         notification = await self.create_notification(
             user=user,
