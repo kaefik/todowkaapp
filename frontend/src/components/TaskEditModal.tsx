@@ -144,6 +144,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema),
@@ -229,6 +230,20 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     setIsTodayDue(newDate === today)
   }
 
+  const handleReminderChange = (data: {
+    reminder_time: string | null
+    reminder_offsets: number[] | null
+  }) => {
+    setReminderData(data)
+    const currentDueDate = watch('due_date')
+    const hasReminder = !!data.reminder_time || !!data.reminder_offsets?.length
+    if (hasReminder && !currentDueDate) {
+      const today = new Date().toISOString().slice(0, 10)
+      reset(prev => ({ ...prev, due_date: today }))
+      setIsTodayDue(true)
+    }
+  }
+
   const onSubmit = (data: EditTaskFormData) => {
     if (!currentTask) return
     onSave(currentTask.id, {
@@ -237,6 +252,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       recurrence_type: recurrenceData.recurrence_type,
       recurrence_config: recurrenceData.recurrence_config,
       recurrence_end_date: recurrenceData.recurrence_end_date,
+      reminder_time: reminderData.reminder_time,
       reminder_offsets: reminderData.reminder_offsets,
     })
     onClose()
@@ -435,7 +451,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   <ReminderEditor
                     reminderTime={reminderData.reminder_time}
                     reminderOffsets={reminderData.reminder_offsets}
-                    onChange={setReminderData}
+                    onChange={handleReminderChange}
                   />
                 </div>
 
