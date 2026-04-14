@@ -52,9 +52,9 @@ await event_bus.publish(str(user.id), "notification_created", {
 
 ---
 
-## Этап 2 — Backend: Cookie-based авторизация для SSE
+## ~~Этап 2~~ — Backend: Cookie-based авторизация для SSE ✅ ВЫПОЛНЕН
 
-### 2.1 Устанавливать access_token cookie при логине
+### 2.1 Устанавливать access_token cookie при логине ✅
 
 **Файл:** `backend/app/security.py`
 
@@ -78,7 +78,7 @@ samesite="strict"
 max_age=settings.access_token_expire_minutes * 60
 ```
 
-### 2.2 Создать SSE-зависимость для авторизации через cookie
+### 2.2 Создать SSE-зависимость для авторизации через cookie ✅
 
 **Файл:** `backend/app/dependencies.py`
 
@@ -97,7 +97,7 @@ async def get_current_user_from_cookie(
 3. Декодировать JWT, найти пользователя
 4. Вернуть 401 если не валиден
 
-### 2.3 Обновить SSE-эндпоинт
+### 2.3 Обновить SSE-эндпоинт ✅
 
 **Файл:** `backend/app/api/sse.py`
 

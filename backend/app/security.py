@@ -55,6 +55,30 @@ def decode_token(token: str) -> dict[str, Any] | None:
         return None
 
 
+def set_access_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        max_age=settings.access_token_expire_minutes * 60,
+        path="/api/sse",
+        httponly=True,
+        secure=True,
+        samesite="strict",
+    )
+
+
+def clear_access_cookie(response: Response) -> None:
+    response.set_cookie(
+        key="access_token",
+        value="",
+        max_age=0,
+        path="/api/sse",
+        httponly=True,
+        secure=True,
+        samesite="strict",
+    )
+
+
 def set_refresh_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key="refresh_token",

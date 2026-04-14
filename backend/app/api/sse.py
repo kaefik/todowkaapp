@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from app.database import get_db
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user_from_cookie
 from app.models.notification import Notification
 from app.models.task import Task
 from app.models.user import User
@@ -21,7 +21,7 @@ sse_router = APIRouter(prefix="/sse", tags=["sse"])
 
 @sse_router.get("/notifications")
 async def notification_stream(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user_from_cookie)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StreamingResponse:
     from collections import defaultdict
@@ -65,7 +65,7 @@ async def notification_stream(
 
 @sse_router.get("/sync")
 async def sync_stream(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user_from_cookie)],
     db: Annotated[AsyncSession, Depends(get_db)],
     last_sync: str | None = Query(default=None),
 ) -> StreamingResponse:
