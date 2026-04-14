@@ -105,54 +105,55 @@ async def get_current_user_from_cookie(
 
 ---
 
-## Этап 3 — Backend: Переписать SSE на event-driven
+## Этап 3 — Backend: Переписать SSE на event-driven ✅ ВЫПОЛНЕН
 
-### 3.1 Переписать `GET /sse/notifications`
+### 3.1 Переписать `GET /sse/notifications` ✅
 
 **Файл:** `backend/app/api/sse.py`
 
-Заменить polling-генератор на event-driven:
-
-```python
-@sse_router.get("/notifications")
-async def notification_stream(current_user=Depends(get_current_user_from_cookie)):
-    # Rate limiting
-    if event_bus.get_subscriber_count(str(current_user.id)) >= 3:
-        raise HTTPException(429, "Too many SSE connections")
-
-    async def event_generator():
-        queue = event_bus.subscribe(str(current_user.id))
-        try:
-            # Отправить heartbeat каждые 30с
-            while True:
-                try:
-                    event = await asyncio.wait_for(queue.get(), timeout=30)
-                    yield {"event": "notification", "data": json.dumps(event)}
-                except asyncio.TimeoutError:
-                    yield {"event": "heartbeat", "data": ""}
-        finally:
-            event_bus.unsubscribe(str(current_user.id), queue)
-
-    return EventSourceResponse(event_generator())
-```
-
-Ключевые отличия от текущей реализации:
+Реализовано:
+- Event-driven генератор через EventBus (вместо polling с DB-запросами каждую секунду)
+- Раздельные каналы: `{user_id}:notifications` и `{user_id}:sync`
+- Rate limiting (максимум 3 SSE-соединения на канал)
+- Heartbeat каждые 30с через `asyncio.wait_for(queue.get(), timeout=30)`
+- Автоматическая отписка в `finally` блоке
 - Нет DB-сессии внутри генератора (нет утечки)
-- Нет polling (ждёт событие через queue.get())
-- Heartbeat каждые 30с (для поддержания соединения)
-- Rate limiting через subscriber count
 
-### 3.2 Обновить `GET /sse/sync`
+**Дополнительно исправлено:**
+- SSE-роутер подключён через `api_router` (раньше напрямую к `app`), теперь SSE доступен на `/api/sse/...`
+- Cookie path `/api/sse` теперь корректно совпадает с реальным путём SSE
 
-Аналогично: подписка на `event_bus.publish(user_id, "task_updated", ...)`.
+### 3.2 Обновить `GET /sse/sync` ✅
 
-Публиковать событие при любом изменении задач (в task API после commit).
+**Файл:** `backend/app/api/sse.py`
 
-### 3.3 Убрать зависимость SSE от DB-сессии
+Реализовано аналогично notifications — event-driven через канал `{user_id}:sync`.
 
-SSE-эндпоинты больше не должны принимать `db: AsyncSession = Depends(get_db)`. Авторизация через cookie не требует DB в момент установки SSE (токен содержит user_id, пользователь уже проверен).
+**Файл:** `backend/app/api/tasks.py`
 
-**НО:** для начальной загрузки (отправка непрочитанных при подключении) можно сделать один запрос до входа в цикл, затем закрыть сессию.
+Добавлена функция `_publish_task_event()` — публикует `task_updated` события в EventBus при:
+- `create_task` (action: "created")
+- `update_task` (action: "updated")
+- `move_task` (action: "moved")
+- `reorder_task` (action: "reordered")
+- `toggle_task` (action: "toggled")
+- `delete_task` (action: "deleted")
+- `create_subtask` (action: "subtask_created")
+- `stop_task_recurrence` (action: "recurrence_stopped")
+
+**Файл:** `backend/app/scheduler.py`
+
+Обновлён channel для публикации: `f"{user.id}:notifications"` (вместо `str(user.id)`)
+
+### 3.3 Убрать зависимость SSE от DB-сессии ✅
+
+SSE-эндпоинты больше не принимают `db: AsyncSession = Depends(get_db)`.
+Авторизация через `get_current_user_from_cookie` (DB-сессия создаётся внутри зависимости и закрывается после разрешения).
+Сам event_generator не использует DB.
+
+**Файл:** `frontend/src/hooks/useSSE.ts`
+
+Обновлены URL: `/sse/...` → `/api/sse/...` (для совместимости с новым маршрутом).
 
 ---
 

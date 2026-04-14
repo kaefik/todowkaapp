@@ -69,12 +69,12 @@ def create_app() -> FastAPI:
     api_router.include_router(contexts_router)
     api_router.include_router(notifications_router)
     api_router.include_router(projects_router)
+    api_router.include_router(sse_router)
     api_router.include_router(stats_router)
     api_router.include_router(tags_router)
     api_router.include_router(tasks_router)
     api_router.include_router(users_router)
     app.include_router(api_router)
-    app.include_router(sse_router)
 
     @app.get("/")
     async def root():

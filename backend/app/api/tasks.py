@@ -26,6 +26,14 @@ from app.services.task_service import TaskService
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
+async def _publish_task_event(user_id, task_id: str, action: str):
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{user_id}:sync", "task_updated", {
+        "task_id": str(task_id),
+        "action": action,
+    })
+
+
 @tasks_router.get("/counts", response_model=GtdCountsResponse)
 async def get_gtd_counts(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -100,6 +108,7 @@ async def create_task(
 ) -> TaskResponse:
     service = TaskService(db)
     task = await service.create_task(user_id=current_user.id, data=data)
+    await _publish_task_event(current_user.id, task.id, "created")
     return task
 
 
@@ -141,6 +150,7 @@ async def update_task(
             detail="Task not found",
         )
 
+    await _publish_task_event(current_user.id, task_id, "updated")
     return task
 
 
@@ -164,6 +174,7 @@ async def move_task(
             detail="Task not found",
         )
 
+    await _publish_task_event(current_user.id, task_id, "moved")
     return task
 
 
@@ -185,6 +196,7 @@ async def reorder_task(
             detail="Task not found",
         )
 
+    await _publish_task_event(current_user.id, task_id, "reordered")
     return task
 
 
@@ -205,6 +217,7 @@ async def toggle_task(
             detail="Task not found",
         )
 
+    await _publish_task_event(current_user.id, task_id, "toggled")
     return task
 
 
@@ -223,6 +236,7 @@ async def delete_task(
             detail="Task not found",
         )
 
+    await _publish_task_event(current_user.id, task_id, "deleted")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -261,6 +275,7 @@ async def create_subtask(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
+    await _publish_task_event(current_user.id, task.id, "subtask_created")
     return task
 
 
@@ -323,4 +338,5 @@ async def stop_task_recurrence(
     await db.commit()
     await db.refresh(task)
 
+    await _publish_task_event(current_user.id, task_id, "recurrence_stopped")
     return TaskResponse.model_validate(task)

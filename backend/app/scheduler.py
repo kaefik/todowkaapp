@@ -1,5 +1,4 @@
 import logging
-from contextlib import asynccontextmanager
 from datetime import datetime
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -96,7 +95,6 @@ class TaskScheduler:
 
         try:
             from app.services.reminder_service import ReminderService
-            from sqlalchemy.orm import selectinload
 
             async with AsyncSessionLocal() as session:
                 reminder_service = ReminderService(session)
@@ -119,7 +117,7 @@ class TaskScheduler:
                                 await session.commit()
 
                                 from app.event_bus import event_bus
-                                await event_bus.publish(str(user.id), "notification_created", {
+                                await event_bus.publish(f"{user.id}:notifications", "notification_created", {
                                     "notification_id": str(notification.id),
                                     "type": notification.type,
                                     "message": notification.message,

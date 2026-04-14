@@ -70,7 +70,7 @@ export function useSSE() {
 
     setNotificationState('connecting')
 
-    const url = new URL('/sse/notifications', window.location.origin)
+    const url = new URL('/api/sse/notifications', window.location.origin)
     
     const eventSource = new EventSource(url.toString())
     notificationEventSourceRef.current = eventSource
@@ -125,7 +125,7 @@ export function useSSE() {
 
     setSyncState('connecting')
 
-    const url = new URL('/sse/sync', window.location.origin)
+    const url = new URL('/api/sse/sync', window.location.origin)
     
     const eventSource = new EventSource(url.toString())
     syncEventSourceRef.current = eventSource
