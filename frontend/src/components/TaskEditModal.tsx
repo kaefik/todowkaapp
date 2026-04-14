@@ -228,6 +228,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     const newDate = e.target.value
     const today = new Date().toISOString().slice(0, 10)
     setIsTodayDue(newDate === today)
+    if (!newDate && recurrenceData.recurrence_type) {
+      setRecurrenceData({
+        recurrence_type: null,
+        recurrence_config: null,
+        recurrence_end_date: null,
+      })
+    }
   }
 
   const handleReminderChange = (data: {
@@ -460,6 +467,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                     recurrenceType={recurrenceData.recurrence_type}
                     recurrenceConfig={recurrenceData.recurrence_config}
                     recurrenceEndDate={recurrenceData.recurrence_end_date}
+                    dueDate={watch('due_date')}
                     onChange={setRecurrenceData}
                   />
                 </div>

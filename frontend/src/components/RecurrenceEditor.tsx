@@ -5,6 +5,7 @@ interface RecurrenceEditorProps {
   recurrenceType: string | null
   recurrenceConfig: RecurrenceConfig | null
   recurrenceEndDate: string | null
+  dueDate: string | null
   onChange: (data: {
     recurrence_type: string | null
     recurrence_config: RecurrenceConfig | null
@@ -52,6 +53,7 @@ export function RecurrenceEditor({
   recurrenceType,
   recurrenceConfig,
   recurrenceEndDate,
+  dueDate,
   onChange,
 }: RecurrenceEditorProps) {
   const [enabled, setEnabled] = useState(!!recurrenceType)
@@ -200,12 +202,18 @@ export function RecurrenceEditor({
           type="checkbox"
           checked={enabled}
           onChange={handleToggleEnabled}
-          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
+          disabled={!dueDate}
+          className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
           Повторяющаяся задача
         </span>
       </label>
+      {!dueDate && (
+        <p className="text-xs text-amber-600 dark:text-amber-400 pl-6">
+          Для настройки повторения необходимо указать дедлайн
+        </p>
+      )}
 
       {enabled && (
         <div className="space-y-3 pl-6 border-l-2 border-indigo-200 dark:border-indigo-800">
