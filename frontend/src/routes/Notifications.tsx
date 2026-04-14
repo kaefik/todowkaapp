@@ -40,7 +40,7 @@ function NotificationsContent() {
   const handleNotificationClick = async (notificationId: string, taskId: string | null) => {
     await markAsRead(notificationId)
     if (taskId) {
-      navigate('/tasks')
+      navigate(`/tasks?editTaskId=${taskId}`)
     }
   }
 

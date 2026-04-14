@@ -44,7 +44,7 @@ export function NotificationBell() {
     await markAsRead(notificationId)
     setIsOpen(false)
     if (taskId) {
-      navigate(`/tasks`)
+      navigate(`/tasks?editTaskId=${taskId}`)
     }
   }
 

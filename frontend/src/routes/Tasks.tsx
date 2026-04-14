@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTasks, type Task, type UpdateTask } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { TaskEditModal } from '../components/TaskEditModal'
@@ -100,6 +101,7 @@ function TasksContent() {
   )
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [historyTaskId, setHistoryTaskId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const {
     register,
@@ -124,6 +126,17 @@ function TasksContent() {
       return () => cancelAnimationFrame(id)
     }
   }, [isLoading])
+
+  useEffect(() => {
+    const editTaskId = searchParams.get('editTaskId')
+    if (editTaskId && !isLoading && tasks.length > 0 && !editingTask) {
+      const task = tasks.find((t) => t.id === editTaskId)
+      if (task) {
+        setEditingTask(task)
+        setSearchParams({}, { replace: true })
+      }
+    }
+  }, [searchParams, isLoading, tasks, editingTask, setSearchParams])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
