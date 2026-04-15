@@ -30,7 +30,7 @@ type RegisterFormData = z.infer<typeof registerSchema>
 
 export function Register() {
   const navigate = useNavigate()
-  const { registerAndLogin, isLoading, error, clearError, user } = useAuthStore()
+  const { registerAndLogin, isLoading, error, clearError } = useAuthStore()
   const { config, isLoading: configLoading } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showTimezoneModal, setShowTimezoneModal] = useState(false)
@@ -69,7 +69,8 @@ export function Register() {
         password: data.password,
         invite_code: data.inviteCode && data.inviteCode.trim() ? data.inviteCode.trim() : undefined,
       })
-      if (!user?.timezone) {
+      const currentUser = useAuthStore.getState().user
+      if (!currentUser?.timezone) {
         setShowTimezoneModal(true)
       } else {
         navigate('/tasks')

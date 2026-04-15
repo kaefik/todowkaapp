@@ -17,7 +17,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { login, isLoading, error, clearError, user } = useAuthStore()
+  const { login, isLoading, error, clearError } = useAuthStore()
   const { config } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
@@ -42,7 +42,8 @@ export function Login() {
     setIsSubmitting(true)
     try {
       await login(data)
-      if (!user?.timezone) {
+      const currentUser = useAuthStore.getState().user
+      if (!currentUser?.timezone) {
         setShowTimezoneModal(true)
       } else {
         navigate('/tasks')
