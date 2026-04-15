@@ -104,25 +104,24 @@ class TaskScheduler:
 
                 for task in due_tasks:
                     try:
-                        if reminder_service.should_send_reminder(task):
-                            from app.models.user import User
-                            result = await session.execute(
-                                select(User).where(User.id == task.user_id)
-                            )
-                            user = result.scalar_one_or_none()
+                        from app.models.user import User
+                        result = await session.execute(
+                            select(User).where(User.id == task.user_id)
+                        )
+                        user = result.scalar_one_or_none()
 
-                            if user:
-                                notification = await reminder_service.send_reminder(task, user)
-                                logger.info(f"Sent reminder for task '{task.title}' to user {user.username}")
-                                await session.commit()
+                        if user:
+                            notification = await reminder_service.send_reminder(task, user)
+                            logger.info(f"Sent reminder for task '{task.title}' to user {user.username}")
+                            await session.commit()
 
-                                from app.event_bus import event_bus
-                                await event_bus.publish(f"{user.id}:notifications", "notification_created", {
-                                    "notification_id": str(notification.id),
-                                    "type": notification.type,
-                                    "message": notification.message,
-                                    "task_id": str(task.id) if task.id else None,
-                                })
+                            from app.event_bus import event_bus
+                            await event_bus.publish(f"{user.id}:notifications", "notification_created", {
+                                "notification_id": str(notification.id),
+                                "type": notification.type,
+                                "message": notification.message,
+                                "task_id": str(task.id) if task.id else None,
+                            })
                     except Exception as e:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()
