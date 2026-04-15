@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { httpClient, ApiError } from '../api/httpClient'
-import { notifyTasksChanged } from '../hooks/useGtdCounts'
+import { notifyTasksChanged, useGtdCounts } from '../hooks/useGtdCounts'
 import { GtdTaskList } from './GtdTaskList'
 
 export function Trash() {
   const [isClearing, setIsClearing] = useState(false)
   const [clearError, setClearError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const { counts } = useGtdCounts()
+  const isEmpty = counts.trash === 0
 
   const handleClearTrash = async () => {
     if (!confirm('Удалить все задачи из корзины навсегда? Это действие нельзя отменить.')) return
@@ -34,7 +36,7 @@ export function Trash() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Корзина</h1>
         <button
           onClick={handleClearTrash}
-          disabled={isClearing}
+          disabled={isClearing || isEmpty}
           className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus:ring-offset-gray-900"
         >
           {isClearing ? (
