@@ -16,7 +16,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       store.refetch()
       return () => store.stopSSE()
     }
-  }, [isAuthenticated, user, store])
+  }, [isAuthenticated, user])
 
   return <>{children}</>
 }
