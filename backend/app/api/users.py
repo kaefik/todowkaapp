@@ -126,8 +126,8 @@ async def update_current_user(
     update_data = data.model_dump(exclude_unset=True)
 
     if data.password:
-        from app.security import get_password_hash
-        update_data['password_hash'] = get_password_hash(data.password)
+        from app.security import hash_password
+        update_data['password_hash'] = hash_password(data.password)
         if 'password' in update_data:
             del update_data['password']
 

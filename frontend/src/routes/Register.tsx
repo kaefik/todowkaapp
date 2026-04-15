@@ -16,8 +16,8 @@ const registerSchema = z
       .min(8, 'Password must be at least 8 characters')
       .max(100, 'Password must be at most 100 characters')
       .regex(/\d/, 'Password must contain at least one digit')
-      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-      .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
+      .regex(/\p{Lu}/u, 'Password must contain at least one uppercase letter')
+      .regex(/[^\p{L}\p{N}]/u, 'Password must contain at least one special character'),
     confirmPassword: z.string(),
     inviteCode: z.string().optional(),
   })

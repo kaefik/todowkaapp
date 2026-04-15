@@ -332,7 +332,13 @@
 - Проверка is_blocked при логине, refresh токене и get_current_user
 - Защищённые API-эндпоинты для управления пользователями (только администраторы)
 - Валидация email через EmailStr и email-validator (backend + frontend)
-- Валидация пароля: минимум 8 символов (backend и frontend schemas)
+- Валидация пароля: минимум 8 символов, максимум 100 символов (backend и frontend schemas)
+  - Поддержка Unicode-паролей: кириллица, арабский, китайский, японский и другие языки
+  - Заглавная буква: проверяется через `str.isupper()` — поддерживает любой алфавит с регистром (латиница, кириллица, греческий и т.д.)
+  - Спецсимвол: проверяется через Unicode-категории P (Punctuation) и S (Symbol) — любые спецсимволы мировых языков
+  - Цифра: `\d` — арабские цифры (0-9)
+  - Frontend: `\p{Lu}` (Unicode uppercase) и `[^\p{L}\p{N}]` (Unicode special) с флагом `u`
+  - Файлы: `backend/app/schemas/user.py`, `backend/app/schemas/auth.py`, `frontend/src/routes/Register.tsx`
 - Валидация username: минимум 3, максимум 50 символов
 - Конфигурация CORS для разрешённых источников
 - SQLAlchemy ORM с параметризованными запросами (предотвращение SQL-инъекций)

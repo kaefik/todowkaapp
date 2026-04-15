@@ -1,7 +1,17 @@
+import re
+import unicodedata
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+
+
+def _has_uppercase(s: str) -> bool:
+    return any(c.isupper() for c in s)
+
+
+def _has_special(s: str) -> bool:
+    return any(unicodedata.category(c).startswith(('P', 'S')) for c in s)
 
 
 class UserResponse(BaseModel):
@@ -41,14 +51,13 @@ class UserUpdate(BaseModel):
     def validate_password(cls, v: str | None) -> str | None:
         if v is None:
             return v
-        import re
         if len(v) < 8 or len(v) > 100:
             raise ValueError('Password must be between 8 and 100 characters')
         if not re.search(r'\d', v):
             raise ValueError('Password must contain at least one digit')
-        if not re.search(r'[A-Z]', v):
+        if not _has_uppercase(v):
             raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+        if not _has_special(v):
             raise ValueError('Password must contain at least one special character')
         return v
 
@@ -62,12 +71,11 @@ class RegisterRequest(BaseModel):
     @field_validator('password')
     @classmethod
     def validate_password(cls, v: str) -> str:
-        import re
         if not re.search(r'\d', v):
             raise ValueError('Password must contain at least one digit')
-        if not re.search(r'[A-Z]', v):
+        if not _has_uppercase(v):
             raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+        if not _has_special(v):
             raise ValueError('Password must contain at least one special character')
         return v
 
