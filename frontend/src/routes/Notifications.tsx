@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useNotifications } from '../hooks/useNotifications'
+import { useNotificationStore } from '../stores/notificationStore'
+import { formatTime, typeIcon } from '../utils/notificationUtils.tsx'
 
 type Filter = 'all' | 'unread'
 
@@ -9,17 +10,15 @@ function NotificationsContent() {
   const [filter, setFilter] = useState<Filter>('all')
   const [offset, setOffset] = useState(0)
   const limit = 20
-  const {
-    notifications,
-    total,
-    unreadCount,
-    isLoading,
-    error,
-    refetch,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-  } = useNotifications()
+  const notifications = useNotificationStore((state) => state.notifications)
+  const total = useNotificationStore((state) => state.total)
+  const unreadCount = useNotificationStore((state) => state.unreadCount)
+  const isLoading = useNotificationStore((state) => state.isLoading)
+  const error = useNotificationStore((state) => state.error)
+  const refetch = useNotificationStore((state) => state.refetch)
+  const markAsRead = useNotificationStore((state) => state.markAsRead)
+  const markAllAsRead = useNotificationStore((state) => state.markAllAsRead)
+  const deleteNotification = useNotificationStore((state) => state.deleteNotification)
 
   useEffect(() => {
     setOffset(0)
@@ -47,50 +46,6 @@ function NotificationsContent() {
   const handleDelete = async (e: React.MouseEvent, notificationId: string) => {
     e.stopPropagation()
     await deleteNotification(notificationId)
-  }
-
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMin = Math.floor(diffMs / 60000)
-    const diffHour = Math.floor(diffMs / 3600000)
-    const diffDay = Math.floor(diffMs / 86400000)
-
-    if (diffMin < 1) return 'Только что'
-    if (diffMin < 60) return `${diffMin} мин назад`
-    if (diffHour < 24) return `${diffHour} ч назад`
-    if (diffDay < 7) return `${diffDay} дн назад`
-    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
-  }
-
-  const typeIcon = (type: string) => {
-    switch (type) {
-      case 'due_reminder':
-        return (
-          <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-      case 'recurrence_created':
-        return (
-          <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        )
-      case 'task_updated':
-        return (
-          <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-      default:
-        return (
-          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        )
-    }
   }
 
   return (
