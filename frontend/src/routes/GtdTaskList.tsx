@@ -58,7 +58,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+      {title && <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>}
 
       <TaskFilterPanel
         filters={activeFilters}

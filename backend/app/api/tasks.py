@@ -221,6 +221,17 @@ async def toggle_task(
     return task
 
 
+@tasks_router.delete("/trash/clear", status_code=status.HTTP_200_OK)
+async def clear_trash(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, int]:
+    service = TaskService(db)
+    deleted_count = await service.clear_trash(user_id=current_user.id)
+    await _publish_task_event(current_user.id, "all", "trash_cleared")
+    return {"deleted": deleted_count}
+
+
 @tasks_router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: str,

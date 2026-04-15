@@ -256,6 +256,23 @@ class TaskService:
 
         return await self.get_task(user_id, task_id)
 
+    async def clear_trash(self, user_id: UUID) -> int:
+        subtasks_stmt = delete(Task).where(
+            Task.user_id == user_id,
+            Task.gtd_status == GtdStatus.TRASH.value,
+            Task.parent_task_id.isnot(None),
+        )
+        await self.db.execute(subtasks_stmt)
+
+        stmt = delete(Task).where(
+            Task.user_id == user_id,
+            Task.gtd_status == GtdStatus.TRASH.value,
+            Task.parent_task_id.is_(None),
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount
+
     async def delete_task(self, user_id: UUID, task_id: UUID) -> bool:
         task = await self.get_task(user_id, task_id)
         if task is None:
