@@ -51,23 +51,30 @@ class ReminderService:
 
                 reminder_dt_local = datetime.combine(due_date_local.date(), reminder_time_to_use, tzinfo=user_timezone)
                 reminder_dt = reminder_dt_local.astimezone(ZoneInfo('UTC'))
+
             elif task.reminder_offsets:
                 for offset_minutes in task.reminder_offsets:
                     due_date = task.due_date
                     if due_date.tzinfo is None:
                         due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
-                    reminder_dt = due_date - timedelta(minutes=offset_minutes)
-                    if now_utc >= reminder_dt:
-                        if not task.last_reminder_sent_at or reminder_dt > task.last_reminder_sent_at:
+                    calculated_reminder_dt = due_date - timedelta(minutes=offset_minutes)
+
+                    if now_utc >= calculated_reminder_dt:
+                        last_sent = task.last_reminder_sent_at
+                        if last_sent and last_sent.tzinfo is None:
+                            last_sent = last_sent.replace(tzinfo=ZoneInfo('UTC'))
+
+                        if not last_sent or calculated_reminder_dt > last_sent:
+                            reminder_dt = calculated_reminder_dt
                             due_tasks.append(task)
                             break
                 continue
 
             if reminder_dt and now_utc >= reminder_dt:
                 last_sent = task.last_reminder_sent_at
-                if last_sent:
-                    if last_sent.tzinfo is None:
-                        last_sent = last_sent.replace(tzinfo=ZoneInfo('UTC'))
+                if last_sent and last_sent.tzinfo is None:
+                    last_sent = last_sent.replace(tzinfo=ZoneInfo('UTC'))
+
                 if not last_sent or reminder_dt > last_sent:
                     due_tasks.append(task)
 
@@ -105,6 +112,7 @@ class ReminderService:
             task_id=task.id if task else None,
             type=type,
             message=message,
+            is_read=False,
             created_at=now,
             expires_at=expires_at
         )

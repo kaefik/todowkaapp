@@ -30,9 +30,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   sseState: 'disconnected',
 
   refetch: async (params) => {
+    console.log('Fetching notifications with params:', params)
     set({ isLoading: true, error: null })
     try {
       const data = await notificationsApi.getAll(params)
+      console.log('Notifications fetched:', { items: data.items.length, total: data.total, unread_count: data.unread_count })
       set({
         notifications: data.items,
         total: data.total,
@@ -40,6 +42,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         isLoading: false,
       })
     } catch (err) {
+      console.error('Failed to fetch notifications:', err)
       set({
         isLoading: false,
         error: err instanceof Error ? err.message : 'Failed to load notifications',
@@ -102,11 +105,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ sseState: 'connecting' })
     sseManager.connect(userId, {
       onMessage: (message) => {
+        console.log('SSE message received in store:', message)
         if (message.event === 'notification') {
+          console.log('Calling refetch due to notification event')
           get().refetch()
         }
       },
       onStateChange: (state) => {
+        console.log('SSE state changed:', state)
         set({ sseState: state })
       },
       onError: (error) => {

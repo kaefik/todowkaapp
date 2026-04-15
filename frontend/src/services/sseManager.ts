@@ -34,9 +34,21 @@ class SSEManager {
       return
     }
 
-    const url = new URL('/api/sse/notifications', window.location.origin)
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
     
-    this.eventSource = new EventSource(url.toString(), { withCredentials: true })
+    let sseUrl: string
+    if (apiBaseUrl.startsWith('http')) {
+      const apiUrl = new URL(apiBaseUrl)
+      sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/notifications`
+    } else if (import.meta.env.DEV) {
+      sseUrl = 'http://localhost:8000/api/sse/notifications'
+    } else {
+      sseUrl = `${window.location.origin}${apiBaseUrl}/sse/notifications`
+    }
+    
+    console.log('Connecting to SSE:', sseUrl)
+    
+    this.eventSource = new EventSource(sseUrl, { withCredentials: true })
 
     this.eventSource.onopen = () => {
       this.retryDelay = 1000
@@ -47,6 +59,7 @@ class SSEManager {
     }
 
     this.eventSource.addEventListener('notification', (event) => {
+      console.log('SSE notification received:', event.data)
       if (this.callbacks) {
         this.callbacks.onMessage({
           event: 'notification',

@@ -2,17 +2,16 @@ import { ReactNode } from 'react'
 
 export function formatTime(dateStr: string, deliveredAtStr: string | null = null): string {
   const dateToFormat = deliveredAtStr ? new Date(deliveredAtStr) : new Date(dateStr)
-  const now = new Date()
-  const diffMs = now.getTime() - dateToFormat.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  const diffHour = Math.floor(diffMs / 3600000)
-  const diffDay = Math.floor(diffMs / 86400000)
-
-  if (diffMin < 1) return 'Только что'
-  if (diffMin < 60) return `${diffMin} мин назад`
-  if (diffHour < 24) return `${diffHour} ч назад`
-  if (diffDay < 7) return `${diffDay} дн назад`
-  return dateToFormat.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+  
+  return new Date(dateToFormat).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).replace(',', '')
 }
 
 export function typeIcon(type: string, size: string = 'md'): ReactNode {
