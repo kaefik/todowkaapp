@@ -125,7 +125,7 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {formatTime(notification.created_at)}
+                        {formatTime(notification.created_at, notification.delivered_at)}
                       </p>
                     </div>
                     {!notification.is_read && (

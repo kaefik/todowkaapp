@@ -87,6 +87,7 @@ class ReminderService:
             message=message
         )
 
+        notification.delivered_at = datetime.now(ZoneInfo('UTC'))
         task.last_reminder_sent_at = datetime.now(ZoneInfo('UTC'))
         await self.db.flush()
 

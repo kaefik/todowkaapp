@@ -12,6 +12,7 @@ class NotificationResponse(BaseModel):
     message: str
     is_read: bool
     created_at: datetime
+    delivered_at: datetime | None = None
     read_at: datetime | None = None
     expires_at: datetime | None = None
 
