@@ -48,6 +48,7 @@ export interface Task {
   recurrence_end_date: string | null
   reminder_time: string | null
   reminder_offsets: number[] | null
+  reminder_fired: boolean
   is_recurring: boolean
   tags: Tag[]
   subtasks_count: number
@@ -77,6 +78,7 @@ interface ApiTask {
   recurrence_end_date: string | null
   reminder_time: string | null
   reminder_offsets: number[] | null
+  reminder_fired: boolean
   is_recurring: boolean
   tags: Tag[]
   subtasks_count: number
@@ -196,6 +198,12 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
 
   useEffect(() => {
     refetch()
+  }, [refetch])
+
+  useEffect(() => {
+    const handler = () => { refetch() }
+    window.addEventListener('task:reminder-fired', handler)
+    return () => window.removeEventListener('task:reminder-fired', handler)
   }, [refetch])
 
   const addTask = useCallback(async (data: CreateTask) => {

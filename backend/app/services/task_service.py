@@ -161,6 +161,9 @@ class TaskService:
             tags = await self._resolve_tags(user_id, tag_ids)
             task.tags = tags
 
+        if 'reminder_time' in update_data or 'reminder_offsets' in update_data:
+            update_data['reminder_fired'] = False
+
         if 'gtd_status' in update_data:
             val = update_data.pop('gtd_status')
             update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val

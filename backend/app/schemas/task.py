@@ -69,6 +69,7 @@ class TaskUpdate(BaseModel):
     recurrence_end_date: datetime | None = None
     reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
+    reminder_fired: bool | None = None
     last_reminder_sent_at: datetime | None = None
 
     @model_validator(mode='after')
@@ -106,6 +107,7 @@ class TaskResponse(BaseModel):
     recurrence_end_date: datetime | None = None
     reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
+    reminder_fired: bool = False
     last_reminder_sent_at: datetime | None = None
     is_recurring: bool = False
     tags: list[TagBriefResponse] = []

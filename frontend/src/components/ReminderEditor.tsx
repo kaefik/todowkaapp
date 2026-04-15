@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 interface ReminderEditorProps {
   reminderTime: string | null
   reminderOffsets: number[] | null
+  reminderFired: boolean
   dueDate: string | null
   onChange: (data: {
     reminder_time: string | null
@@ -21,10 +22,11 @@ const REMINDER_PRESETS = [
 export function ReminderEditor({
   reminderTime,
   reminderOffsets,
+  reminderFired,
   dueDate,
   onChange,
 }: ReminderEditorProps) {
-  const [enabled, setEnabled] = useState(!!reminderTime || !!reminderOffsets?.length)
+  const [enabled, setEnabled] = useState((!!reminderTime || !!reminderOffsets?.length) && !reminderFired)
   const [useTime, setUseTime] = useState(!!reminderTime)
   const [time, setTime] = useState(reminderTime || '09:00')
   const [useOffsets, setUseOffsets] = useState(!!reminderOffsets?.length)
@@ -40,13 +42,13 @@ export function ReminderEditor({
   })() : false
 
   useEffect(() => {
-    const hasReminder = !!reminderTime || !!reminderOffsets?.length
+    const hasReminder = (!!reminderTime || !!reminderOffsets?.length) && !reminderFired
     setEnabled(hasReminder)
     setUseTime(!!reminderTime)
     setTime(reminderTime || '09:00')
     setUseOffsets(!!reminderOffsets?.length)
     setSelected(reminderOffsets || [])
-  }, [reminderTime, reminderOffsets])
+  }, [reminderTime, reminderOffsets, reminderFired])
 
   const handleToggleEnabled = () => {
     const next = !enabled

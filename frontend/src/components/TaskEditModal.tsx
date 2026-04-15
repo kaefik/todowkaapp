@@ -284,7 +284,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             Edit Task
             {currentTask?.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
-            {(currentTask?.reminder_time || currentTask?.reminder_offsets?.length) && <span title="Есть напоминание">&#x1F514;</span>}
+            {(currentTask?.reminder_time || currentTask?.reminder_offsets?.length) && !currentTask?.reminder_fired && <span title="Есть напоминание">&#x1F514;</span>}
           </h2>
         </div>
 
@@ -427,7 +427,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               </Accordion>
 
               <Accordion
-                title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${reminderData.reminder_time || reminderData.reminder_offsets?.length ? ' \u{1F514}' : ''}`}
+                title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${(reminderData.reminder_time || reminderData.reminder_offsets?.length) && !currentTask?.reminder_fired ? ' \u{1F514}' : ''}`}
                 isOpen={accordionStates.recurrence}
                 onToggle={() => toggleAccordion('recurrence')}
               >
@@ -458,6 +458,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   <ReminderEditor
                     reminderTime={reminderData.reminder_time}
                     reminderOffsets={reminderData.reminder_offsets}
+                    reminderFired={currentTask?.reminder_fired ?? false}
                     dueDate={watch('due_date')}
                     onChange={handleReminderChange}
                   />

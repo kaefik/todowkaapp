@@ -241,11 +241,17 @@
 - Режим "смещение от дедлайна": напоминать за X минут/часов/дней до дедлайна (за 5 мин, 15 мин, 1 час, 1 день)
 - Поле reminder_time (TIME) в модели Task для хранения конкретного времени напоминания
 - Компонент ReminderEditor с переключением между режимами
-- Иконка 🕐 в списке задач для указания наличия напоминания
+- Иконка 🔔 в списке задач для указания наличия активного напоминания
 - Обновлена логика ReminderService для работы с reminder_time
 - Напоминания создаются в reminder_time дня due_date (если reminder_time > due_date, то за день до)
+- **Автоматический сброс напоминания при срабатывании**: когда напоминание отправлено, иконка колокольчика исчезает, галочка «Напоминание» снимается. При изменении напоминания пользователем — колокольчик появляется снова
+  - Поле `reminder_fired` (bool) в модели Task — True после срабатывания, False при редактировании
+  - Условие отображения колокольчика: `(reminder_time || reminder_offsets) && !reminder_fired`
+  - При обновлении reminder_time или reminder_offsets через API — `reminder_fired` автоматически сбрасывается в False
+  - SSE-событие `task:reminder-fired` триггерит refetch задач на фронтенде
 - Миграция: alembic/versions/20260414_1113_add_reminder_time_field_42dc15b81a10.py
-- Файлы: `backend/app/models/task.py`, `backend/app/schemas/task.py`, `backend/app/services/reminder_service.py`, `backend/app/services/task_service.py`, `backend/app/services/recurrence_service.py`, `frontend/src/components/ReminderEditor.tsx`, `frontend/src/hooks/useTasks.ts`
+- Миграция (reminder_fired): alembic/versions/20260415_2120_add_reminder_fired_to_task_5e55c2ba49f5.py
+- Файлы: `backend/app/models/task.py`, `backend/app/schemas/task.py`, `backend/app/services/reminder_service.py`, `backend/app/services/task_service.py`, `backend/app/services/recurrence_service.py`, `frontend/src/components/ReminderEditor.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/stores/notificationStore.ts`
 - Линтеры и type checking: ruff (backend) и ESLint + TypeScript (frontend) без ошибок
 
 ---
@@ -586,6 +592,13 @@
 *Последнее обновление: 15 апреля 2026 года*
 
 **15 апреля 2026:**
+- Добавлен автоматический сброс напоминания при срабатывании: колокольчик исчезает после отправки уведомления, галочка «Напоминание» снимается
+  - Поле `reminder_fired` (bool, default=False) в модели Task
+  - `ReminderService.send_reminder()` устанавливает `reminder_fired = True`
+  - `TaskService.update_task()` сбрасывает `reminder_fired = False` при изменении reminder_time/reminder_offsets
+  - Фронтенд: условие колокольчика `reminder && !reminder_fired`, ReminderEditor учитывает fired-статус
+  - SSE-событие `task:reminder-fired` триггерит refetch задач для мгновенного обновления UI
+  - Миграция: 20260415_2120_add_reminder_fired_to_task_5e55c2ba49f5.py
 - Добавлена автоочистка корзины: задачи автоматически удаляются через 30 дней после перемещения в корзину
   - Поле `trashed_at` в модели Task (миграция 20260415_2040)
   - `TaskService.cleanup_old_trash(days=30)` — массовое удаление старых задач
