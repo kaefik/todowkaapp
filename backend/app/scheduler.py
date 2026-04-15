@@ -53,6 +53,14 @@ class TaskScheduler:
                 replace_existing=True
             )
 
+            self.scheduler.add_job(
+                self._job_cleanup_old_trash,
+                'interval',
+                days=1,
+                id='cleanup_old_trash',
+                replace_existing=True
+            )
+
             self.scheduler.start()
             logger.info("Scheduler started")
 
@@ -177,6 +185,22 @@ class TaskScheduler:
 
         except Exception as e:
             logger.error(f"Error in job_startup_recovery: {e}")
+
+    @staticmethod
+    async def _job_cleanup_old_trash():
+        logger.info("Running job: cleanup_old_trash")
+
+        try:
+            from app.services.task_service import TaskService
+
+            async with AsyncSessionLocal() as session:
+                task_service = TaskService(session)
+                deleted_count = await task_service.cleanup_old_trash(days=30)
+                await session.commit()
+                logger.info(f"Deleted {deleted_count} tasks from trash older than 30 days")
+
+        except Exception as e:
+            logger.error(f"Error in cleanup_old_trash: {e}")
 
 
 task_scheduler = TaskScheduler()

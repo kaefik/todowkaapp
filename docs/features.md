@@ -34,7 +34,14 @@
 - Автоматическая фиксация времени выполнения задачи (completed_at)
 - Удаление задачи с подтверждением
 - Очистка корзины одной кнопкой с подтверждением действия (DELETE /api/tasks/trash/clear)
-- Файлы: `backend/app/api/tasks.py`, `backend/app/services/task_service.py`, `frontend/src/routes/Trash.tsx`
+- Автоочистка корзины: задачи в корзине (gtd_status='trash') автоматически удаляются через 30 дней
+  - Поле `trashed_at` в модели Task фиксирует время перемещения в корзину
+  - Фоновая задача (APScheduler) запускается раз в сутки
+  - Восстановление задачи очищает `trashed_at`
+  - Метод: `TaskService.cleanup_old_trash(days=30)`
+  - Job: `TaskScheduler._job_cleanup_old_trash`
+  - Миграция: `alembic/versions/20260415_2040_add_trashed_at_to_tasks_695b4085a209.py`
+- Файлы: `backend/app/api/tasks.py`, `backend/app/services/task_service.py`, `backend/app/scheduler.py`, `frontend/src/routes/Trash.tsx`
 - Сворачивание/разворачивание списка выполненных задач
 - Мгновенное обновление интерфейса без перезагрузки страницы
 
@@ -579,6 +586,11 @@
 *Последнее обновление: 15 апреля 2026 года*
 
 **15 апреля 2026:**
+- Добавлена автоочистка корзины: задачи автоматически удаляются через 30 дней после перемещения в корзину
+  - Поле `trashed_at` в модели Task (миграция 20260415_2040)
+  - `TaskService.cleanup_old_trash(days=30)` — массовое удаление старых задач
+  - `_job_cleanup_old_trash` в TaskScheduler запускается раз в сутки
+  - `move_task()` ставит `trashed_at` при trash, очищает при восстановлении
 - Добавлена кнопка «Очистить корзину» на странице корзины — удаление всех задач одним кликом с подтверждением
 - Backend: endpoint DELETE /tasks/trash/clear, метод TaskService.clear_trash()
 - Frontend: кнопка с spinner, confirm-диалог, обработка ошибок, обновление счётчиков после очистки

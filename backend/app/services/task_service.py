@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -179,12 +179,16 @@ class TaskService:
         was_recurring_and_completed = task.is_recurring and task.is_completed
 
         task.gtd_status = gtd_status.value
-        if gtd_status == GtdStatus.COMPLETED:
+        if gtd_status == GtdStatus.TRASH:
+            task.trashed_at = datetime.now()
+        elif gtd_status == GtdStatus.COMPLETED:
             task.is_completed = True
             task.completed_at = datetime.now()
+            task.trashed_at = None
         elif task.gtd_status != GtdStatus.COMPLETED.value:
             task.is_completed = False
             task.completed_at = None
+            task.trashed_at = None
 
         await self.db.flush()
 
@@ -267,6 +271,27 @@ class TaskService:
         stmt = delete(Task).where(
             Task.user_id == user_id,
             Task.gtd_status == GtdStatus.TRASH.value,
+            Task.parent_task_id.is_(None),
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount
+
+    async def cleanup_old_trash(self, days: int = 30) -> int:
+        cutoff = datetime.now() - timedelta(days=days)
+
+        subtasks_stmt = delete(Task).where(
+            Task.gtd_status == GtdStatus.TRASH.value,
+            Task.trashed_at.isnot(None),
+            Task.trashed_at < cutoff,
+            Task.parent_task_id.isnot(None),
+        )
+        await self.db.execute(subtasks_stmt)
+
+        stmt = delete(Task).where(
+            Task.gtd_status == GtdStatus.TRASH.value,
+            Task.trashed_at.isnot(None),
+            Task.trashed_at < cutoff,
             Task.parent_task_id.is_(None),
         )
         result = await self.db.execute(stmt)
