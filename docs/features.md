@@ -106,24 +106,109 @@
 - Баннер приглашения к установке при поддержке браузером
 - Запуск в отдельном окне (standalone режим)
 
-#### Уведомления и Real-time синхронизация ✅ (Реализовано 14.04.2026)
-- Компонент NotificationBell с иконкой колокольчика и badge (количество непрочитанных)
-- Dropdown со списком последних 5 уведомлений
-- Страница уведомлений (/notifications) с полной историей и пагинацией
-- Фильтр уведомлений: все / непрочитанные
-- Кнопка "отметить все как прочитанные"
-- Клик на уведомление → перейти к задаче / отметить как прочитанное
-- Удаление отдельных уведомлений
-- SSE (Server-Sent Events) для real-time получения уведомлений
-- SSE для real-time синхронизации изменений задач между клиентами
-- Автоматическое переподключение SSE с exponential backoff (1s → 30s max)
-- Индикация состояния подключения: connecting / connected / disconnected / error
-- Авто-refresh через polling (30 сек) как fallback для NotificationBell
-- Event-driven обновление через NOTIFICATIONS_CHANGED_EVENT
-- API уведомлений: GET /api/notifications, PATCH /api/notifications/{id}/read, PATCH /api/notifications/read-all, DELETE /api/notifications/{id}
-- SSE эндпоинты: GET /api/sse/notifications, GET /api/sse/sync
-- Файлы: `frontend/src/components/NotificationBell.tsx`, `frontend/src/routes/Notifications.tsx`, `frontend/src/hooks/useNotifications.ts`, `frontend/src/hooks/useSSE.ts`, `frontend/src/api/notifications.ts`, `backend/app/api/sse.py`
-- Тесты: бэкенд тесты для пользователей проходят успешно, фронтенд линтинг и type checking без ошибок
+#### Уведомления и Real-time синхронизация ✅ (Реализовано 15.04.2026)
+
+**Алгоритм работы системы уведомлений:**
+
+1. **Планировщик напоминаний** запускается каждую минуту:
+   - `ReminderService.find_due_tasks()` находит задачи, которые требуют напоминания
+   - Для каждой задачи вычисляется время напоминания:
+     - **Режим 1 (конкретное время):** `reminder_time` в день `due_date`
+       - Если `reminder_time > due_date.time()`, то за день до
+     - **Режим 2 (смещение):** `due_date - reminder_offsets`
+   - Проверяется `last_reminder_sent_at` для предотвращения дубликатов (но не более 1 раза в 24 часа)
+   - Создаётся `Notification` с `is_read=False` и `delivered_at = now()`
+   - Отправляется событие через `event_bus.publish()` на канал `{user_id}:notifications`
+
+2. **SSE (Server-Sent Events) для real-time доставки:**
+   - Фронтенд подключается к `GET /api/sse/notifications`
+   - При получении события SSE → `NotificationStore.refetch()` обновляет список
+   - Колокольчик показывает `unreadCount` из API-ответа
+   - Автоматическое переподключение с exponential backoff (1s → 30s max)
+
+3. **Отображение времени уведомления:**
+   - Формат абсолютного времени: `ДД.ММ.ГГГГ ЧЧ:ММ:СС`
+   - Используется `delivered_at` (время отправки), если есть, иначе `created_at`
+   - Время отображается в локальной timezone пользователя через `toLocaleString()`
+
+**Примеры работы:**
+
+**Пример 1: Напоминание с конкретным временем**
+```
+Пользователь создаёт задачу:
+  title: "Встреча с клиентом"
+  due_date: 2026-04-16 14:00
+  reminder_time: 09:00
+
+15 апреля 2026, 09:00 (UTC):
+  Планировщик находит задачу
+  Создаётся уведомление:
+    type: "due_reminder"
+    message: "Напоминание о задаче 'Встреча с клиентом'"
+    is_read: false
+    delivered_at: 2026-04-15 06:00:00 UTC
+  SSE событие отправляется на фронтенд
+  Колокольчик показывает "1"
+  Пользователь видит: "15.04.2026 09:00:00 Напоминание о задаче 'Встреча с клиентом'"
+```
+
+**Пример 2: Напоминание со смещением**
+```
+Пользователь создаёт задачу:
+  title: "Дедлайн отчёта"
+  due_date: 2026-04-15 16:00
+  reminder_offsets: [15]  (за 15 минут)
+
+15 апреля 2026, 15:45 (UTC):
+  Планировщик вычисляет: 16:00 - 15 минут = 15:45
+  Создаётся уведомление
+  SSE событие доставляется в реальном времени
+  Колокольчик показывает "1"
+```
+
+**Пример 3: Клик по уведомлению**
+```
+Пользователь кликает на уведомление:
+  → PATCH /api/notifications/{id}/read
+  → Уведомление помечается как is_read=true
+  → Колокольчик обновляется: "1" → "0"
+  → Автоматическое перенаправление: /tasks?editTaskId={task_id}
+```
+
+**Техническая реализация:**
+
+**Бэкенд:**
+- `ReminderService.send_reminder()` — создание уведомления и отправка события
+- `event_bus.publish(channel, event_type, data)` — асинхронная шина событий
+- `GET /api/notifications` — получение списка с `unread_count`
+- `GET /api/sse/notifications` — SSE поток уведомлений (timeout 30s, heartbeat)
+- Модель `Notification`: `is_read` (boolean), `delivered_at` (datetime), `expires_at` (datetime)
+- Кастомный сериализатор datetime для ISO формата с timezone
+
+**Фронтенд:**
+- `NotificationBell` — компонент с badge непрочитанных
+- `NotificationStore` — Zustand store для управления состоянием
+- `SSEManager` — менеджер SSE подключений с авто-reconnect
+- `formatTime(dateStr, deliveredAtStr)` — форматирование времени в локальной timezone
+- URL для SSE в dev: `http://localhost:8000/api/sse/notifications`
+- URL для SSE в prod: `{origin}/api/sse/notifications`
+
+**API эндпоинты:**
+- `GET /api/notifications` — список уведомлений (параметры: unread_only, limit, offset)
+- `PATCH /api/notifications/{id}/read` — отметить как прочитанное
+- `PATCH /api/notifications/read-all` — отметить все как прочитанные
+- `DELETE /api/notifications/{id}` — удалить уведомление
+- `GET /api/sse/notifications` — SSE поток уведомлений
+- `GET /api/sse/sync` — SSE поток синхронизации задач
+
+**Файлы:**
+- Бэкенд: `backend/app/services/reminder_service.py`, `backend/app/api/notifications.py`, `backend/app/api/sse.py`, `backend/app/event_bus.py`, `backend/app/models/notification.py`, `backend/app/schemas/notification.py`, `backend/app/scheduler.py`
+- Фронтенд: `frontend/src/components/NotificationBell.tsx`, `frontend/src/routes/Notifications.tsx`, `frontend/src/stores/notificationStore.ts`, `frontend/src/services/sseManager.ts`, `frontend/src/utils/notificationUtils.tsx`, `frontend/src/components/NotificationProvider.tsx`
+
+**Тесты:**
+- Бэкенд: 19 тестов в `tests/test_reminder_service.py`, 11 тестов в `tests/test_notifications_api.py`
+- Все тесты проходят успешно
+- Линтеры и type checking без ошибок
 
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Два режима напоминаний: конкретное время дня или смещение от дедлайна
