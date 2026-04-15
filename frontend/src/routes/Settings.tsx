@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useBrowserNotifications } from '../hooks/useBrowserNotifications'
+import { useToastStore } from '../stores/toastStore'
 import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 
@@ -26,6 +28,8 @@ const POPULAR_TIMEZONES = [
 
 function SettingsContent() {
   const { user } = useAuthStore()
+  const browserNotifications = useBrowserNotifications()
+  const addToast = useToastStore((s) => s.addToast)
   const [activeTab, setActiveTab] = useLocalStorage<Tab>(
     'ui-settings-active-tab',
     'general'
@@ -160,6 +164,94 @@ function SettingsContent() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Уведомления браузера</h2>
+
+            {!browserNotifications.supported ? (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                  Ваш браузер не поддерживает уведомления. Попробуйте использовать Chrome, Firefox, Edge или Safari.
+                </p>
+              </div>
+            ) : browserNotifications.permission === 'denied' && browserNotifications.enabled ? (
+              <div className="space-y-3">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-sm text-red-700 dark:text-red-400">
+                    Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта и обновите страницу.
+                  </p>
+                </div>
+                <button
+                  onClick={browserNotifications.disable}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Отключить уведомления
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Получайте системные уведомления браузера при наступлении напоминаний о задачах.
+                  Уведомления отображаются даже когда приложение свёрнуто.
+                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Браузерные уведомления
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {browserNotifications.enabled
+                        ? 'Уведомления включены'
+                        : 'Уведомления отключены'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (browserNotifications.enabled) {
+                        browserNotifications.disable()
+                      } else {
+                        browserNotifications.enable()
+                      }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      browserNotifications.enabled
+                        ? 'bg-indigo-600 dark:bg-indigo-500'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={browserNotifications.enabled}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        browserNotifications.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                {browserNotifications.enabled && (
+                    <button
+                      onClick={async () => {
+                        const ok = await browserNotifications.showNotification(
+                          'Напоминание о задаче',
+                          'Тестовое уведомление от Todowka',
+                          'test-notification'
+                        )
+                        if (!ok) {
+                          addToast({
+                            title: 'Напоминание о задаче',
+                            body: 'Тестовое уведомление от Todowka',
+                            type: 'info',
+                          })
+                        }
+                      }}
+                      className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
+                    >
+                      Отправить тестовое уведомление
+                    </button>
+                  )}
+                </div>
+            )}
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
