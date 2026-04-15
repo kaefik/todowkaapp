@@ -458,6 +458,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   <ReminderEditor
                     reminderTime={reminderData.reminder_time}
                     reminderOffsets={reminderData.reminder_offsets}
+                    dueDate={watch('due_date')}
                     onChange={handleReminderChange}
                   />
                 </div>

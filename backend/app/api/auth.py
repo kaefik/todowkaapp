@@ -13,12 +13,14 @@ from app.models.revoked_token import RevokedToken
 from app.models.user import User
 from app.schemas.user import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
+    clear_access_cookie,
     clear_refresh_cookie,
     create_access_token,
     create_refresh_token,
     decode_token,
     get_token_jti,
     hash_password,
+    set_access_cookie,
     set_refresh_cookie,
     verify_password,
 )
@@ -121,6 +123,7 @@ async def login(
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     set_refresh_cookie(response, refresh_token)
+    set_access_cookie(response, access_token)
 
     return TokenResponse(access_token=access_token, user=user)
 
@@ -187,6 +190,7 @@ async def refresh(
     new_refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     set_refresh_cookie(response, new_refresh_token)
+    set_access_cookie(response, access_token)
 
     if settings.refresh_token_rotation_enabled:
         revoked_token = RevokedToken(token_jti=token_jti)
@@ -210,6 +214,7 @@ async def logout(
             await db.commit()
 
     clear_refresh_cookie(response)
+    clear_access_cookie(response)
     return {"message": "Logged out successfully"}
 
 
