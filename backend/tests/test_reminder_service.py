@@ -278,3 +278,55 @@ async def test_cleanup_does_not_remove_active(reminder_service, db_session, user
         select(Notification).where(Notification.id == active_notification.id)
     )
     assert result.scalar_one_or_none() is not None
+
+
+@pytest.mark.asyncio
+async def test_find_due_tasks_skips_old_reminders(reminder_service, db_session, user_with_timezone):
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with old due date",
+        due_date=datetime.now(UTC) - timedelta(days=7),
+        reminder_time=time(9, 0),
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    assert not any(t.id == task.id for t in due_tasks)
+
+
+@pytest.mark.asyncio
+async def test_find_due_tasks_with_reminder_time_after_due_time(reminder_service, db_session, user_with_timezone):
+    due_date = datetime.now(ZoneInfo('Europe/Moscow')) - timedelta(minutes=30)
+    due_date = due_date.replace(minute=0, second=0, microsecond=0)
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with reminder after due time",
+        due_date=due_date,
+        reminder_time=time(20, 0),
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    
+    found = any(t.id == task.id for t in due_tasks)
+    assert found, "Task should be found with reminder adjusted to due time"
+
+
+@pytest.mark.asyncio
+async def test_find_due_tasks_reminder_within_24h(reminder_service, db_session, user_with_timezone):
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with recent reminder time",
+        due_date=datetime.now(UTC) + timedelta(hours=1),
+        reminder_time=time(9, 0),
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    assert len(due_tasks) >= 1

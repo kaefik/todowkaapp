@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base as Base
@@ -22,6 +22,12 @@ class Notification(Base):
 
     user = relationship('User')
     task = relationship('Task')
+
+    __table_args__ = (
+        Index('ix_notifications_user_id', 'user_id'),
+        Index('ix_notifications_user_id_is_read', 'user_id', 'is_read'),
+        Index('ix_notifications_user_id_created_at', 'user_id', 'created_at'),
+    )
 
     def __repr__(self) -> str:
         return f'<Notification(id={self.id}, type={self.type}, is_read={self.is_read})>'

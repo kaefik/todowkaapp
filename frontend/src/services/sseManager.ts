@@ -36,7 +36,7 @@ class SSEManager {
 
     const url = new URL('/api/sse/notifications', window.location.origin)
     
-    this.eventSource = new EventSource(url.toString())
+    this.eventSource = new EventSource(url.toString(), { withCredentials: true })
 
     this.eventSource.onopen = () => {
       this.retryDelay = 1000

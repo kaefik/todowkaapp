@@ -48,9 +48,12 @@ class ReminderService:
                 if due_date.tzinfo is None:
                     due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
                 due_date_local = due_date.astimezone(user_timezone)
-                reminder_dt_local = datetime.combine(due_date_local.date(), task.reminder_time, tzinfo=user_timezone)
-                if due_date.time() != time(0, 0) and reminder_dt_local > due_date_local:
-                    reminder_dt_local = reminder_dt_local - timedelta(days=1)
+                
+                reminder_time_to_use = task.reminder_time
+                if due_date.time() != time(0, 0) and task.reminder_time > due_date.time():
+                    reminder_time_to_use = time(due_date_local.hour, due_date_local.minute)
+                
+                reminder_dt_local = datetime.combine(due_date_local.date(), reminder_time_to_use, tzinfo=user_timezone)
                 reminder_dt = reminder_dt_local.astimezone(ZoneInfo('UTC'))
             elif task.reminder_offsets:
                 for offset_minutes in task.reminder_offsets:
@@ -64,7 +67,9 @@ class ReminderService:
                 continue
 
             if reminder_dt and now_utc >= reminder_dt:
-                due_tasks.append(task)
+                time_past = now_utc - reminder_dt
+                if time_past <= timedelta(hours=24):
+                    due_tasks.append(task)
 
         return due_tasks
 
