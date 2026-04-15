@@ -1,10 +1,10 @@
 from datetime import UTC, datetime
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -28,12 +28,12 @@ async def get_notifications(
     query = select(Notification).where(Notification.user_id == current_user.id)
 
     if unread_only:
-        query = query.where(Notification.is_read == False)
+        query = query.where(not Notification.is_read)
 
     unread_count_result = await db.execute(
         select(func.count(Notification.id)).where(
             Notification.user_id == current_user.id,
-            Notification.is_read == False
+            not Notification.is_read
         )
     )
     unread_count = unread_count_result.scalar() or 0
@@ -45,7 +45,6 @@ async def get_notifications(
 
     result = await db.execute(
         query
-        .options(selectinload(Notification.task))
         .order_by(Notification.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -58,7 +57,7 @@ async def get_notifications(
 
 @notifications_router.patch("/{notification_id}/read", status_code=status.HTTP_200_OK)
 async def mark_notification_as_read(
-    notification_id: str,
+    notification_id: UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
@@ -96,7 +95,7 @@ async def mark_all_notifications_as_read(
         update(Notification)
         .where(
             Notification.user_id == current_user.id,
-            Notification.is_read == False
+            not Notification.is_read
         )
         .values(is_read=True, read_at=datetime.now(UTC))
     )
@@ -107,7 +106,7 @@ async def mark_all_notifications_as_read(
 
 @notifications_router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notification(
-    notification_id: str,
+    notification_id: UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:

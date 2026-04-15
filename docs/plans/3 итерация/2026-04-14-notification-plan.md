@@ -159,7 +159,7 @@ SSE-эндпоинты больше не принимают `db: AsyncSession = 
 
 ## Этап 4 — Backend: Исправление критических багов
 
-### 4.1 Устранить двойной commit в scheduler
+### 4.1 Устранить двойной commit в scheduler ✅ ВЫПОЛНЕНО
 
 **Файл:** `backend/app/services/reminder_service.py`
 
@@ -173,7 +173,7 @@ SSE-эндпоинты больше не принимают `db: AsyncSession = 
 - Один `await db.commit()` в конце цикла обработки всех задач
 - В `except`: `await db.rollback()` откатит всё, включая `last_reminder_sent_at` — это правильно, т.к. уведомление не создано
 
-### 4.2 Оптимизировать `find_due_tasks()` — фильтрация в SQL
+### 4.2 Оптимизировать `find_due_tasks()` — фильтрация в SQL ✅ ВЫПОЛНЕНО
 
 **Файл:** `backend/app/services/reminder_service.py`
 
@@ -195,7 +195,7 @@ result = await self.db.execute(
 
 Фильтрацию по `reminder_time` / `reminder_offsets` оставить в Python (она требует timezone-преобразований, которые сложны в SQL для SQLite).
 
-### 4.3 Исправить `cleanup_expired_notifications()`
+### 4.3 Исправить `cleanup_expired_notifications()` ✅ ВЫПОЛНЕНО
 
 **Файл:** `backend/app/services/reminder_service.py` (строка 200-210)
 
@@ -211,7 +211,7 @@ delete(Notification).where(Notification.expires_at < now)
 
 Уведомления удаляются когда `expires_at` прошёл (30 дней после создания), а не `expires_at` + ещё 30 дней.
 
-### 4.4 Оптимизировать `mark_all_as_read()` — bulk update
+### 4.4 Оптимизировать `mark_all_as_read()` — bulk update ✅ ВЫПОЛНЕНО
 
 **Файл:** `backend/app/services/reminder_service.py` (строка 158-175)
 
@@ -230,39 +230,38 @@ return result.rowcount
 
 ---
 
-## Этап 5 — Backend: Индексы и валидация
+## ~~Этап 5~~ — Backend: Индексы и валидация ✅ ВЫПОЛНЕН
 
-### 5.1 Добавить миграцию с индексами на notifications
+### 5.1 Добавить миграцию с индексами на notifications ✅
 
-**Новый файл:** `backend/alembic/versions/20260414_xxxx_add_notification_indexes.py`
+**Файл создан:** `backend/alembic/versions/20260415_0944_add_notification_indexes_a32a2291d1c4.py`
 
 Индексы:
-- `ix_notifications_user_read` на `(user_id, is_read)` — для списка непрочитанных
-- `ix_notifications_user_created` на `(user_id, created_at)` — для сортировки по дате
-- `ix_notifications_expires` на `(expires_at)` — для cleanup
+- `ix_notifications_user_read` на `(user_id, is_read)` — для списка непрочитанных ✅
+- `ix_notifications_user_created` на `(user_id, created_at)` — для сортировки по дате ✅
+- `ix_notifications_expires` на `(expires_at)` — для cleanup ✅
 
-### 5.2 Валидация UUID в API
+Миграция применена успешно. Индексы созданы в БД.
+
+### 5.2 Валидация UUID в API ✅
 
 **Файл:** `backend/app/api/notifications.py`
 
-Заменить:
-```python
-notification_id: str
-```
-на:
-```python
-notification_id: UUID
-```
+- Добавлен импорт `UUID` из `uuid` ✅
+- Изменен тип параметра `notification_id` с `str` на `UUID` в:
+  - `mark_notification_as_read()` (строка 61) ✅
+  - `delete_notification()` (строка 110) ✅
 
-FastAPI автоматически валидирует формат UUID и вернёт 422 при некорректном значении.
+FastAPI автоматически валидирует формат UUID и возвращает 422 при некорректном значении. Проверено тестами.
 
-### 5.3 Убрать избыточный `selectinload(Notification.task)`
+### 5.3 Убрать избыточный `selectinload(Notification.task)` ✅
 
-**Файл:** `backend/app/api/notifications.py` (строка 48)
+**Файл:** `backend/app/api/notifications.py`
 
-Убрать `selectinload(Notification.task)` из запроса списка. Если `task` нужен только для `task_id` (навигация), то он доступен как FK-столбец без JOIN.
+- Удален `selectinload(Notification.task)` из запроса списка (строка 48) ✅
+- Удален неиспользуемый импорт `selectinload` ✅
 
-Проверить: если `NotificationResponse` требует данные задачи (название и т.д.) — оставить для `GET /notifications/{id}`, убрать для списка.
+`NotificationResponse` требует только `task_id` (доступен как FK-столбец), поэтому JOIN не нужен. Проверено тестом - список уведомлений работает корректно.
 
 ---
 

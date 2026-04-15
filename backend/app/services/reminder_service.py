@@ -1,8 +1,9 @@
 from datetime import datetime, time, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from app.models.notification import Notification
@@ -18,8 +19,6 @@ class ReminderService:
         self.db = db
 
     async def find_due_tasks(self) -> list[Task]:
-        from zoneinfo import ZoneInfo
-
         now_utc = datetime.now(ZoneInfo('UTC'))
 
         result = await self.db.execute(
@@ -27,7 +26,11 @@ class ReminderService:
             .options(selectinload(Task.user))
             .where(
                 Task.due_date.isnot(None),
-                Task.is_completed == False
+                not Task.is_completed,
+                or_(
+                    Task.last_reminder_sent_at.is_(None),
+                    Task.last_reminder_sent_at <= now_utc - timedelta(hours=24),
+                )
             )
         )
         tasks = list(result.scalars().all())
@@ -66,20 +69,9 @@ class ReminderService:
         return due_tasks
 
     async def send_reminder(self, task: Task, user: User) -> Notification:
-        from zoneinfo import ZoneInfo
-
-        user_timezone = user.timezone or 'UTC'
-
         due_date = task.due_date
         if due_date.tzinfo is None:
             due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
-        
-        due_date_local = self.convert_to_user_timezone(due_date, user_timezone)
-
-        if due_date_local.time() == time(0, 0):
-            due_date_str = due_date_local.strftime('%d.%m.%Y')
-        else:
-            due_date_str = due_date_local.strftime('%d.%m.%Y %H:%M')
 
         message = f'Напоминание о задаче "{task.title}"'
 
@@ -91,7 +83,7 @@ class ReminderService:
         )
 
         task.last_reminder_sent_at = datetime.now(ZoneInfo('UTC'))
-        await self.db.commit()
+        await self.db.flush()
 
         return notification
 
@@ -99,8 +91,6 @@ class ReminderService:
     async def create_notification(
         self, user: User, task: Task | None, type: str, message: str
     ) -> Notification:
-        from zoneinfo import ZoneInfo
-
         now = datetime.now(ZoneInfo('UTC'))
         expires_at = now + timedelta(days=30)
 
@@ -121,7 +111,7 @@ class ReminderService:
     ) -> tuple[list[Notification], int]:
         count_stmt = select(func.count(Notification.id)).where(
             Notification.user_id == str(user_id),
-            Notification.is_read == False
+            not Notification.is_read
         )
         count_result = await self.db.execute(count_stmt)
         total = count_result.scalar() or 0
@@ -131,7 +121,7 @@ class ReminderService:
             .options(selectinload(Notification.task))
             .where(
                 Notification.user_id == str(user_id),
-                Notification.is_read == False
+                not Notification.is_read
             )
             .order_by(Notification.created_at.desc())
             .limit(limit)
@@ -141,8 +131,6 @@ class ReminderService:
         return notifications, total
 
     async def mark_as_read(self, notification_id: str | UUID) -> Notification | None:
-        from zoneinfo import ZoneInfo
-
         result = await self.db.execute(
             select(Notification).where(Notification.id == str(notification_id))
         )
@@ -156,27 +144,15 @@ class ReminderService:
         return notification
 
     async def mark_all_as_read(self, user_id: str | UUID) -> int:
-        from zoneinfo import ZoneInfo
-
-        now = datetime.now(ZoneInfo('UTC'))
-        result = await self.db.execute(
-            select(Notification).where(
-                Notification.user_id == str(user_id),
-                Notification.is_read == False
-            )
+        stmt = (
+            update(Notification)
+            .where(Notification.user_id == str(user_id), Notification.is_read == False)
+            .values(is_read=True, read_at=datetime.now(ZoneInfo('UTC')))
         )
-        notifications = list(result.scalars().all())
-
-        for notification in notifications:
-            notification.is_read = True
-            notification.read_at = now
-
-        await self.db.flush()
-        return len(notifications)
+        result = await self.db.execute(stmt)
+        return result.rowcount
 
     def convert_to_user_timezone(self, dt: datetime, user_timezone: str) -> datetime:
-        from zoneinfo import ZoneInfo
-
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=ZoneInfo('UTC'))
 
@@ -184,8 +160,6 @@ class ReminderService:
         return dt.astimezone(target_tz)
 
     def should_send_reminder(self, task: Task) -> bool:
-        from zoneinfo import ZoneInfo
-
         if not task.last_reminder_sent_at:
             return True
 
@@ -198,12 +172,10 @@ class ReminderService:
         return time_since_last_reminder >= timedelta(hours=24)
 
     async def cleanup_expired_notifications(self, days: int = 30) -> int:
-        from zoneinfo import ZoneInfo
-
-        cutoff_date = datetime.now(ZoneInfo('UTC')) - timedelta(days=days)
+        now = datetime.now(ZoneInfo('UTC'))
 
         result = await self.db.execute(
-            delete(Notification).where(Notification.expires_at < cutoff_date)
+            delete(Notification).where(Notification.expires_at < now)
         )
         deleted_count = result.rowcount
         await self.db.flush()
