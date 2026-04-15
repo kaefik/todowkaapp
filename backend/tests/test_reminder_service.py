@@ -161,6 +161,78 @@ async def test_should_send_reminder_first_time(reminder_service, db_session, use
 
 
 @pytest.mark.asyncio
+async def test_find_due_tasks_reminder_past_no_last_sent(reminder_service, db_session, user_with_timezone):
+    now = datetime.now(ZoneInfo('Europe/Moscow'))
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with past reminder no last sent",
+        due_date=now - timedelta(hours=1),
+        reminder_time=time(now.hour - 1, 0),
+        last_reminder_sent_at=None,
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    assert any(t.id == task.id for t in due_tasks), "Past reminder without last_sent should trigger"
+
+
+@pytest.mark.asyncio
+async def test_find_due_tasks_reminder_past_after_last_sent(reminder_service, db_session, user_with_timezone):
+    now = datetime.now(ZoneInfo('Europe/Moscow'))
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with past reminder after last sent",
+        due_date=now - timedelta(minutes=30),
+        reminder_time=time(now.hour - 1, 0),
+        last_reminder_sent_at=now - timedelta(days=1),
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    assert any(t.id == task.id for t in due_tasks), "Past reminder after last_sent should trigger if reminder time > last_sent"
+
+
+@pytest.mark.asyncio
+async def test_find_due_tasks_reminder_past_before_last_sent(reminder_service, db_session, user_with_timezone):
+    now = datetime.now(ZoneInfo('Europe/Moscow'))
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with past reminder before last sent",
+        due_date=now - timedelta(hours=1),
+        reminder_time=time(now.hour - 1, 0),
+        last_reminder_sent_at=now,
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    assert not any(t.id == task.id for t in due_tasks), "Past reminder before last_sent should not trigger"
+
+
+@pytest.mark.asyncio
+async def test_find_due_tasks_reminder_future_no_trigger(reminder_service, db_session, user_with_timezone):
+    now = datetime.now(ZoneInfo('Europe/Moscow'))
+    task = Task(
+        user_id=user_with_timezone.id,
+        title="Task with future reminder",
+        due_date=now + timedelta(hours=1),
+        reminder_time=time(now.hour + 1, 0),
+        last_reminder_sent_at=None,
+        is_completed=False,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    due_tasks = await reminder_service.find_due_tasks()
+    assert not any(t.id == task.id for t in due_tasks), "Future reminder should not trigger yet"
+
+
+@pytest.mark.asyncio
 async def test_should_send_reminder_within_24h(reminder_service, db_session, user_with_timezone):
     task = Task(
         user_id=user_with_timezone.id,
@@ -282,11 +354,13 @@ async def test_cleanup_does_not_remove_active(reminder_service, db_session, user
 
 @pytest.mark.asyncio
 async def test_find_due_tasks_skips_old_reminders(reminder_service, db_session, user_with_timezone):
+    old_due_date = datetime.now(UTC) - timedelta(days=7)
     task = Task(
         user_id=user_with_timezone.id,
         title="Task with old due date",
-        due_date=datetime.now(UTC) - timedelta(days=7),
+        due_date=old_due_date,
         reminder_time=time(9, 0),
+        last_reminder_sent_at=old_due_date + timedelta(hours=1),
         is_completed=False,
     )
     db_session.add(task)
@@ -311,7 +385,7 @@ async def test_find_due_tasks_with_reminder_time_after_due_time(reminder_service
     await db_session.commit()
 
     due_tasks = await reminder_service.find_due_tasks()
-    
+
     found = any(t.id == task.id for t in due_tasks)
     assert found, "Task should be found with reminder adjusted to due time"
 

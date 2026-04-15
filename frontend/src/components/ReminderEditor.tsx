@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 interface ReminderEditorProps {
   reminderTime: string | null
   reminderOffsets: number[] | null
+  dueDate: string | null
   onChange: (data: {
     reminder_time: string | null
     reminder_offsets: number[] | null
@@ -20,6 +21,7 @@ const REMINDER_PRESETS = [
 export function ReminderEditor({
   reminderTime,
   reminderOffsets,
+  dueDate,
   onChange,
 }: ReminderEditorProps) {
   const [enabled, setEnabled] = useState(!!reminderTime || !!reminderOffsets?.length)
@@ -27,6 +29,15 @@ export function ReminderEditor({
   const [time, setTime] = useState(reminderTime || '09:00')
   const [useOffsets, setUseOffsets] = useState(!!reminderOffsets?.length)
   const [selected, setSelected] = useState<number[]>(reminderOffsets || [])
+
+  const isReminderInPast = useTime && dueDate && time ? (() => {
+    const now = new Date()
+    const dueDateObj = new Date(dueDate + 'T00:00:00')
+    const [hours, minutes] = time.split(':').map(Number)
+    const reminderDate = new Date(dueDateObj)
+    reminderDate.setHours(hours, minutes, 0, 0)
+    return reminderDate < now
+  })() : false
 
   useEffect(() => {
     const hasReminder = !!reminderTime || !!reminderOffsets?.length
@@ -122,6 +133,11 @@ export function ReminderEditor({
                 onChange={handleTimeChange}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               />
+              {isReminderInPast && (
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Время напоминания в прошлом — напоминание не будет отправлено
+                </p>
+              )}
             </div>
           )}
 

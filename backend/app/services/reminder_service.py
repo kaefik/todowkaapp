@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import selectinload
 
 from app.models.notification import Notification
@@ -27,10 +27,6 @@ class ReminderService:
             .where(
                 Task.due_date.isnot(None),
                 Task.is_completed == False,
-                or_(
-                    Task.last_reminder_sent_at.is_(None),
-                    Task.last_reminder_sent_at <= now_utc - timedelta(hours=24),
-                )
             )
         )
         tasks = list(result.scalars().all())
@@ -48,11 +44,11 @@ class ReminderService:
                 if due_date.tzinfo is None:
                     due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
                 due_date_local = due_date.astimezone(user_timezone)
-                
+
                 reminder_time_to_use = task.reminder_time
                 if due_date.time() != time(0, 0) and task.reminder_time > due_date.time():
                     reminder_time_to_use = time(due_date_local.hour, due_date_local.minute)
-                
+
                 reminder_dt_local = datetime.combine(due_date_local.date(), reminder_time_to_use, tzinfo=user_timezone)
                 reminder_dt = reminder_dt_local.astimezone(ZoneInfo('UTC'))
             elif task.reminder_offsets:
@@ -62,13 +58,17 @@ class ReminderService:
                         due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
                     reminder_dt = due_date - timedelta(minutes=offset_minutes)
                     if now_utc >= reminder_dt:
-                        due_tasks.append(task)
-                        break
+                        if not task.last_reminder_sent_at or reminder_dt > task.last_reminder_sent_at:
+                            due_tasks.append(task)
+                            break
                 continue
 
             if reminder_dt and now_utc >= reminder_dt:
-                time_past = now_utc - reminder_dt
-                if time_past <= timedelta(hours=24):
+                last_sent = task.last_reminder_sent_at
+                if last_sent:
+                    if last_sent.tzinfo is None:
+                        last_sent = last_sent.replace(tzinfo=ZoneInfo('UTC'))
+                if not last_sent or reminder_dt > last_sent:
                     due_tasks.append(task)
 
         return due_tasks
