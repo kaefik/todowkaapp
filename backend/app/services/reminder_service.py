@@ -26,7 +26,7 @@ class ReminderService:
             .options(selectinload(Task.user))
             .where(
                 Task.due_date.isnot(None),
-                not Task.is_completed,
+                Task.is_completed == False,
                 or_(
                     Task.last_reminder_sent_at.is_(None),
                     Task.last_reminder_sent_at <= now_utc - timedelta(hours=24),
@@ -111,7 +111,7 @@ class ReminderService:
     ) -> tuple[list[Notification], int]:
         count_stmt = select(func.count(Notification.id)).where(
             Notification.user_id == str(user_id),
-            not Notification.is_read
+            Notification.is_read == False
         )
         count_result = await self.db.execute(count_stmt)
         total = count_result.scalar() or 0
@@ -121,7 +121,7 @@ class ReminderService:
             .options(selectinload(Notification.task))
             .where(
                 Notification.user_id == str(user_id),
-                not Notification.is_read
+                Notification.is_read == False
             )
             .order_by(Notification.created_at.desc())
             .limit(limit)

@@ -28,12 +28,12 @@ async def get_notifications(
     query = select(Notification).where(Notification.user_id == current_user.id)
 
     if unread_only:
-        query = query.where(not Notification.is_read)
+        query = query.where(Notification.is_read == False)
 
     unread_count_result = await db.execute(
         select(func.count(Notification.id)).where(
             Notification.user_id == current_user.id,
-            not Notification.is_read
+            Notification.is_read == False
         )
     )
     unread_count = unread_count_result.scalar() or 0
@@ -63,7 +63,7 @@ async def mark_notification_as_read(
 ) -> dict[str, str]:
     result = await db.execute(
         select(Notification).where(
-            Notification.id == notification_id,
+            Notification.id == str(notification_id),
             Notification.user_id == current_user.id
         )
     )
@@ -78,7 +78,7 @@ async def mark_notification_as_read(
     if not notification.is_read:
         await db.execute(
             update(Notification)
-            .where(Notification.id == notification_id)
+            .where(Notification.id == str(notification_id))
             .values(is_read=True, read_at=datetime.now(UTC))
         )
         await db.commit()
@@ -95,7 +95,7 @@ async def mark_all_notifications_as_read(
         update(Notification)
         .where(
             Notification.user_id == current_user.id,
-            not Notification.is_read
+            Notification.is_read == False
         )
         .values(is_read=True, read_at=datetime.now(UTC))
     )
@@ -112,7 +112,7 @@ async def delete_notification(
 ) -> Response:
     result = await db.execute(
         select(Notification).where(
-            Notification.id == notification_id,
+            Notification.id == str(notification_id),
             Notification.user_id == current_user.id
         )
     )
@@ -125,7 +125,7 @@ async def delete_notification(
         )
 
     await db.execute(
-        delete(Notification).where(Notification.id == notification_id)
+        delete(Notification).where(Notification.id == str(notification_id))
     )
     await db.commit()
 
