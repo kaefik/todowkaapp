@@ -7,6 +7,7 @@ export interface User {
   email: string
   is_active: boolean
   is_admin: boolean
+  timezone: string | null
   created_at: string
 }
 
@@ -23,6 +24,7 @@ interface AuthState {
   refreshToken: () => Promise<void>
   clearError: () => void
   fetchCurrentUser: () => Promise<void>
+  setCurrentUser: (user: User) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -244,6 +246,10 @@ export const useAuthStore = create<AuthState>()(
       })
       throw error
     }
+  },
+
+  setCurrentUser: (user) => {
+    set({ user })
   },
 }),
     {

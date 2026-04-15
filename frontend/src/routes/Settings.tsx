@@ -5,7 +5,24 @@ import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 
 type Theme = 'light' | 'dark'
-type Tab = 'general' | 'users'
+type Tab = 'general' | 'profile' | 'users'
+
+const POPULAR_TIMEZONES = [
+  { name: 'Москва (UTC+3)', value: 'Europe/Moscow' },
+  { name: 'Лондон (UTC+0)', value: 'Europe/London' },
+  { name: 'Нью-Йорк (UTC-5)', value: 'America/New_York' },
+  { name: 'Токио (UTC+9)', value: 'Asia/Tokyo' },
+  { name: 'Берлин (UTC+1)', value: 'Europe/Berlin' },
+  { name: 'Париж (UTC+1)', value: 'Europe/Paris' },
+  { name: 'Сидней (UTC+10)', value: 'Australia/Sydney' },
+  { name: 'Дубай (UTC+4)', value: 'Asia/Dubai' },
+  { name: 'Киев (UTC+2)', value: 'Europe/Kiev' },
+  { name: 'Санкт-Петербург (UTC+3)', value: 'Europe/Moscow' },
+  { name: 'Екатеринбург (UTC+5)', value: 'Asia/Yekaterinburg' },
+  { name: 'Новосибирск (UTC+7)', value: 'Asia/Novosibirsk' },
+  { name: 'Владивосток (UTC+10)', value: 'Asia/Vladivostok' },
+  { name: 'Калининград (UTC+2)', value: 'Europe/Kaliningrad' },
+]
 
 function SettingsContent() {
   const { user } = useAuthStore()
@@ -28,8 +45,50 @@ function SettingsContent() {
     document.documentElement.classList.toggle('dark', newTheme === 'dark')
   }
 
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [profileSuccess, setProfileSuccess] = useState(false)
+  const [username, setUsername] = useState(user?.username || '')
+  const [email, setEmail] = useState(user?.email || '')
+  const [timezone, setTimezone] = useState(user?.timezone || 'Europe/Moscow')
+  const [customTimezone, setCustomTimezone] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      setUsername(user.username)
+      setEmail(user.email)
+      setTimezone(user.timezone || 'Europe/Moscow')
+    }
+  }, [user])
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setProfileLoading(true)
+    setProfileError(null)
+    setProfileSuccess(false)
+
+    try {
+      const updatedUser = await usersApi.updateCurrentUser({
+        username,
+        email,
+        timezone,
+      })
+      
+      const { setCurrentUser } = useAuthStore.getState()
+      setCurrentUser(updatedUser)
+      
+      setProfileSuccess(true)
+      setTimeout(() => setProfileSuccess(false), 3000)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : 'Failed to update profile')
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
   const tabs: { key: Tab; label: string; adminOnly: boolean }[] = [
     { key: 'general', label: 'Общие', adminOnly: false },
+    { key: 'profile', label: 'Профиль', adminOnly: false },
     { key: 'users', label: 'Пользователи', adminOnly: true },
   ]
 
@@ -135,6 +194,118 @@ function SettingsContent() {
             </div>
           </div>
         </>
+      )}
+
+      {activeTab === 'profile' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Редактирование профиля</h2>
+          
+          {profileError && (
+            <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+              {profileError}
+            </div>
+          )}
+
+          {profileSuccess && (
+            <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded">
+              Профиль успешно обновлён
+            </div>
+          )}
+
+          <form onSubmit={handleProfileUpdate} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Имя пользователя
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                required
+                minLength={3}
+                maxLength={50}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Часовой пояс
+              </label>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                Выберите часовой пояс для корректного отображения времени в напоминаниях и дедлайнах
+              </p>
+              
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                {POPULAR_TIMEZONES.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.name}
+                  </option>
+                ))}
+              </select>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Или введите свой часовой пояс (IANA формат, например: Europe/Moscow)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customTimezone}
+                    onChange={(e) => setCustomTimezone(e.target.value)}
+                    placeholder="Europe/Moscow"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customTimezone.trim()) {
+                        setTimezone(customTimezone.trim())
+                        setCustomTimezone('')
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                <p className="text-sm text-blue-700 dark:text-blue-400">
+                  <strong>Текущий часовой пояс:</strong> {timezone}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={profileLoading}
+                className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {profileLoading ? 'Сохранение...' : 'Сохранить изменения'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
@@ -253,6 +424,9 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                   Email
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Часовой пояс
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   Статус
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
@@ -281,11 +455,14 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                         {currentUser.id === u.id && (
                           <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(Вы)</span>
                         )}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{u.email}</td>
-                  <td className="px-4 py-3">
+                  </span>
+                </div>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{u.email}</td>
+              <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                {u.timezone || 'Europe/Moscow'}
+              </td>
+              <td className="px-4 py-3">
                     {u.is_active ? (
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
                         Активен
