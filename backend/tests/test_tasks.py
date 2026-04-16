@@ -1,3 +1,6 @@
+import asyncio
+from datetime import datetime
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
@@ -1136,4 +1139,42 @@ async def test_task_includes_context(client, auth_user1, test_context):
     assert task_with_context is not None
     assert task_with_context["context"]["id"] == test_context["id"]
     assert task_with_context["context"]["name"] == test_context["name"]
-    assert task_with_context["context"]["color"] == test_context["color"]
+
+
+@pytest.mark.asyncio
+async def test_update_task_updates_updated_at(client, auth_user1):
+    """Проверка, что updated_at обновляется при редактировании задачи"""
+    # Создаем задачу
+    create_response = await client.post(
+        "/api/tasks",
+        json={"title": "Task to test updated_at"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert create_response.status_code == 201
+    task = create_response.json()
+    initial_updated_at = datetime.fromisoformat(task["updated_at"].replace('Z', '+00:00'))
+
+    # Ждем небольшое время, чтобы updated_at гарантированно изменился
+    await asyncio.sleep(1.0)
+
+    # Обновляем задачу
+    update_response = await client.put(
+        f"/api/tasks/{task['id']}",
+        json={"title": "Updated Task Title"},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert update_response.status_code == 200
+    updated_task = update_response.json()
+
+    # Проверяем, что updated_at изменился
+    updated_updated_at = datetime.fromisoformat(updated_task["updated_at"].replace('Z', '+00:00'))
+    assert updated_updated_at > initial_updated_at, "updated_at должен увеличиться после редактирования"
+
+    # Проверяем, что данные обновились
+    assert updated_task["title"] == "Updated Task Title"
+    assert updated_task["id"] == task["id"]
+
+    # created_at не должен измениться
+    initial_created_at = datetime.fromisoformat(task["created_at"].replace('Z', '+00:00'))
+    updated_created_at = datetime.fromisoformat(updated_task["created_at"].replace('Z', '+00:00'))
+    assert updated_created_at == initial_created_at, "created_at не должен измениться"

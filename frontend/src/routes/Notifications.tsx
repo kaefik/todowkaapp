@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useNotificationStore } from '../stores/notificationStore'
 import { formatTime, typeIcon } from '../utils/notificationUtils.tsx'
+import { TaskDetailModal } from '../components/TaskDetailModal'
 
 type Filter = 'all' | 'unread'
 
 function NotificationsContent() {
-  const navigate = useNavigate()
   const [filter, setFilter] = useState<Filter>('all')
   const [offset, setOffset] = useState(0)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const limit = 20
   const notifications = useNotificationStore((state) => state.notifications)
   const total = useNotificationStore((state) => state.total)
@@ -39,8 +40,14 @@ function NotificationsContent() {
   const handleNotificationClick = async (notificationId: string, taskId: string | null) => {
     await markAsRead(notificationId)
     if (taskId) {
-      navigate(`/tasks?editTaskId=${taskId}`)
+      setSelectedTaskId(taskId)
+      setIsModalOpen(true)
     }
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setSelectedTaskId(null)
   }
 
   const handleDelete = async (e: React.MouseEvent, notificationId: string) => {
@@ -169,6 +176,12 @@ function NotificationsContent() {
           </>
         )}
       </div>
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
     </div>
   )
 }

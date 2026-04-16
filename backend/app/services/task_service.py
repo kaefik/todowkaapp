@@ -171,6 +171,8 @@ class TaskService:
         for field, value in update_data.items():
             setattr(task, field, value)
 
+        task.updated_at = datetime.now()
+
         await self.db.flush()
         return await self.get_task(user_id, task_id)
 
@@ -182,6 +184,7 @@ class TaskService:
         was_recurring_and_completed = task.is_recurring and task.is_completed
 
         task.gtd_status = gtd_status.value
+        task.updated_at = datetime.now()
         if gtd_status == GtdStatus.TRASH:
             task.trashed_at = datetime.now()
         elif gtd_status == GtdStatus.COMPLETED:
@@ -216,6 +219,7 @@ class TaskService:
             return None
 
         task.position = position
+        task.updated_at = datetime.now()
         await self.db.flush()
         return await self.get_task(user_id, task_id)
 
@@ -240,6 +244,7 @@ class TaskService:
         was_recurring_and_completed = task.is_recurring and was_completed
 
         task.is_completed = not task.is_completed
+        task.updated_at = datetime.now()
         if task.is_completed:
             task.completed_at = datetime.now()
             task.gtd_status = GtdStatus.COMPLETED.value
