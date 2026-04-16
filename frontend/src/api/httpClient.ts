@@ -1,5 +1,6 @@
 import { useAuthStore } from '../stores/authStore'
 import { useToastStore } from '../stores/toastStore'
+import { getCache, setCache } from '../lib/indexedDB'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -70,6 +71,22 @@ async function fetchWithAuth<T>(
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
 
   try {
+    if (config.method === 'GET' || !config.method) {
+      const cached = await getCache<T>(fullUrl)
+      if (cached) {
+        console.log('[Cache] Using cached data for:', fullUrl)
+        fetch(fullUrl, { ...fetchConfig, headers })
+          .then(async (response) => {
+            if (response.ok) {
+              const data = await response.json()
+              await setCache(fullUrl, data)
+            }
+          })
+          .catch(console.error)
+        return { data: cached, status: 200, statusText: 'OK' }
+      }
+    }
+
     const response = await fetch(fullUrl, {
       ...fetchConfig,
       headers,
@@ -168,6 +185,10 @@ async function fetchWithAuth<T>(
 
     const data = response.status === 204 ? null : await response.json()
 
+    if ((config.method === 'GET' || !config.method) && data) {
+      await setCache(fullUrl, data)
+    }
+
     return {
       data,
       status: response.status,
@@ -179,6 +200,14 @@ async function fetchWithAuth<T>(
     }
 
     if (error instanceof TypeError && error.message.includes('fetch')) {
+      if ((config.method === 'GET' || !config.method)) {
+        const cached = await getCache<T>(fullUrl)
+        if (cached) {
+          console.log('[Cache] Using cached data after error for:', fullUrl)
+          return { data: cached, status: 200, statusText: 'OK' }
+        }
+      }
+
       if (queueMutationFn && config.method && config.method !== 'GET') {
         const mutation: Mutation = {
           id: crypto.randomUUID(),
