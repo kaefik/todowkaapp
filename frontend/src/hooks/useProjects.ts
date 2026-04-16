@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { httpClient, ApiError } from '../api/httpClient'
 
 export interface ProjectProgress {
@@ -42,93 +42,95 @@ interface UseProjectsReturn {
   addProject: (data: CreateProject) => Promise<void>
   updateProject: (id: string, data: UpdateProject) => Promise<void>
   deleteProject: (id: string) => Promise<void>
-  refetch: () => Promise<void>
+  refetch: () => Promise<unknown>
+}
+
+export const projectKeys = {
+  all: ['projects'] as const,
+  lists: () => [...projectKeys.all, 'list'] as const,
+  detail: (id: string) => [...projectKeys.all, 'detail', id] as const,
 }
 
 export function useProjects(): UseProjectsReturn {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const { data: projects = [], isLoading, error, refetch } = useQuery({
+    queryKey: projectKeys.lists(),
+    queryFn: async () => {
       const response = await httpClient.get<{ items: Project[]; total: number }>('/projects')
-      setProjects(response.data.items)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('Не удалось загрузить проекты')
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+      return response.data.items
+    },
+    staleTime: 1000 * 60 * 5,
+  })
 
-  useEffect(() => {
-    refetch()
-  }, [refetch])
+  const addProjectMutation = useMutation({
+    mutationFn: async (data: CreateProject) => {
+      const response = await httpClient.post<Project>('/projects', data)
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
+    },
+  })
 
-  const addProject = useCallback(async (data: CreateProject) => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      await httpClient.post<Project>('/projects', data)
-      await refetch()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Не удалось создать проект')
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [refetch])
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateProject }) => {
+      const response = await httpClient.put<Project>(`/projects/${id}`, data)
+      return response.data
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
+    },
+  })
 
-  const updateProject = useCallback(async (id: string, data: UpdateProject) => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      await httpClient.put<Project>(`/projects/${id}`, data)
-      await refetch()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Не удалось обновить проект')
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [refetch])
-
-  const deleteProject = useCallback(async (id: string) => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const deleteProjectMutation = useMutation({
+    mutationFn: async (id: string) => {
       await httpClient.delete(`/projects/${id}`)
-      setProjects((prev) => prev.filter((p) => p.id !== id))
+      return id
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
+    },
+  })
+
+  const addProject = async (data: CreateProject) => {
+    try {
+      await addProjectMutation.mutateAsync(data)
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message)
         throw err
       }
-      setError('Не удалось удалить проект')
-      throw err
-    } finally {
-      setIsLoading(false)
+      throw new Error('Не удалось создать проект')
     }
-  }, [])
+  }
+
+  const updateProject = async (id: string, data: UpdateProject) => {
+    try {
+      await updateProjectMutation.mutateAsync({ id, data })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+      throw new Error('Не удалось обновить проект')
+    }
+  }
+
+  const deleteProject = async (id: string) => {
+    try {
+      await deleteProjectMutation.mutateAsync(id)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+      throw new Error('Не удалось удалить проект')
+    }
+  }
 
   return {
     projects,
     isLoading,
-    error,
+    error: error instanceof Error ? error.message : null,
     addProject,
     updateProject,
     deleteProject,
