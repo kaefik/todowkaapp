@@ -148,6 +148,13 @@
 - Индикатор офлайн-режима в форме редактирования задачи ("🔌 Офлайн")
 - Очистка локальных изменений после успешной синхронизации
 - Интеграция с существующей офлайн-очередью мутаций
+- Исправлен бесконечный цикл тостов "Офлайн режим" при недоступном бэкенде:
+  - React Query не ретрайит мутации при OfflineQueueError (исключены дублирование очереди и тостов)
+  - Дедупликация тоста "Офлайн режим" — показывается один раз до восстановления сети
+  - Sync-очередь использует raw fetch вместо httpClient.request для предотвращения ре-кьюинга
+  - Убран автоматический sync сразу после добавления мутации (устранён цикл при упавшем сервере)
+  - Убраны дублирующие тосты из OfflineBanner (тосты показываются только из httpClient)
+  - Файлы: `frontend/src/lib/queryClient.ts`, `frontend/src/api/httpClient.ts`, `frontend/src/hooks/useOfflineQueue.ts`, `frontend/src/components/OfflineBanner.tsx`
 - Файлы: `frontend/src/lib/localTaskChanges.ts` (IndexedDB для локальных изменений), `frontend/src/hooks/useLocalTaskChanges.ts` (хук управления), `frontend/src/hooks/useTasks.ts` (интеграция), `frontend/src/hooks/useOfflineQueue.ts` (синхронизация), `frontend/src/components/TaskEditModal.tsx` (индикатор)
 - Работа: при `updateTaskMutation.onMutate` изменения сохраняются в IndexedDB, при `onSuccess` удаляются, при `onError` с `OfflineQueueError` сохраняются, в `useTask` локальные изменения применяются к загруженной задаче
 
@@ -629,6 +636,12 @@
 *Последнее обновление: 16 апреля 2026 года*
 
 **16 апреля 2026:**
+- Исправлен бесконечный цикл тостов "Офлайн режим" при недоступном бэкенде
+  - React Query не ретрайит мутации при OfflineQueueError
+  - Дедупликация тоста "Офлайн режим" — показывается однократно
+  - Sync-очередь использует raw fetch для предотвращения повторного кьюинга
+  - Убраны дублирующие тосты из OfflineBanner
+  - Файлы: `frontend/src/lib/queryClient.ts`, `frontend/src/api/httpClient.ts`, `frontend/src/hooks/useOfflineQueue.ts`, `frontend/src/components/OfflineBanner.tsx`
 - Добавлена видимость активных фильтров с индикатором количества
   - Бейдж с количеством активных фильтров на кнопке "Фильтры" (красный кружок с цифрой)
   - Кнопка "Сбросить" для быстрого сброса всех фильтров одним кликом

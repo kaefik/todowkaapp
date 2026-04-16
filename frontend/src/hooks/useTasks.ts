@@ -2,6 +2,7 @@ import { useCallback, useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { httpClient, ApiError, OfflineQueueError } from '../api/httpClient'
 import type { Tag } from './useTags'
+import { tagKeys } from './useTags'
 import { notifyTasksChanged } from './useGtdCounts'
 import {
   setLocalTaskChange,
@@ -176,6 +177,18 @@ export const taskKeys = {
   detail: (id: string) => [...taskKeys.details(), id] as const,
 }
 
+function buildOptimisticPatch(data: UpdateTask, allTags: Tag[]) {
+  const patch: Record<string, unknown> = { ...data }
+  if (data.tag_ids) {
+    const tagMap = new Map(allTags.map(t => [t.id, t]))
+    patch.tags = data.tag_ids
+      .map(id => tagMap.get(id))
+      .filter((t): t is Tag => !!t)
+    delete patch.tag_ids
+  }
+  return patch
+}
+
 export function useTasks(filters?: TaskFilters): UseTasksReturn {
   const queryClient = useQueryClient()
 
@@ -230,22 +243,33 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists() })
 
       const previousTask = queryClient.getQueryData<Task>(taskKeys.detail(id))
-      const previousTasks = queryClient.getQueryData<Task[]>(taskKeys.lists())
+      const previousListQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists(),
+      })
+
+      const allTags = queryClient.getQueryData<Tag[]>(tagKeys.lists()) ?? []
+      const patch = buildOptimisticPatch(data, allTags)
 
       queryClient.setQueryData<Task>(taskKeys.detail(id), (old) => {
         if (!old) return old
-        return { ...old, ...data }
+        return { ...old, ...patch }
       })
 
-      queryClient.setQueryData<Task[]>(taskKeys.lists(), (old = []) => {
-        return old.map((t) => (t.id === id ? { ...t, ...data } : t))
+      const listQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists(),
       })
+      for (const [key] of listQueries) {
+        queryClient.setQueryData<Task[]>(key, (old) => {
+          if (!old) return old
+          return old.map((t) => (t.id === id ? { ...t, ...patch } : t))
+        })
+      }
 
       console.log('[updateTaskMutation] Saving local changes to IndexedDB...')
       await setLocalTaskChange(id, data)
       console.log('[updateTaskMutation] Local changes saved to IndexedDB')
 
-      return { previousTask, previousTasks }
+      return { previousTask, previousListQueries }
     },
     onError: (err, { id }, context) => {
       console.error('[updateTaskMutation] Update failed:', err)
@@ -260,11 +284,11 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       if (context?.previousTask) {
         queryClient.setQueryData(taskKeys.detail(id), context.previousTask)
       }
-      if (context?.previousTasks) {
-        queryClient.setQueryData(taskKeys.lists(), context.previousTasks)
+      if (context?.previousListQueries) {
+        for (const [key, data] of context.previousListQueries) {
+          queryClient.setQueryData(key, data)
+        }
       }
-      // НЕ удаляем локальные изменения - они сохранятся в IndexedDB
-      // и будут применены при следующей загрузке задачи
     },
     onSuccess: (_, { id }) => {
       console.log('[updateTaskMutation] Update successful, clearing local changes for task:', id)
@@ -392,6 +416,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
 }
 
 export function useTask(id: string) {
+  const queryClient = useQueryClient()
   const query = useQuery({
     queryKey: taskKeys.detail(id),
     queryFn: async () => {
@@ -406,29 +431,23 @@ export function useTask(id: string) {
   const [mergedTask, setMergedTask] = useState<Task | null>(null)
 
   useEffect(() => {
-    console.log('[useTask] Task data changed:', { id, hasTask: !!task })
-    
     if (!task) {
       setMergedTask(null)
       return
     }
 
     getLocalTaskChange(id).then((localChange) => {
-      console.log('[useTask] Local changes for task:', id, localChange)
-      
       if (localChange) {
-        const merged = mergeTaskWithLocalChanges(task, localChange)
-        console.log('[useTask] Merged task:', merged)
+        const allTags = queryClient.getQueryData<Tag[]>(tagKeys.lists()) ?? []
+        const merged = mergeTaskWithLocalChanges(task, localChange, allTags)
         setMergedTask(merged)
       } else {
-        console.log('[useTask] No local changes, using task as-is')
         setMergedTask(task)
       }
-    }).catch((err) => {
-      console.error('[useTask] Failed to get local changes:', err)
+    }).catch(() => {
       setMergedTask(task)
     })
-  }, [task, id])
+  }, [task, id, queryClient])
 
   return {
     ...rest,
