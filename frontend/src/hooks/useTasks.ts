@@ -1,7 +1,14 @@
+import { useCallback, useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError } from '../api/httpClient'
+import { httpClient, ApiError, OfflineQueueError } from '../api/httpClient'
 import type { Tag } from './useTags'
 import { notifyTasksChanged } from './useGtdCounts'
+import {
+  setLocalTaskChange,
+  deleteLocalTaskChange,
+  mergeTaskWithLocalChanges,
+  getLocalTaskChange,
+} from '../lib/localTaskChanges'
 
 export type GtdStatus = 'inbox' | 'next' | 'waiting' | 'someday' | 'completed' | 'trash'
 
@@ -216,7 +223,52 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
       return mapTask(response.data)
     },
+    onMutate: async ({ id, data }) => {
+      console.log('[updateTaskMutation] Starting update for task:', id, 'with data:', data)
+      
+      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
+      await queryClient.cancelQueries({ queryKey: taskKeys.lists() })
+
+      const previousTask = queryClient.getQueryData<Task>(taskKeys.detail(id))
+      const previousTasks = queryClient.getQueryData<Task[]>(taskKeys.lists())
+
+      queryClient.setQueryData<Task>(taskKeys.detail(id), (old) => {
+        if (!old) return old
+        return { ...old, ...data }
+      })
+
+      queryClient.setQueryData<Task[]>(taskKeys.lists(), (old = []) => {
+        return old.map((t) => (t.id === id ? { ...t, ...data } : t))
+      })
+
+      console.log('[updateTaskMutation] Saving local changes to IndexedDB...')
+      await setLocalTaskChange(id, data)
+      console.log('[updateTaskMutation] Local changes saved to IndexedDB')
+
+      return { previousTask, previousTasks }
+    },
+    onError: (err, { id }, context) => {
+      console.error('[updateTaskMutation] Update failed:', err)
+      
+      if (err instanceof OfflineQueueError) {
+        console.log('[updateTaskMutation] Offline queue error, keeping local changes for task:', id)
+        return
+      }
+
+      console.error('[updateTaskMutation] Update failed, but keeping local changes in IndexedDB:', err)
+      
+      if (context?.previousTask) {
+        queryClient.setQueryData(taskKeys.detail(id), context.previousTask)
+      }
+      if (context?.previousTasks) {
+        queryClient.setQueryData(taskKeys.lists(), context.previousTasks)
+      }
+      // НЕ удаляем локальные изменения - они сохранятся в IndexedDB
+      // и будут применены при следующей загрузке задачи
+    },
     onSuccess: (_, { id }) => {
+      console.log('[updateTaskMutation] Update successful, clearing local changes for task:', id)
+      deleteLocalTaskChange(id).catch(console.error)
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
@@ -313,7 +365,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     }
   }
 
-  const fetchTask = async (id: string): Promise<Task> => {
+  const fetchTask = useCallback(async (id: string): Promise<Task> => {
     try {
       const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
       return mapTask(response.data)
@@ -323,7 +375,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       }
       throw new Error('Failed to fetch task')
     }
-  }
+  }, [])
 
   return {
     tasks,
@@ -340,7 +392,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
 }
 
 export function useTask(id: string) {
-  return useQuery({
+  const query = useQuery({
     queryKey: taskKeys.detail(id),
     queryFn: async () => {
       const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
@@ -348,4 +400,38 @@ export function useTask(id: string) {
     },
     enabled: !!id,
   })
+
+  const { data: task, ...rest } = query
+
+  const [mergedTask, setMergedTask] = useState<Task | null>(null)
+
+  useEffect(() => {
+    console.log('[useTask] Task data changed:', { id, hasTask: !!task })
+    
+    if (!task) {
+      setMergedTask(null)
+      return
+    }
+
+    getLocalTaskChange(id).then((localChange) => {
+      console.log('[useTask] Local changes for task:', id, localChange)
+      
+      if (localChange) {
+        const merged = mergeTaskWithLocalChanges(task, localChange)
+        console.log('[useTask] Merged task:', merged)
+        setMergedTask(merged)
+      } else {
+        console.log('[useTask] No local changes, using task as-is')
+        setMergedTask(task)
+      }
+    }).catch((err) => {
+      console.error('[useTask] Failed to get local changes:', err)
+      setMergedTask(task)
+    })
+  }, [task, id])
+
+  return {
+    ...rest,
+    data: mergedTask,
+  }
 }

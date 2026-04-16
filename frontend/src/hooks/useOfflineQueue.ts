@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { httpClient, setQueueMutationFn } from '../api/httpClient'
+import { clearAllLocalTaskChanges } from '../lib/localTaskChanges'
 
 interface QueuedMutation {
   id: string
@@ -180,6 +181,7 @@ export function useOfflineQueue() {
       const mutations = await getAllMutations()
       const sortedMutations = mutations.sort((a, b) => a.timestamp - b.timestamp)
       
+      let allSynced = true
       for (const mutation of sortedMutations) {
         try {
           await httpClient.request({
@@ -190,8 +192,14 @@ export function useOfflineQueue() {
           await deleteMutation(mutation.id)
         } catch (error) {
           console.error('Failed to sync mutation:', mutation, error)
+          allSynced = false
           break
         }
+      }
+      
+      if (allSynced) {
+        await clearAllLocalTaskChanges()
+        console.log('[OfflineQueue] All mutations synced, cleared local task changes')
       }
       
       await updateQueueSize()

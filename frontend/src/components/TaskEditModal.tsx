@@ -4,11 +4,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Task, UpdateTask, GtdStatus, RecurrenceConfig } from '../hooks/useTasks'
-import { useTasks } from '../hooks/useTasks'
+import { useTask } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
+import { useOfflineQueue } from '../hooks/useOfflineQueue'
 import { RecurrenceEditor } from './RecurrenceEditor'
 import { ReminderEditor } from './ReminderEditor'
 
@@ -106,14 +107,13 @@ function TagChips({ tags, selectedTagIds, onToggle }: {
 }
 
 export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalProps) {
-  const { fetchTask } = useTasks()
   const { contexts } = useContexts()
   const { areas } = useAreas()
   const { tags } = useTags()
   const { projects } = useProjects()
+  const { data: fetchedTask, isLoading } = useTask(task?.id || '')
+  const { isOnline } = useOfflineQueue()
   const [currentTask, setCurrentTask] = useState<Task | null>(task)
-  const [loading, setLoading] = useState(false)
-  const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [isMobile, setIsMobile] = useState(false)
   const [recurrenceData, setRecurrenceData] = useState<{
@@ -164,22 +164,16 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   }
 
   useEffect(() => {
-    if (isOpen && task) {
-      setLoading(true)
-      setFetchError(null)
-      fetchTask(task.id)
-        .then((data) => {
-          setCurrentTask(data)
-          setSelectedTagIds(data.tags.map((t: Tag) => t.id))
-          setLoading(false)
-        })
-        .catch((err) => {
-          setFetchError(err.message || 'Failed to load task')
-          setCurrentTask(task)
-          setLoading(false)
-        })
+    if (isOpen) {
+      if (fetchedTask) {
+        setCurrentTask(fetchedTask)
+        setSelectedTagIds(fetchedTask.tags.map((t: Tag) => t.id))
+      } else if (task) {
+        setCurrentTask(task)
+        setSelectedTagIds(task.tags.map((t: Tag) => t.id))
+      }
     }
-  }, [isOpen, task, fetchTask])
+  }, [isOpen, fetchedTask, task])
 
   useEffect(() => {
     if (currentTask) {
@@ -285,16 +279,11 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             Edit Task
             {currentTask?.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
             {(currentTask?.reminder_time || currentTask?.reminder_offsets?.length) && !currentTask?.reminder_fired && <span title="Есть напоминание">&#x1F514;</span>}
+            {!isOnline && <span className="text-amber-500 text-sm" title="Офлайн режим: изменения будут сохранены локально">&#128268; Офлайн</span>}
           </h2>
         </div>
 
-        {fetchError && (
-          <div className="flex-shrink-0 mx-4 mt-4 rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-            <p className="text-sm text-red-800 dark:text-red-400">{fetchError}</p>
-          </div>
-        )}
-
-        {loading ? (
+        {isLoading ? (
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
             <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
