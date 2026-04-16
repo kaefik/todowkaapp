@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { httpClient, ApiError } from '../api/httpClient'
 import type { Tag } from './useTags'
 import { notifyTasksChanged } from './useGtdCounts'
@@ -138,7 +138,7 @@ interface UseTasksReturn {
   moveTask: (id: string, gtd_status: GtdStatus) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   fetchTask: (id: string) => Promise<Task>
-  refetch: () => Promise<void>
+  refetch: () => Promise<unknown>
 }
 
 function mapTask(t: ApiTask): Task {
@@ -161,74 +161,41 @@ function buildQueryString(filters?: TaskFilters): string {
   return qs ? `?${qs}` : ''
 }
 
+export const taskKeys = {
+  all: ['tasks'] as const,
+  lists: () => [...taskKeys.all, 'list'] as const,
+  list: (filters: TaskFilters) => [...taskKeys.lists(), filters] as const,
+  details: () => [...taskKeys.all, 'detail'] as const,
+  detail: (id: string) => [...taskKeys.details(), id] as const,
+}
+
 export function useTasks(filters?: TaskFilters): UseTasksReturn {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const qs = useMemo(() => buildQueryString(filters), [
-    filters?.gtd_status,
-    filters?.context_id,
-    filters?.area_id,
-    filters?.project_id,
-    filters?.tag_id,
-    filters?.is_completed,
-    filters?.search,
-    filters?.sort_by,
-    filters?.sort_order,
-  ])
+  const qs = buildQueryString(filters)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const { data: tasks = [], isLoading, error, refetch } = useQuery({
+    queryKey: taskKeys.list(filters || {}),
+    queryFn: async () => {
       const response = await httpClient.get<{ items: ApiTask[]; total: number }>(`/tasks${qs}`)
-      setTasks(response.data.items.map(mapTask))
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('Failed to load tasks')
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [qs])
+      return response.data.items.map(mapTask)
+    },
+    staleTime: 1000 * 60 * 2,
+  })
 
-  useEffect(() => {
-    refetch()
-  }, [refetch])
-
-  useEffect(() => {
-    const handler = () => { refetch() }
-    window.addEventListener('task:reminder-fired', handler)
-    return () => window.removeEventListener('task:reminder-fired', handler)
-  }, [refetch])
-
-  const addTask = useCallback(async (data: CreateTask) => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const addTaskMutation = useMutation({
+    mutationFn: async (data: CreateTask) => {
       const response = await httpClient.post<ApiTask>('/tasks', data)
-      setTasks((prev) => [...prev, mapTask(response.data)])
+      return mapTask(response.data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Failed to add task')
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+    },
+  })
 
-  const updateTask = useCallback(async (id: string, data: UpdateTask) => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTask }) => {
       const updateData: Record<string, unknown> = {}
       if (data.title !== undefined) updateData.title = data.title
       if (data.description !== undefined) updateData.description = data.description
@@ -247,113 +214,121 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       if (data.reminder_offsets !== undefined) updateData.reminder_offsets = data.reminder_offsets
 
       const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
-      setTasks((prev) =>
-        prev.map((task) => (task.id === id ? mapTask(response.data) : task))
-      )
+      return mapTask(response.data)
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Failed to update task')
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+    },
+  })
 
-  const toggleTask = useCallback(async (id: string) => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const toggleTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
       const response = await httpClient.patch<ApiTask>(`/tasks/${id}/toggle`)
-      const updated = mapTask(response.data)
-      setTasks((prev) => {
-        if (filters?.gtd_status && updated.gtd_status !== filters.gtd_status) {
-          return prev.filter((t) => t.id !== id)
-        }
-        return prev.map((t) => (t.id === id ? updated : t))
-      })
+      return mapTask(response.data)
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Failed to toggle task')
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [filters?.gtd_status])
+    },
+  })
 
-  const moveTask = useCallback(async (id: string, gtd_status: GtdStatus) => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const moveTaskMutation = useMutation({
+    mutationFn: async ({ id, gtd_status }: { id: string; gtd_status: GtdStatus }) => {
       const response = await httpClient.patch<ApiTask>(`/tasks/${id}/move`, { gtd_status })
-      const updated = mapTask(response.data)
-      setTasks((prev) => {
-        if (filters?.gtd_status && updated.gtd_status !== filters.gtd_status) {
-          return prev.filter((t) => t.id !== id)
-        }
-        return prev.map((t) => (t.id === id ? updated : t))
-      })
+      return mapTask(response.data)
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Failed to move task')
-      throw err
-    } finally {
-      setIsLoading(false)
-    }
-  }, [filters?.gtd_status])
+    },
+  })
 
-  const deleteTask = useCallback(async (id: string) => {
-    setIsLoading(true)
-    setError(null)
-    try {
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (id: string) => {
       await httpClient.delete(`/tasks/${id}`)
-      setTasks((prev) => prev.filter((task) => task.id !== id))
+      return id
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
+    },
+  })
+
+  const addTask = async (data: CreateTask) => {
+    try {
+      await addTaskMutation.mutateAsync(data)
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message)
         throw err
       }
-      setError('Failed to delete task')
-      throw err
-    } finally {
-      setIsLoading(false)
+      throw new Error('Failed to add task')
     }
-  }, [])
+  }
 
-  const fetchTask = useCallback(async (id: string): Promise<Task> => {
-    setIsLoading(true)
-    setError(null)
+  const updateTask = async (id: string, data: UpdateTask) => {
+    try {
+      await updateTaskMutation.mutateAsync({ id, data })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+      throw new Error('Failed to update task')
+    }
+  }
+
+  const toggleTask = async (id: string) => {
+    try {
+      await toggleTaskMutation.mutateAsync(id)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+      throw new Error('Failed to toggle task')
+    }
+  }
+
+  const moveTask = async (id: string, gtd_status: GtdStatus) => {
+    try {
+      await moveTaskMutation.mutateAsync({ id, gtd_status })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+      throw new Error('Failed to move task')
+    }
+  }
+
+  const deleteTask = async (id: string) => {
+    try {
+      await deleteTaskMutation.mutateAsync(id)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err
+      }
+      throw new Error('Failed to delete task')
+    }
+  }
+
+  const fetchTask = async (id: string): Promise<Task> => {
     try {
       const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
       return mapTask(response.data)
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message)
         throw err
       }
-      setError('Failed to fetch task')
-      throw err
-    } finally {
-      setIsLoading(false)
+      throw new Error('Failed to fetch task')
     }
-  }, [])
+  }
 
   return {
     tasks,
     isLoading,
-    error,
+    error: error instanceof Error ? error.message : null,
     addTask,
     updateTask,
     toggleTask,
@@ -362,4 +337,15 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     fetchTask,
     refetch,
   }
+}
+
+export function useTask(id: string) {
+  return useQuery({
+    queryKey: taskKeys.detail(id),
+    queryFn: async () => {
+      const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
+      return mapTask(response.data)
+    },
+    enabled: !!id,
+  })
 }

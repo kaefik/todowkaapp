@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { httpClient } from '../api/httpClient'
+import { httpClient, setQueueMutationFn } from '../api/httpClient'
 
 interface QueuedMutation {
   id: string
@@ -145,14 +145,30 @@ export function useOfflineQueue() {
       id: `${mutation.method}-${mutation.url}-${Date.now()}`,
       timestamp: Date.now(),
     }
-    
+
     await addMutation(queuedMutation)
     await updateQueueSize()
-    
+
     if (isOnline) {
       syncQueueRef.current?.()
+    } else {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'REGISTER_SYNC' })
+      }
     }
   }, [isOnline, updateQueueSize])
+
+  useEffect(() => {
+    console.log('[OfflineQueue] Initializing queueMutationFn')
+    setQueueMutationFn(async (mutation) => {
+      console.log('[OfflineQueue] Queue mutation:', mutation)
+      await queueMutation({
+        method: mutation.method,
+        url: mutation.url,
+        body: mutation.body ? JSON.parse(mutation.body) : undefined,
+      })
+    })
+  }, [queueMutation])
 
   const syncQueue = useCallback(async () => {
     if (!isOnline || isSyncingRef.current) return

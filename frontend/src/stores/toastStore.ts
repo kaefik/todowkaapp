@@ -4,7 +4,7 @@ export interface ToastItem {
   id: string
   title: string
   body: string
-  type: 'reminder' | 'info'
+  type: 'reminder' | 'info' | 'error' | 'success'
   taskId?: string
   createdAt: number
 }
