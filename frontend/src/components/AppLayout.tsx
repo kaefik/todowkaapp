@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { InstallPrompt } from './InstallPrompt'
 import { NotificationBell } from './NotificationBell'
+import { StatusLight } from './StatusLight'
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
@@ -170,8 +171,8 @@ export function AppLayout() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <Link to="/" className="ml-3 text-xl font-bold text-indigo-600 dark:text-indigo-400">
-            Todowka
+          <Link to="/" className="ml-3 text-xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center">
+            Todowka <StatusLight />
           </Link>
           <div className="ml-auto">
             <NotificationBell />
@@ -184,8 +185,8 @@ export function AppLayout() {
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
           <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-xl z-50 p-4">
             <div className="flex items-center justify-between mb-4">
-              <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400" onClick={() => setSidebarOpen(false)}>
-                Todowka
+              <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center" onClick={() => setSidebarOpen(false)}>
+                Todowka <StatusLight />
               </Link>
               <button
                 onClick={() => setSidebarOpen(false)}
@@ -203,8 +204,8 @@ export function AppLayout() {
 
       <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <Link to="/" className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
-            Todowka
+          <Link to="/" className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center">
+            Todowka <StatusLight />
           </Link>
           <NotificationBell />
         </div>
