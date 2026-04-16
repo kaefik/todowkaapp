@@ -17,6 +17,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     updateFilter,
     clearFilters,
     hasActiveFilters,
+    activeFilterCount,
   } = useTaskFilter({ gtd_status: gtdStatus })
 
   const activeFilters = useMemo(() => ({ ...filters, gtd_status: gtdStatus }), [filters, gtdStatus])
@@ -67,6 +68,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         onUpdateFilter={updateFilter}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
         hideGtdStatus
       />
 

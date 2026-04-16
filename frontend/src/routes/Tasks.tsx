@@ -79,6 +79,7 @@ function TasksContent() {
     updateFilter,
     clearFilters,
     hasActiveFilters,
+    activeFilterCount,
   } = useTaskFilter()
 
   const {
@@ -222,6 +223,7 @@ function TasksContent() {
         onUpdateFilter={updateFilter}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
       />
 
       {error && (

@@ -85,7 +85,7 @@ describe('TaskFilterPanel', () => {
     })
   })
 
-  const renderPanel = (filters: TaskFilters = defaultFilters, hasActiveFilters = false, searchOpen = false) => {
+  const renderPanel = (filters: TaskFilters = defaultFilters, hasActiveFilters = false, searchOpen = false, activeFilterCount = 0) => {
     return render(
       <TaskFilterPanel
         filters={filters}
@@ -94,6 +94,7 @@ describe('TaskFilterPanel', () => {
         onUpdateFilter={mockOnUpdateFilter}
         onClearFilters={mockOnClearFilters}
         hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
       />
     )
   }
@@ -164,6 +165,7 @@ describe('TaskFilterPanel', () => {
           onUpdateFilter={mockOnUpdateFilter}
           onClearFilters={mockOnClearFilters}
           hasActiveFilters={false}
+          activeFilterCount={0}
           hideGtdStatus
         />
       )
@@ -195,6 +197,7 @@ describe('TaskFilterPanel', () => {
           onUpdateFilter={mockOnUpdateFilter}
           onClearFilters={mockOnClearFilters}
           hasActiveFilters={true}
+          activeFilterCount={1}
         />
       )
       expect(mockOnClearFilters).toBeDefined()
