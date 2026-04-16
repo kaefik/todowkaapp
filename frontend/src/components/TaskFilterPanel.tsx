@@ -29,6 +29,7 @@ interface TaskFilterPanelProps {
   onUpdateFilter: <K extends keyof TaskFiltersType>(key: K, value: TaskFiltersType[K]) => void
   onClearFilters: () => void
   hasActiveFilters: boolean
+  activeFilterCount: number
   hideGtdStatus?: boolean
   hideProject?: boolean
 }
@@ -40,6 +41,7 @@ export function TaskFilterPanel({
   onUpdateFilter,
   onClearFilters,
   hasActiveFilters,
+  activeFilterCount,
   hideGtdStatus,
   hideProject,
 }: TaskFilterPanelProps) {
@@ -104,14 +106,29 @@ export function TaskFilterPanel({
 
           <button
             onClick={() => setExpanded(!expanded)}
-            className={`px-3 py-2 text-xs font-medium border rounded-md transition-colors ${
+            className={`px-3 py-2 text-xs font-medium border rounded-md transition-colors relative ${
               expanded
                 ? 'text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
                 : 'text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
             }`}
           >
             Фильтры
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
+
+          {hasActiveFilters && (
+            <button
+              onClick={onClearFilters}
+              className="px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600 rounded-md bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              title="Сбросить все фильтры"
+            >
+              Сбросить
+            </button>
+          )}
 
           <select
             value={filters.sort_by || 'created_at'}

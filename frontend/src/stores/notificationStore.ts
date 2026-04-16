@@ -109,6 +109,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         if (message.event === 'notification') {
           console.log('Calling refetch due to notification event')
           get().refetch()
+          try {
+            const data = JSON.parse(message.data)
+            if (data?.data?.type === 'due_reminder' && data?.data?.task_id) {
+              window.dispatchEvent(new CustomEvent('task:reminder-fired', {
+                detail: { taskId: data.data.task_id }
+              }))
+            }
+          } catch {}
         }
       },
       onStateChange: (state) => {

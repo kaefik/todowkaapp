@@ -17,6 +17,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     updateFilter,
     clearFilters,
     hasActiveFilters,
+    activeFilterCount,
   } = useTaskFilter({ gtd_status: gtdStatus })
 
   const activeFilters = useMemo(() => ({ ...filters, gtd_status: gtdStatus }), [filters, gtdStatus])
@@ -58,7 +59,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>
+      {title && <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>}
 
       <TaskFilterPanel
         filters={activeFilters}
@@ -67,6 +68,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         onUpdateFilter={updateFilter}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
         hideGtdStatus
       />
 

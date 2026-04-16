@@ -30,7 +30,7 @@ function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () =>
           &#x1F504;
         </button>
       )}
-      {(task.reminder_time || (task.reminder_offsets && task.reminder_offsets.length > 0)) && (
+      {(task.reminder_time || (task.reminder_offsets && task.reminder_offsets.length > 0)) && !task.reminder_fired && (
         <span className="text-sm" title="Есть напоминание">&#x1F514;</span>
       )}
     </span>
@@ -79,6 +79,7 @@ function TasksContent() {
     updateFilter,
     clearFilters,
     hasActiveFilters,
+    activeFilterCount,
   } = useTaskFilter()
 
   const {
@@ -222,6 +223,7 @@ function TasksContent() {
         onUpdateFilter={updateFilter}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
       />
 
       {error && (

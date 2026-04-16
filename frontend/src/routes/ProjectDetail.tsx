@@ -56,6 +56,7 @@ export function ProjectDetail() {
     updateFilter,
     clearFilters,
     hasActiveFilters,
+    activeFilterCount,
   } = useTaskFilter({ project_id: id })
 
   const activeFilters = useMemo(() => ({ ...filters, project_id: id }), [filters, id])
@@ -177,6 +178,7 @@ export function ProjectDetail() {
         onUpdateFilter={updateFilter}
         onClearFilters={clearFilters}
         hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
         hideProject
       />
 

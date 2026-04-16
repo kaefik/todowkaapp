@@ -49,7 +49,9 @@ class Task(Base):
     recurrence_end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     reminder_offsets: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    reminder_fired: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    trashed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -71,6 +73,7 @@ class Task(Base):
         Index('ix_tasks_parent_task_id', 'parent_task_id'),
         Index('ix_tasks_user_due_date', 'user_id', 'due_date'),
         Index('ix_tasks_user_position', 'user_id', 'position'),
+        Index('ix_tasks_trashed_at', 'gtd_status', 'trashed_at'),
     )
 
     @property

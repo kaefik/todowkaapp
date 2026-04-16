@@ -3,10 +3,13 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useNotificationStore } from '../stores/notificationStore'
 import { formatTime, typeIcon } from '../utils/notificationUtils.tsx'
+import { TaskDetailModal } from './TaskDetailModal'
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const navigate = useNavigate()
   const notifications = useNotificationStore((state) => state.notifications)
   const unreadCount = useNotificationStore((state) => state.unreadCount)
@@ -42,8 +45,14 @@ export function NotificationBell() {
     await markAsRead(notificationId)
     setIsOpen(false)
     if (taskId) {
-      navigate(`/tasks?editTaskId=${taskId}`)
+      setSelectedTaskId(taskId)
+      setIsModalOpen(true)
     }
+  }
+
+  const handleModalClose = () => {
+    setIsModalOpen(false)
+    setSelectedTaskId(null)
   }
 
   const handleMarkAllRead = async () => {
@@ -152,6 +161,12 @@ export function NotificationBell() {
         </div>,
         document.body
       )}
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+      />
     </>
   )
 }

@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
 import { useConfig } from '../hooks/useConfig'
+import { TimezoneSetupModal } from '../components/TimezoneSetupModal'
 
 const registerSchema = z
   .object({
@@ -15,8 +16,8 @@ const registerSchema = z
       .min(8, 'Password must be at least 8 characters')
       .max(100, 'Password must be at most 100 characters')
       .regex(/\d/, 'Password must contain at least one digit')
-      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-      .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
+      .regex(/\p{Lu}/u, 'Password must contain at least one uppercase letter')
+      .regex(/[^\p{L}\p{N}]/u, 'Password must contain at least one special character'),
     confirmPassword: z.string(),
     inviteCode: z.string().optional(),
   })
@@ -32,6 +33,7 @@ export function Register() {
   const { registerAndLogin, isLoading, error, clearError } = useAuthStore()
   const { config, isLoading: configLoading } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showTimezoneModal, setShowTimezoneModal] = useState(false)
 
   const {
     register,
@@ -67,10 +69,20 @@ export function Register() {
         password: data.password,
         invite_code: data.inviteCode && data.inviteCode.trim() ? data.inviteCode.trim() : undefined,
       })
-      navigate('/tasks')
+      const currentUser = useAuthStore.getState().user
+      if (!currentUser?.timezone) {
+        setShowTimezoneModal(true)
+      } else {
+        navigate('/tasks')
+      }
     } catch {
     }
     setIsSubmitting(false)
+  }
+
+  const handleTimezoneSetupComplete = () => {
+    setShowTimezoneModal(false)
+    navigate('/tasks')
   }
 
   return (
@@ -205,6 +217,10 @@ export function Register() {
           </div>
         </form>
       </div>
+
+      {showTimezoneModal && (
+        <TimezoneSetupModal onClose={handleTimezoneSetupComplete} />
+      )}
     </div>
   )
 }

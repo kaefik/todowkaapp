@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
 import { useConfig } from '../hooks/useConfig'
+import { TimezoneSetupModal } from '../components/TimezoneSetupModal'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -20,6 +21,7 @@ export function Login() {
   const { config } = useConfig()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
+  const [showTimezoneModal, setShowTimezoneModal] = useState(false)
 
   useEffect(() => {
     if (searchParams.get('reason') === 'session_expired') {
@@ -40,10 +42,20 @@ export function Login() {
     setIsSubmitting(true)
     try {
       await login(data)
-      navigate('/tasks')
+      const currentUser = useAuthStore.getState().user
+      if (!currentUser?.timezone) {
+        setShowTimezoneModal(true)
+      } else {
+        navigate('/tasks')
+      }
     } catch {
     }
     setIsSubmitting(false)
+  }
+
+  const handleTimezoneSetupComplete = () => {
+    setShowTimezoneModal(false)
+    navigate('/tasks')
   }
 
   return (
@@ -128,6 +140,10 @@ export function Login() {
           )}
         </form>
       </div>
+
+      {showTimezoneModal && (
+        <TimezoneSetupModal onClose={handleTimezoneSetupComplete} />
+      )}
     </div>
   )
 }
