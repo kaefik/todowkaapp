@@ -51,6 +51,7 @@ export const setQueueMutationFn = (fn: typeof queueMutationFn) => {
 let isRefreshing = false
 let refreshPromise: Promise<void> | null = null
 let hasShownOfflineToast = false
+let hasShownQueueToast = false
 
 async function fetchWithAuth<T>(
   url: string,
@@ -167,14 +168,17 @@ async function fetchWithAuth<T>(
         console.log('[Offline] Queuing mutation:', { method: mutation.method, url: mutation.url })
         queueMutationFn(mutation).catch((err) => console.error('Failed to queue mutation:', err))
 
-        try {
-          useToastStore.getState().addToast({
-            title: 'Офлайн режим',
-            body: 'Запрос сохранен и будет отправлен при восстановлении сети',
-            type: 'info'
-          })
-        } catch (err) {
-          console.error('[Offline] Failed to show queued mutation toast:', err)
+        if (!hasShownQueueToast) {
+          hasShownQueueToast = true
+          try {
+            useToastStore.getState().addToast({
+              title: 'Офлайн режим',
+              body: 'Запрос сохранен и будет отправлен при восстановлении сети',
+              type: 'info'
+            })
+          } catch (err) {
+            console.error('[Offline] Failed to show queued mutation toast:', err)
+          }
         }
 
         throw new OfflineQueueError('Request saved to offline queue')
@@ -220,13 +224,16 @@ async function fetchWithAuth<T>(
 
         queueMutationFn(mutation).catch((err) => console.error('Failed to queue mutation:', err))
 
-        try {
-          useToastStore.getState().addToast({
-            title: 'Офлайн режим',
-            body: 'Запрос сохранен и будет отправлен при восстановлении сети',
-            type: 'info'
-          })
-        } catch {
+        if (!hasShownQueueToast) {
+          hasShownQueueToast = true
+          try {
+            useToastStore.getState().addToast({
+              title: 'Офлайн режим',
+              body: 'Запрос сохранен и будет отправлен при восстановлении сети',
+              type: 'info'
+            })
+          } catch {
+          }
         }
 
         throw new OfflineQueueError('Request saved to offline queue')
@@ -266,12 +273,19 @@ export const httpClient = {
 
   delete: <T = unknown>(url: string, config?: RequestConfig) =>
     fetchWithAuth<T>(url, { ...config, method: 'DELETE' }),
+
+  request: <T = unknown>(opts: { method: string; url: string; data?: unknown }) =>
+    fetchWithAuth<T>(opts.url, {
+      method: opts.method as RequestInit['method'],
+      body: opts.data ? JSON.stringify(opts.data) : undefined,
+    }),
 }
 
 if (typeof window !== 'undefined') {
   window.addEventListener('online', async () => {
     console.log('[Offline] Online event detected')
     hasShownOfflineToast = false
+    hasShownQueueToast = false
     try {
       useToastStore.getState().addToast({
         title: 'Сеть восстановлена',

@@ -2,6 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { persistQueryClient } from '@tanstack/react-query-persist-client'
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { openDB } from 'idb'
+import { OfflineQueueError } from '../api/httpClient'
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,7 +16,10 @@ export const queryClient = new QueryClient({
       refetchOnMount: false,
     },
     mutations: {
-      retry: 1,
+      retry: (failureCount, error) => {
+        if (error instanceof OfflineQueueError) return false
+        return failureCount < 1
+      },
       retryDelay: 1000,
     },
   },

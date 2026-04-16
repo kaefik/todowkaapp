@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { httpClient, setQueueMutationFn } from '../api/httpClient'
+import { setQueueMutationFn } from '../api/httpClient'
 import { clearAllLocalTaskChanges } from '../lib/localTaskChanges'
+import { useAuthStore } from '../stores/authStore'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 interface QueuedMutation {
   id: string
@@ -150,9 +153,7 @@ export function useOfflineQueue() {
     await addMutation(queuedMutation)
     await updateQueueSize()
 
-    if (isOnline) {
-      syncQueueRef.current?.()
-    } else {
+    if (!isOnline) {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'REGISTER_SYNC' })
       }
@@ -184,11 +185,23 @@ export function useOfflineQueue() {
       let allSynced = true
       for (const mutation of sortedMutations) {
         try {
-          await httpClient.request({
+          const authStore = useAuthStore.getState()
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          }
+          if (authStore.accessToken) {
+            headers['Authorization'] = `Bearer ${authStore.accessToken}`
+          }
+          const fullUrl = mutation.url.startsWith('http') ? mutation.url : `${API_BASE_URL}${mutation.url}`
+          const response = await fetch(fullUrl, {
             method: mutation.method,
-            url: mutation.url,
-            data: mutation.body,
+            headers,
+            body: mutation.body ? JSON.stringify(mutation.body) : undefined,
           })
+          if (!response.ok) {
+            allSynced = false
+            break
+          }
           await deleteMutation(mutation.id)
         } catch (error) {
           console.error('Failed to sync mutation:', mutation, error)

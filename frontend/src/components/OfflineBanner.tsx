@@ -1,27 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useToastStore } from '../stores/toastStore'
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOffline(false)
-      useToastStore.getState().addToast({
-        title: 'Сеть восстановлена',
-        body: 'Данные синхронизированы',
-        type: 'success'
-      })
-    }
-
-    const handleOffline = () => {
-      setIsOffline(true)
-      useToastStore.getState().addToast({
-        title: 'Вы офлайн',
-        body: 'Работаем с кэшированными данными',
-        type: 'error'
-      })
-    }
+    const handleOnline = () => setIsOffline(false)
+    const handleOffline = () => setIsOffline(true)
 
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
