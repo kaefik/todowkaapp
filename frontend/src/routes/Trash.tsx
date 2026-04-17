@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { httpClient, ApiError } from '../api/httpClient'
 import { notifyTasksChanged, useGtdCounts } from '../hooks/useGtdCounts'
+import { taskKeys } from '../hooks/useTasks'
 import { GtdTaskList } from './GtdTaskList'
 
 export function Trash() {
+  const queryClient = useQueryClient()
   const [isClearing, setIsClearing] = useState(false)
   const [clearError, setClearError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -17,6 +20,7 @@ export function Trash() {
     setClearError(null)
     try {
       await httpClient.delete<{ deleted: number }>('/tasks/trash/clear')
+      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
       setRefreshKey((k) => k + 1)
     } catch (err) {

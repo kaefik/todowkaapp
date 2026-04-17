@@ -189,7 +189,12 @@ function buildOptimisticPatch(data: UpdateTask, allTags: Tag[]) {
   return patch
 }
 
-export function useTasks(filters?: TaskFilters): UseTasksReturn {
+interface UseTasksOptions {
+  staleTime?: number
+  refetchOnMount?: boolean | 'always'
+}
+
+export function useTasks(filters?: TaskFilters, options?: UseTasksOptions): UseTasksReturn {
   const queryClient = useQueryClient()
 
   const qs = buildQueryString(filters)
@@ -200,7 +205,8 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       const response = await httpClient.get<{ items: ApiTask[]; total: number }>(`/tasks${qs}`)
       return response.data.items.map(mapTask)
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: options?.staleTime ?? 1000 * 60 * 2,
+    refetchOnMount: options?.refetchOnMount,
   })
 
   const addTaskMutation = useMutation({

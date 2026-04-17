@@ -3,10 +3,8 @@ import type { TaskFilters } from './useTasks'
 import { useDebounce } from './useDebounce'
 
 interface StoredFilters {
-  gtd_status?: string
   context_id?: string
   area_id?: string
-  project_id?: string
   tag_id?: string
   is_completed?: boolean
   due_date_from?: string
@@ -20,20 +18,31 @@ interface StoredUiState {
   searchQuery: string
 }
 
-const STORAGE_KEY = 'ui-task-filters'
+function buildStorageKey(defaultFilters?: Partial<TaskFilters>): string {
+  const parts: string[] = ['ui-task-filters']
+  if (defaultFilters?.gtd_status) parts.push(defaultFilters.gtd_status)
+  if (defaultFilters?.project_id) parts.push(defaultFilters.project_id)
+  return parts.join('-')
+}
 
-const loadStoredFilters = (): StoredUiState => {
+const loadStoredFilters = (storageKey: string): StoredUiState => {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(storageKey)
     return stored ? JSON.parse(stored) : { filters: {}, searchQuery: '' }
   } catch {
     return { filters: {}, searchQuery: '' }
   }
 }
 
-const saveFilters = (filters: TaskFilters, searchQuery: string) => {
+const saveFilters = (storageKey: string, filters: TaskFilters, searchQuery: string) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ filters, searchQuery }))
+    const persistable: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(filters)) {
+      if (key !== 'gtd_status' && key !== 'project_id') {
+        persistable[key] = value
+      }
+    }
+    localStorage.setItem(storageKey, JSON.stringify({ filters: persistable, searchQuery }))
   } catch (error) {
     console.error('Error saving filters to localStorage:', error)
   }
@@ -55,11 +64,13 @@ export function useTaskFilter(
   const defaultsRef = useRef(defaultFilters)
   defaultsRef.current = defaultFilters
 
-  const stored = loadStoredFilters()
+  const storageKey = buildStorageKey(defaultFilters)
+
+  const stored = loadStoredFilters(storageKey)
 
   const [filters, setFilters] = useState<TaskFilters>(() => ({
-    ...defaultFilters,
     ...stored.filters,
+    ...defaultFilters,
   }))
   const [searchInput, setSearchInput] = useState(stored.searchQuery)
 
@@ -78,8 +89,8 @@ export function useTaskFilter(
   }, [debouncedSearch])
 
   useEffect(() => {
-    saveFilters(filters, searchInput)
-  }, [filters, searchInput])
+    saveFilters(storageKey, filters, searchInput)
+  }, [storageKey, filters, searchInput])
 
   const updateFilter = useCallback(
     <K extends keyof TaskFilters>(key: K, value: TaskFilters[K]) => {
@@ -99,8 +110,8 @@ export function useTaskFilter(
   const clearFilters = useCallback(() => {
     setFilters({ ...defaultsRef.current })
     setSearchInput('')
-    localStorage.removeItem(STORAGE_KEY)
-  }, [])
+    localStorage.removeItem(storageKey)
+  }, [storageKey])
 
   const hasActiveFilters = useMemo(() => {
     const defaults = defaultsRef.current ?? {}

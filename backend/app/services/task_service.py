@@ -226,7 +226,7 @@ class TaskService:
     async def get_gtd_counts(self, user_id: UUID) -> dict[str, int]:
         result = await self.db.execute(
             select(Task.gtd_status, func.count(Task.id))
-            .where(Task.user_id == user_id)
+            .where(Task.user_id == user_id, Task.parent_task_id.is_(None))
             .group_by(Task.gtd_status)
         )
         rows = result.all()

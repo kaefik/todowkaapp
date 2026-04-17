@@ -32,7 +32,10 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     moveTask,
     deleteTask,
     refetch,
-  } = useTasks(activeFilters)
+  } = useTasks(activeFilters, {
+    staleTime: gtdStatus === 'trash' ? 0 : undefined,
+    refetchOnMount: gtdStatus === 'trash' ? 'always' : undefined,
+  })
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
     await addTask({ ...data, gtd_status: gtdStatus })
@@ -45,6 +48,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     } else {
       await moveTask(id, 'trash')
     }
+    refetch()
   }
 
   const handleSaveTask = async (id: string, data: UpdateTask) => {
