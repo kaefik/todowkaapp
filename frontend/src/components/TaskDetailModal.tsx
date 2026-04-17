@@ -13,6 +13,7 @@ interface TaskDetailModalProps {
   taskId: string | null
   isOpen: boolean
   onClose: () => void
+  onEdit?: (task: Task) => void
 }
 
 function formatDate(dateStr: string | null, timezone: string | null): string {
@@ -52,7 +53,7 @@ function formatReminderOffsets(offsets: number[] | null): string {
   }).join(', ')
 }
 
-export function TaskDetailModal({ taskId, isOpen, onClose }: TaskDetailModalProps) {
+export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailModalProps) {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const { fetchTask } = useTasks()
@@ -80,8 +81,13 @@ export function TaskDetailModal({ taskId, isOpen, onClose }: TaskDetailModalProp
   }, [isOpen, taskId, fetchTask])
 
   const handleEdit = () => {
-    onClose()
-    navigate(`/tasks?editTaskId=${taskId}`)
+    if (task && onEdit) {
+      onClose()
+      onEdit(task)
+    } else {
+      onClose()
+      navigate(`/tasks?editTaskId=${taskId}`)
+    }
   }
 
   if (!isOpen) return null

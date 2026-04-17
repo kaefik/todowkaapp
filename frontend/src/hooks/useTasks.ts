@@ -290,11 +290,22 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
         }
       }
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (updatedTask, { id }) => {
       console.log('[updateTaskMutation] Update successful, clearing local changes for task:', id)
       deleteLocalTaskChange(id).catch(console.error)
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
+
+      queryClient.setQueryData<Task>(taskKeys.detail(id), updatedTask)
+
+      const listQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists(),
+      })
+      for (const [key] of listQueries) {
+        queryClient.setQueryData<Task[]>(key, (old) => {
+          if (!old) return old
+          return old.map((t) => (t.id === id ? updatedTask : t))
+        })
+      }
+
       notifyTasksChanged()
     },
   })

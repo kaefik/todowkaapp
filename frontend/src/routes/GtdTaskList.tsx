@@ -49,7 +49,6 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
 
   const handleSaveTask = async (id: string, data: UpdateTask) => {
     await updateTask(id, data)
-    refetch()
   }
 
   const handleMoveTask = async (id: string, status: GtdStatus) => {

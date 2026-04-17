@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Task, UpdateTask, GtdStatus, RecurrenceConfig } from '../hooks/useTasks'
-import { useTask } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
@@ -111,11 +110,15 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const { areas } = useAreas()
   const { tags } = useTags()
   const { projects } = useProjects()
-  const { data: fetchedTask, isLoading } = useTask(task?.id || '')
   const { isOnline } = useOfflineQueue()
-  const [currentTask, setCurrentTask] = useState<Task | null>(task)
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [isMobile, setIsMobile] = useState(false)
+  const [accordionStates, setAccordionStates] = useState({
+    tags: true,
+    categorization: false,
+    datesAndNotes: false,
+    recurrence: false,
+  })
+
   const [recurrenceData, setRecurrenceData] = useState<{
     recurrence_type: string | null
     recurrence_config: RecurrenceConfig | null
@@ -133,12 +136,22 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     reminder_offsets: null,
   })
   const [isTodayDue, setIsTodayDue] = useState(false)
-  const [accordionStates, setAccordionStates] = useState({
-    tags: true,
-    categorization: false,
-    datesAndNotes: false,
-    recurrence: false,
-  })
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+
+  const defaultValues = useMemo(() => {
+    if (!task) return undefined
+    const dueDateStr = task.due_date ? task.due_date.slice(0, 10) : null
+    return {
+      title: task.title,
+      description: task.description,
+      context_id: task.context_id ?? null,
+      area_id: (task as Record<string, unknown>).area_id as string | null ?? null,
+      project_id: (task as Record<string, unknown>).project_id as string | null ?? null,
+      gtd_status: task.gtd_status,
+      due_date: dueDateStr,
+      notes: task.notes ?? null,
+    }
+  }, [task])
 
   const {
     register,
@@ -148,7 +161,37 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema),
+    defaultValues,
   })
+
+  useEffect(() => {
+    if (task && isOpen) {
+      const dueDateStr = task.due_date ? task.due_date.slice(0, 10) : null
+      const today = new Date().toISOString().slice(0, 10)
+
+      reset({
+        title: task.title,
+        description: task.description,
+        context_id: task.context_id ?? null,
+        area_id: (task as Record<string, unknown>).area_id as string | null ?? null,
+        project_id: (task as Record<string, unknown>).project_id as string | null ?? null,
+        gtd_status: task.gtd_status,
+        due_date: dueDateStr,
+        notes: task.notes ?? null,
+      })
+      setSelectedTagIds(task.tags.map((t: Tag) => t.id))
+      setRecurrenceData({
+        recurrence_type: task.recurrence_type,
+        recurrence_config: task.recurrence_config,
+        recurrence_end_date: task.recurrence_end_date,
+      })
+      setReminderData({
+        reminder_time: task.reminder_time ? task.reminder_time.slice(0, 5) : null,
+        reminder_offsets: task.reminder_offsets,
+      })
+      setIsTodayDue(dueDateStr === today)
+    }
+  }, [task, isOpen, reset])
 
   useEffect(() => {
     const checkMobile = () => {
@@ -162,47 +205,6 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const toggleAccordion = (key: keyof typeof accordionStates) => {
     setAccordionStates(prev => ({ ...prev, [key]: !prev[key] }))
   }
-
-  useEffect(() => {
-    if (isOpen) {
-      if (fetchedTask) {
-        setCurrentTask(fetchedTask)
-        setSelectedTagIds(fetchedTask.tags.map((t: Tag) => t.id))
-      } else if (task) {
-        setCurrentTask(task)
-        setSelectedTagIds(task.tags.map((t: Tag) => t.id))
-      }
-    }
-  }, [isOpen, fetchedTask, task])
-
-  useEffect(() => {
-    if (currentTask) {
-      const dueDateStr = currentTask.due_date ? currentTask.due_date.slice(0, 10) : null
-      const today = new Date().toISOString().slice(0, 10)
-      const isToday = dueDateStr === today
-
-      reset({
-        title: currentTask.title,
-        description: currentTask.description,
-        context_id: currentTask.context_id ?? null,
-        area_id: (currentTask as Record<string, unknown>).area_id as string | null ?? null,
-        project_id: (currentTask as Record<string, unknown>).project_id as string | null ?? null,
-        gtd_status: currentTask.gtd_status,
-        due_date: dueDateStr,
-        notes: currentTask.notes ?? null,
-      })
-      setRecurrenceData({
-        recurrence_type: currentTask.recurrence_type,
-        recurrence_config: currentTask.recurrence_config,
-        recurrence_end_date: currentTask.recurrence_end_date,
-      })
-      setReminderData({
-        reminder_time: currentTask.reminder_time ? currentTask.reminder_time.slice(0, 5) : null,
-        reminder_offsets: currentTask.reminder_offsets,
-      })
-      setIsTodayDue(isToday)
-    }
-  }, [currentTask, reset])
 
   const handleTagToggle = (tagId: string) => {
     setSelectedTagIds((prev) =>
@@ -246,8 +248,8 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   }
 
   const onSubmit = (data: EditTaskFormData) => {
-    if (!currentTask) return
-    onSave(currentTask.id, {
+    if (!task) return
+    onSave(task.id, {
       ...data,
       tag_ids: selectedTagIds,
       recurrence_type: recurrenceData.recurrence_type,
@@ -259,7 +261,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     onClose()
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !task) return null
 
   return createPortal(
     <div
@@ -277,231 +279,221 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             Edit Task
-            {currentTask?.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
-            {(currentTask?.reminder_time || currentTask?.reminder_offsets?.length) && !currentTask?.reminder_fired && <span title="Есть напоминание">&#x1F514;</span>}
+            {task.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
+            {(task.reminder_time || task.reminder_offsets?.length) && !task.reminder_fired && <span title="Есть напоминание">&#x1F514;</span>}
             {!isOnline && <span className="text-amber-500 text-sm" title="Офлайн режим: изменения будут сохранены локально">&#128268; Офлайн</span>}
           </h2>
         </div>
 
-        {isLoading ? (
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
-            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          </div>
-        ) : (
-          <>
-            <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Title
-                  </label>
-                  <input
-                    {...register('title')}
-                    type="text"
-                    id="title"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                    placeholder="Task title"
-                  />
-                  {errors.title && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    {...register('description')}
-                    id="description"
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                    placeholder="Task description (optional)"
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
-                  )}
-                </div>
-              </div>
-
-              <Accordion
-                title="Теги"
-                isOpen={accordionStates.tags}
-                onToggle={() => toggleAccordion('tags')}
-              >
-                <TagChips
-                  tags={tags}
-                  selectedTagIds={selectedTagIds}
-                  onToggle={handleTagToggle}
-                />
-              </Accordion>
-
-              <Accordion
-                title="Категоризация"
-                isOpen={accordionStates.categorization}
-                onToggle={() => toggleAccordion('categorization')}
-              >
-                <div>
-                  <label htmlFor="context_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Контекст
-                  </label>
-                  <select
-                    {...register('context_id')}
-                    id="context_id"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                  >
-                    <option value="">Без контекста</option>
-                    {contexts.map((ctx) => (
-                      <option key={ctx.id} value={ctx.id}>
-                        {ctx.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="area_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Область
-                  </label>
-                  <select
-                    {...register('area_id')}
-                    id="area_id"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                  >
-                    <option value="">Без области</option>
-                    {areas.map((area) => (
-                      <option key={area.id} value={area.id}>
-                        {area.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Проект
-                  </label>
-                  <select
-                    {...register('project_id')}
-                    id="project_id"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                  >
-                    <option value="">Без проекта</option>
-                    {projects.filter((p) => p.is_active).map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    GTD-статус
-                  </label>
-                  <select
-                    {...register('gtd_status')}
-                    id="gtd_status"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                  >
-                    {GTD_STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </Accordion>
-
-              <Accordion
-                title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${(reminderData.reminder_time || reminderData.reminder_offsets?.length) && !currentTask?.reminder_fired ? ' \u{1F514}' : ''}`}
-                isOpen={accordionStates.recurrence}
-                onToggle={() => toggleAccordion('recurrence')}
-              >
-                <div>
-                  <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Дедлайн
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer mb-2">
-                    <input
-                      type="checkbox"
-                      checked={isTodayDue}
-                      onChange={(e) => handleTodayToggle(e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Сегодня</span>
-                  </label>
-                  <input
-                    {...register('due_date', {
-                      onChange: handleDueDateChange
-                    })}
-                    type="date"
-                    id="due_date"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                  />
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                  <ReminderEditor
-                    reminderTime={reminderData.reminder_time}
-                    reminderOffsets={reminderData.reminder_offsets}
-                    reminderFired={currentTask?.reminder_fired ?? false}
-                    dueDate={watch('due_date')}
-                    onChange={handleReminderChange}
-                  />
-                </div>
-
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                  <RecurrenceEditor
-                    recurrenceType={recurrenceData.recurrence_type}
-                    recurrenceConfig={recurrenceData.recurrence_config}
-                    recurrenceEndDate={recurrenceData.recurrence_end_date}
-                    dueDate={watch('due_date')}
-                    onChange={setRecurrenceData}
-                  />
-                </div>
-              </Accordion>
-
-              <Accordion
-                title="Заметки"
-                isOpen={accordionStates.datesAndNotes}
-                onToggle={() => toggleAccordion('datesAndNotes')}
-              >
-                <div>
-                  <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Заметки
-                  </label>
-                  <textarea
-                    {...register('notes')}
-                    id="notes"
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                    placeholder="Заметки к задаче (optional)"
-                  />
-                </div>
-              </Accordion>
-            </form>
-
-            <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                onClick={handleSubmit(onSubmit)}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
-              >
-                Save
-              </button>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Title
+              </label>
+              <input
+                {...register('title')}
+                type="text"
+                id="title"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                placeholder="Task title"
+              />
+              {errors.title && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
+              )}
             </div>
-          </>
-        )}
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                {...register('description')}
+                id="description"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                placeholder="Task description (optional)"
+              />
+              {errors.description && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
+              )}
+            </div>
+          </div>
+
+          <Accordion
+            title="Теги"
+            isOpen={accordionStates.tags}
+            onToggle={() => toggleAccordion('tags')}
+          >
+            <TagChips
+              tags={tags}
+              selectedTagIds={selectedTagIds}
+              onToggle={handleTagToggle}
+            />
+          </Accordion>
+
+          <Accordion
+            title="Категоризация"
+            isOpen={accordionStates.categorization}
+            onToggle={() => toggleAccordion('categorization')}
+          >
+            <div>
+              <label htmlFor="context_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Контекст
+              </label>
+              <select
+                {...register('context_id')}
+                id="context_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">Без контекста</option>
+                {contexts.map((ctx) => (
+                  <option key={ctx.id} value={ctx.id}>
+                    {ctx.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="area_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Область
+              </label>
+              <select
+                {...register('area_id')}
+                id="area_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">Без области</option>
+                {areas.map((area) => (
+                  <option key={area.id} value={area.id}>
+                    {area.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Проект
+              </label>
+              <select
+                {...register('project_id')}
+                id="project_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">Без проекта</option>
+                {projects.filter((p) => p.is_active).map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                GTD-статус
+              </label>
+              <select
+                {...register('gtd_status')}
+                id="gtd_status"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                {GTD_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </Accordion>
+
+          <Accordion
+            title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${(reminderData.reminder_time || reminderData.reminder_offsets?.length) && !task?.reminder_fired ? ' \u{1F514}' : ''}`}
+            isOpen={accordionStates.recurrence}
+            onToggle={() => toggleAccordion('recurrence')}
+          >
+            <div>
+              <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Дедлайн
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={isTodayDue}
+                  onChange={(e) => handleTodayToggle(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Сегодня</span>
+              </label>
+              <input
+                {...register('due_date', {
+                  onChange: handleDueDateChange
+                })}
+                type="date"
+                id="due_date"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <ReminderEditor
+                reminderTime={reminderData.reminder_time}
+                reminderOffsets={reminderData.reminder_offsets}
+                reminderFired={task?.reminder_fired ?? false}
+                dueDate={watch('due_date')}
+                onChange={handleReminderChange}
+              />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <RecurrenceEditor
+                recurrenceType={recurrenceData.recurrence_type}
+                recurrenceConfig={recurrenceData.recurrence_config}
+                recurrenceEndDate={recurrenceData.recurrence_end_date}
+                dueDate={watch('due_date')}
+                onChange={setRecurrenceData}
+              />
+            </div>
+          </Accordion>
+
+          <Accordion
+            title="Заметки"
+            isOpen={accordionStates.datesAndNotes}
+            onToggle={() => toggleAccordion('datesAndNotes')}
+          >
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Заметки
+              </label>
+              <textarea
+                {...register('notes')}
+                id="notes"
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                placeholder="Заметки к задаче (optional)"
+              />
+            </div>
+          </Accordion>
+        </form>
+
+        <div className="flex-shrink-0 px-4 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            onClick={handleSubmit(onSubmit)}
+            className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>,
     document.body

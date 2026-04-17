@@ -85,7 +85,6 @@ export function ProjectDetail() {
 
   const handleSaveTask = async (taskId: string, data: UpdateTask) => {
     await updateTask(taskId, data)
-    refetch()
     fetchProject()
   }
 

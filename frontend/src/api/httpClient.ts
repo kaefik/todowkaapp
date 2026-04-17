@@ -77,22 +77,6 @@ async function fetchWithAuth<T>(
   console.debug(`[HTTP] Request: ${(config.method || 'GET').toUpperCase()} ${fullUrl}`)
 
   try {
-    if (config.method === 'GET' || !config.method) {
-      const cached = await getCache<T>(fullUrl)
-      if (cached) {
-        console.log('[Cache] Using cached data for:', fullUrl)
-        fetch(fullUrl, { ...fetchConfig, headers })
-          .then(async (response) => {
-            if (response.ok) {
-              const data = await response.json()
-              await setCache(fullUrl, data)
-            }
-          })
-          .catch(console.error)
-        return { data: cached, status: 200, statusText: 'OK' }
-      }
-    }
-
     const response = await fetch(fullUrl, {
       ...fetchConfig,
       headers,
