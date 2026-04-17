@@ -45,11 +45,17 @@ export interface TaskListViewProps {
 }
 
 function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtaskChange: () => void }) {
-  const { subtasks, isLoading, addSubtask, toggleSubtask, deleteSubtask } = useSubtasks(taskId)
   const storageKey = `ui-subtask-expanded-${taskId}`
   const [expanded, setExpanded] = useLocalStorage(storageKey, false)
   const [newTitle, setNewTitle] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const { subtasks, isLoading, addSubtask, toggleSubtask, deleteSubtask, refetch } = useSubtasks(expanded ? taskId : null)
+
+  useEffect(() => {
+    if (expanded) {
+      refetch()
+    }
+  }, [expanded, refetch])
 
   const handleAdd = async () => {
     const trimmed = newTitle.trim()
