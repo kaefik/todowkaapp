@@ -121,7 +121,9 @@ export function useTaskFilter(
       (filters.project_id && filters.project_id !== defaults.project_id) ||
       (filters.tag_id && filters.tag_id !== defaults.tag_id) ||
       (filters.is_completed !== undefined && filters.is_completed !== defaults.is_completed) ||
-      (filters.search && filters.search !== defaults.search)
+      (filters.search && filters.search !== defaults.search) ||
+      (filters.due_date_from && filters.due_date_from !== defaults.due_date_from) ||
+      (filters.due_date_to && filters.due_date_to !== defaults.due_date_to)
     const hasSort =
       (filters.sort_by && filters.sort_by !== 'created_at' && filters.sort_by !== defaults.sort_by) ||
       (filters.sort_order === 'asc' && filters.sort_order !== defaults.sort_order)
@@ -139,8 +141,8 @@ export function useTaskFilter(
     if (filters.search && filters.search !== defaults.search) count++
     if (filters.sort_by && filters.sort_by !== 'created_at' && filters.sort_by !== defaults.sort_by) count++
     if (filters.sort_order === 'asc' && filters.sort_order !== defaults.sort_order) count++
-    if (filters.due_date_from && filters.due_date_from !== (defaults as TaskFilters).due_date_from) count++
-    if (filters.due_date_to && filters.due_date_to !== (defaults as TaskFilters).due_date_to) count++
+    if (filters.due_date_from && filters.due_date_from !== defaults.due_date_from) count++
+    if (filters.due_date_to && filters.due_date_to !== defaults.due_date_to) count++
     return count
   }, [filters])
 

@@ -94,6 +94,7 @@ function TasksContent() {
   } = useTasks(filters)
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const initialFocusDone = useRef(false)
   const [showDescription, setShowDescription] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useLocalStorage(
@@ -120,7 +121,8 @@ function TasksContent() {
   const titleField = register('title')
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !initialFocusDone.current) {
+      initialFocusDone.current = true
       const id = requestAnimationFrame(() => {
         inputRef.current?.focus()
       })

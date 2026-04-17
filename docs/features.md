@@ -125,14 +125,13 @@
 - Файлы: `frontend/src/hooks/useLocalStorage.ts`, `frontend/src/hooks/useTaskFilter.ts`, `frontend/src/routes/Tasks.tsx`, `frontend/src/routes/Settings.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/components/TaskFilterPanel.tsx`
 
 #### Видимость активных фильтров ✅ (Реализовано 16.04.2026)
-- Бейдж с количеством активных фильтров на кнопке "Фильтры"
-- Кнопка "Сбросить" для быстрого сброса всех фильтров одним кликом
-- Кнопка сброса видна всегда, когда есть активные фильтры (независимо от состояния панели)
+- Бейдж с количеством активных фильтров на кнопке "Фильтры" (в развёрнутом состоянии)
+- Бейдж на иконке поиска (в свёрнутом состоянии) — виден сразу при загрузке страницы
+- Кнопка "Сбросить" для быстрого сброса всех фильтров одним кликом (видна в обоих состояниях)
 - Подсчёт активных фильтров: контекст, область, проект, тег, поиск, сортировка, дедлайн (от/до)
+- Исправлен баг: due_date_from/due_date_to добавлены в TaskFilters и buildQueryString
 - Решение проблемы: пользователь видит, что фильтры активны, даже если они были сохранены в localStorage
-- Файлы: `frontend/src/hooks/useTaskFilter.ts`, `frontend/src/components/TaskFilterPanel.tsx`
-- Тесты: 16 тестов в TaskFilterPanel.test.tsx (все проходят)
-- Линтеры и type checking: без ошибок
+- Файлы: `frontend/src/hooks/useTaskFilter.ts`, `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/hooks/useTasks.ts`
 
 #### Палитра цветов для контекстов, проектов, областей, тегов
 - Визуальная палитра (color picker) для выбора цвета при создании/редактировании контекстов, проектов, областей и тегов

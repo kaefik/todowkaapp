@@ -230,6 +230,7 @@ export function TaskListView({
   emptyMessage = 'Нет задач.',
 }: TaskListViewProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const initialFocusDone = useRef(false)
   const [showDescription, setShowDescription] = useLocalStorage(
     'ui-tasklist-show-description',
     false
@@ -251,7 +252,8 @@ export function TaskListView({
   const titleField = register('title')
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && !initialFocusDone.current) {
+      initialFocusDone.current = true
       const id = requestAnimationFrame(() => {
         inputRef.current?.focus()
       })

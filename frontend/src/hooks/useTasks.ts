@@ -134,6 +134,8 @@ export interface TaskFilters {
   search?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
+  due_date_from?: string
+  due_date_to?: string
 }
 
 interface UseTasksReturn {
@@ -165,6 +167,8 @@ function buildQueryString(filters?: TaskFilters): string {
   if (filters.search) params.set('search', filters.search)
   if (filters.sort_by) params.set('sort_by', filters.sort_by)
   if (filters.sort_order) params.set('sort_order', filters.sort_order)
+  if (filters.due_date_from) params.set('due_date_from', filters.due_date_from)
+  if (filters.due_date_to) params.set('due_date_to', filters.due_date_to)
   const qs = params.toString()
   return qs ? `?${qs}` : ''
 }
