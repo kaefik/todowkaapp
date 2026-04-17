@@ -386,3 +386,99 @@ async def test_register_without_max_users_limit(client, db_session, monkeypatch)
             },
         )
         assert response.status_code == 201
+
+
+@pytest.mark.asyncio
+async def test_cookie_secure_flag_in_production(client, db_session, monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config.settings, "app_env", "production")
+
+    await client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "Password123!",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/auth/login",
+        json={"username": "testuser", "password": "Password123!"},
+    )
+
+    cookies = login_response.cookies
+    refresh_token_cookie = cookies.get("refresh_token")
+
+    assert refresh_token_cookie is not None
+    assert refresh_token_cookie.get("secure") is True
+
+    me_response = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {login_response.json()['access_token']}"},
+        cookies={"refresh_token": refresh_token_cookie}
+    )
+    assert me_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_cookie_secure_flag_in_development(client, db_session, monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config.settings, "app_env", "development")
+
+    await client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "Password123!",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/auth/login",
+        json={"username": "testuser", "password": "Password123!"},
+    )
+
+    cookies = login_response.cookies
+    refresh_token_cookie = cookies.get("refresh_token")
+
+    assert refresh_token_cookie is not None
+    assert refresh_token_cookie.get("secure") is False
+
+    me_response = await client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {login_response.json()['access_token']}"},
+        cookies={"refresh_token": refresh_token_cookie}
+    )
+    assert me_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_cookie_secure_override_via_env(client, db_session, monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config.settings, "app_env", "development")
+    monkeypatch.setattr(config.settings, "cookie_secure", True)
+
+    await client.post(
+        "/api/auth/register",
+        json={
+            "username": "testuser",
+            "email": "test@example.com",
+            "password": "Password123!",
+        },
+    )
+
+    login_response = await client.post(
+        "/api/auth/login",
+        json={"username": "testuser", "password": "Password123!"},
+    )
+
+    cookies = login_response.cookies
+    refresh_token_cookie = cookies.get("refresh_token")
+
+    assert refresh_token_cookie is not None
+    assert refresh_token_cookie.get("secure") is True

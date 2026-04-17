@@ -65,11 +65,16 @@ async function fetchWithAuth<T>(
     ...(fetchConfig.headers as Record<string, string>),
   }
 
-  if (!skipAuth && authStore.accessToken) {
-    headers['Authorization'] = `Bearer ${authStore.accessToken}`
+  const token = authStore.accessToken || localStorage.getItem('accessToken')
+  if (!skipAuth && token) {
+    headers['Authorization'] = `Bearer ${token}`
   }
 
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
+
+  console.debug(`[HTTP] Token: ${authStore.accessToken?.substring(0, 10)}...rest (from store)`)
+  console.debug(`[HTTP] Cookie has access_token: ${document.cookie.includes('access_token')}`)
+  console.debug(`[HTTP] Request: ${(config.method || 'GET').toUpperCase()} ${fullUrl}`)
 
   try {
     if (config.method === 'GET' || !config.method) {
@@ -100,6 +105,8 @@ async function fetchWithAuth<T>(
         errorMessage = errorData.detail || errorMessage
       } catch {
       }
+
+      console.error(`[HTTP] 401 Error: ${response.status} ${fullUrl} - ${errorMessage}`)
 
       if (errorMessage === 'Refresh token has been revoked') {
         isRefreshing = false

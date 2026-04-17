@@ -60,9 +60,9 @@ def set_access_cookie(response: Response, token: str) -> None:
         key="access_token",
         value=token,
         max_age=settings.access_token_expire_minutes * 60,
-        path="/api/sse",
+        path="/",
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="strict",
     )
 
@@ -72,9 +72,9 @@ def clear_access_cookie(response: Response) -> None:
         key="access_token",
         value="",
         max_age=0,
-        path="/api/sse",
+        path="/",
         httponly=True,
-        secure=True,
+        secure=settings.cookie_secure,
         samesite="strict",
     )
 
@@ -85,7 +85,7 @@ def set_refresh_cookie(response: Response, token: str) -> None:
         value=token,
         max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
         path="/api/auth",
-        secure=True,
+        secure=settings.cookie_secure,
         httponly=True,
         samesite="strict",
     )
@@ -97,7 +97,7 @@ def clear_refresh_cookie(response: Response) -> None:
         value="",
         max_age=0,
         path="/api/auth",
-        secure=True,
+        secure=settings.cookie_secure,
         httponly=True,
         samesite="strict",
     )

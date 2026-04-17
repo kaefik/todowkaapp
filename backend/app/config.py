@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     login_rate_limit: int = 5
     register_rate_limit: int = 3
     refresh_token_rotation_enabled: bool = True
+    cookie_secure: bool = False
 
     @field_validator("invite_code", "max_users", mode="before")
     @classmethod
@@ -26,6 +27,14 @@ class Settings(BaseSettings):
         if isinstance(v, str) and v.strip() == "":
             return None
         return v
+
+    @field_validator("cookie_secure", mode="before")
+    @classmethod
+    def set_cookie_secure_for_production(cls, v: Any, info: Any) -> Any:
+        if v is not None:
+            return v
+        app_env = info.data.get("app_env", "development")
+        return app_env == "production"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

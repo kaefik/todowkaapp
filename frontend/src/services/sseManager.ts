@@ -1,3 +1,5 @@
+import { useSSEStore } from '../stores/sseStore'
+
 export type SSEState = 'disconnected' | 'connecting' | 'connected' | 'error'
 
 export interface SSEMessage {
@@ -11,6 +13,13 @@ export interface SSEManagerCallbacks {
   onError?: (error: Error) => void
 }
 
+const logger = {
+  info: (msg: string, data?: unknown) => console.log(`[SSE] [INFO] ${new Date().toISOString()} - ${msg}`, data || ''),
+  warn: (msg: string, data?: unknown) => console.warn(`[SSE] [WARN] ${new Date().toISOString()} - ${msg}`, data || ''),
+  error: (msg: string, data?: unknown) => console.error(`[SSE] [ERROR] ${new Date().toISOString()} - ${msg}`, data || ''),
+  debug: (msg: string, data?: unknown) => console.debug(`[SSE] [DEBUG] ${new Date().toISOString()} - ${msg}`, data || ''),
+}
+
 class SSEManager {
   private eventSource: EventSource | null = null
   private currentUserId: string | null = null
@@ -18,13 +27,21 @@ class SSEManager {
   private retryDelay: number = 1000
   private readonly maxRetryDelay: number = 30000
   private callbacks: SSEManagerCallbacks | null = null
+  private reconnectAttempts: number = 0
+  private readonly MAX_RECONNECT_ATTEMPTS = 5
 
   connect(userId: string, callbacks: SSEManagerCallbacks) {
     this.disconnect()
 
     this.currentUserId = userId
     this.callbacks = callbacks
+    this.reconnectAttempts = 0
 
+    const sseStore = useSSEStore.getState()
+    sseStore.resetAttempts()
+    sseStore.updateStatus('connecting')
+
+    logger.info('Connecting to SSE', { userId, attempt: this.reconnectAttempts + 1 })
     this.setState('connecting')
     this.openConnection()
   }
@@ -35,23 +52,35 @@ class SSEManager {
     }
 
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-    
+
     let sseUrl: string
+
     if (apiBaseUrl.startsWith('http')) {
       const apiUrl = new URL(apiBaseUrl)
       sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/notifications`
-    } else if (import.meta.env.DEV) {
-      sseUrl = 'http://localhost:8000/api/sse/notifications'
     } else {
-      sseUrl = `${window.location.origin}${apiBaseUrl}/sse/notifications`
+      sseUrl = `${apiBaseUrl}/sse/notifications`
     }
+
+    logger.debug('Opening SSE connection', { url: sseUrl, userId: this.currentUserId })
     
-    console.log('Connecting to SSE:', sseUrl)
-    
+    const sseStore = useSSEStore.getState()
+    sseStore.recordConnectionStart()
+
     this.eventSource = new EventSource(sseUrl, { withCredentials: true })
 
     this.eventSource.onopen = () => {
       this.retryDelay = 1000
+      this.reconnectAttempts = 0
+      
+      sseStore.updateStatus('connected')
+      sseStore.resetAttempts()
+      
+      const duration = sseStore.currentConnectionStartTime 
+        ? Date.now() - sseStore.currentConnectionStartTime 
+        : 0
+      logger.info('SSE connection established', { url: sseUrl, duration: `${duration}ms` })
+      
       this.setState('connected')
     }
 
@@ -59,7 +88,7 @@ class SSEManager {
     }
 
     this.eventSource.addEventListener('notification', (event) => {
-      console.log('SSE notification received:', event.data)
+      logger.debug('SSE message received', { event: 'notification', data: event.data })
       if (this.callbacks) {
         this.callbacks.onMessage({
           event: 'notification',
@@ -69,10 +98,25 @@ class SSEManager {
     })
 
     this.eventSource.addEventListener('error', () => {
+      const error = new Error('SSE connection error')
+      
+      sseStore.updateStatus('error')
+      sseStore.recordError(error.message)
+      sseStore.recordConnectionEnd()
+      
+      const duration = sseStore.currentConnectionStartTime 
+        ? Date.now() - sseStore.currentConnectionStartTime 
+        : 0
+      logger.error('SSE connection error', { 
+        error: error.message, 
+        attempt: this.reconnectAttempts,
+        duration: `${duration}ms`,
+        url: sseUrl
+      })
+      
       this.setState('error')
       this.closeConnection()
 
-      const error = new Error('SSE connection error')
       if (this.callbacks?.onError) {
         this.callbacks.onError(error)
       }
@@ -82,8 +126,31 @@ class SSEManager {
   }
 
   private scheduleReconnect() {
+    this.reconnectAttempts++
+
+    const sseStore = useSSEStore.getState()
+    sseStore.incrementAttempts()
+
+    if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
+      sseStore.recordError('SSE reconnect limit reached')
+      logger.error('SSE reconnect limit reached', { 
+        attempts: this.reconnectAttempts, 
+        maxAttempts: this.MAX_RECONNECT_ATTEMPTS 
+      })
+      this.setState('error')
+      return
+    }
+
     const delay = this.retryDelay
     this.retryDelay = Math.min(delay * 2, this.maxRetryDelay)
+
+    sseStore.updateStatus('connecting')
+
+    logger.info('Scheduling reconnect', { 
+      attempt: this.reconnectAttempts, 
+      delay: `${delay}ms`,
+      nextDelay: `${this.retryDelay}ms`
+    })
 
     this.retryTimeout = setTimeout(() => {
       this.setState('connecting')
@@ -93,6 +160,19 @@ class SSEManager {
 
   private closeConnection() {
     if (this.eventSource) {
+      const sseStore = useSSEStore.getState()
+      const duration = sseStore.currentConnectionStartTime 
+        ? Date.now() - sseStore.currentConnectionStartTime 
+        : 0
+      
+      logger.info('Closing SSE connection', { 
+        userId: this.currentUserId,
+        duration: `${duration}ms`
+      })
+      
+      sseStore.updateStatus('disconnected')
+      sseStore.recordConnectionEnd()
+      
       this.eventSource.close()
       this.eventSource = null
     }
@@ -103,16 +183,36 @@ class SSEManager {
   }
 
   disconnect() {
+    const sseStore = useSSEStore.getState()
+    sseStore.updateStatus('disconnected')
+    
+    logger.info('Disconnecting from SSE', { userId: this.currentUserId })
     this.closeConnection()
     this.currentUserId = null
     this.callbacks = null
     this.retryDelay = 1000
+    this.reconnectAttempts = 0
+  }
+
+  resetReconnectAttempts(): void {
+    const sseStore = useSSEStore.getState()
+    sseStore.resetAttempts()
+    logger.info('Resetting reconnect attempts', { previousAttempts: this.reconnectAttempts })
+    this.reconnectAttempts = 0
   }
 
   private setState(state: SSEState) {
+    logger.debug('SSE state changed', { from: this.getCurrentState(), to: state })
     if (this.callbacks?.onStateChange) {
       this.callbacks.onStateChange(state)
     }
+  }
+
+  private getCurrentState(): SSEState {
+    if (!this.eventSource) return 'disconnected'
+    if (this.eventSource.readyState === EventSource.CONNECTING) return 'connecting'
+    if (this.eventSource.readyState === EventSource.OPEN) return 'connected'
+    return 'error'
   }
 }
 

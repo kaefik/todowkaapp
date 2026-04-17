@@ -62,6 +62,9 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
         error: null,
       })
+      if (data.access_token) {
+        localStorage.setItem('accessToken', data.access_token)
+      }
     } catch (error) {
       set({
         isLoading: false,
@@ -153,6 +156,9 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
         error: null,
       })
+      if (loginData.access_token) {
+        localStorage.setItem('accessToken', loginData.access_token)
+      }
     } catch (error) {
       set({
         isLoading: false,
@@ -167,6 +173,7 @@ export const useAuthStore = create<AuthState>()(
       method: 'POST',
       credentials: 'include',
     }).catch(() => {})
+    localStorage.removeItem('accessToken')
     set({
       user: null,
       accessToken: null,
@@ -192,7 +199,11 @@ export const useAuthStore = create<AuthState>()(
         accessToken: data.access_token,
         isAuthenticated: true,
       })
+      if (data.access_token) {
+        localStorage.setItem('accessToken', data.access_token)
+      }
     } catch (error) {
+      localStorage.removeItem('accessToken')
       set({
         user: null,
         accessToken: null,
@@ -216,6 +227,7 @@ export const useAuthStore = create<AuthState>()(
 
       if (!response.ok) {
         if (response.status === 401) {
+          localStorage.removeItem('accessToken')
           set({
             isLoading: false,
             error: null,
@@ -236,7 +248,11 @@ export const useAuthStore = create<AuthState>()(
         isLoading: false,
         error: null,
       })
+      if (data.access_token) {
+        localStorage.setItem('accessToken', data.access_token)
+      }
     } catch (error) {
+      localStorage.removeItem('accessToken')
       set({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to fetch user',

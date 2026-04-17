@@ -28,12 +28,12 @@ async def get_notifications(
     query = select(Notification).where(Notification.user_id == current_user.id)
 
     if unread_only:
-        query = query.where(Notification.is_read == False)
+        query = query.where(not Notification.is_read)
 
     unread_count_result = await db.execute(
         select(func.count(Notification.id)).where(
             Notification.user_id == current_user.id,
-            Notification.is_read == False
+            not Notification.is_read
         )
     )
     unread_count = unread_count_result.scalar() or 0
@@ -95,7 +95,7 @@ async def mark_all_notifications_as_read(
         update(Notification)
         .where(
             Notification.user_id == current_user.id,
-            Notification.is_read == False
+            not Notification.is_read
         )
         .values(is_read=True, read_at=datetime.now(UTC))
     )

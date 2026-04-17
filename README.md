@@ -292,6 +292,195 @@ npm run lint -- --fix
 npx tsc --noEmit
 ```
 
+## Troubleshooting
+
+### IndexedDB Errors
+
+**Problem**: Application fails to start or shows errors related to IndexedDB schema.
+
+**Symptoms**:
+- Console errors: "DOMException: The operation failed for reasons unrelated to the database itself"
+- "VersionError: The requested version (1) is less than the existing version (2)"
+- Application loads but cached data is not working
+
+**Solution**: Clear IndexedDB cache
+
+```javascript
+// In browser console:
+indexedDB.deleteDatabase('todowka-query-cache')
+```
+
+**Manual Steps**:
+1. Open Developer Tools (F12)
+2. Go to Application tab
+3. Expand IndexedDB
+4. Right-click on `todowka-query-cache` and select "Delete database"
+5. Refresh the page
+
+**Automatic Reset**: The application has automatic error handling for IndexedDB issues. If a migration fails, the database will be automatically reset and the application will continue without persistence.
+
+**Diagnosing**:
+- Check console for `[IndexedDB]` or `[QueryClient]` log messages
+- Verify the current database version: `indexedDB.databases().then(dbs => dbs.find(db => db.name === 'todowka-query-cache'))`
+- Look for migration logs in the console
+
+### Authorization (401 Errors)
+
+**Problem**: API requests return 401 Unauthorized errors.
+
+**Symptoms**:
+- Repeated 401 errors in console
+- User gets logged out unexpectedly
+- SSE connection fails with 401 error
+
+**Diagnosing**:
+
+**1. Check Token in Browser Console**:
+```javascript
+// Check access token
+localStorage.getItem('accessToken')
+
+// Check refresh token cookie
+document.cookie.includes('refresh_token')
+document.cookie.includes('access_token')
+```
+
+**2. Check Backend Logs**:
+```bash
+# In backend terminal, look for auth logs:
+# "Auth attempt via header" or "Auth attempt via cookie"
+# "Token: xxxxxxxxxx...rest"
+# "User authenticated: {user-id}"
+# "Auth failed: {reason}"
+```
+
+**3. Check Frontend HTTP Logs**:
+```javascript
+// In browser console, filter for [HTTP] logs:
+// [HTTP] Token: xxxxxxxxxx...rest
+// [HTTP] Cookie has access_token: true/false
+// [HTTP] Request: GET /api/tasks
+// [HTTP] 401 Error: 401 /api/me
+```
+
+**Common Issues**:
+
+**Issue 1: Cookie Not Being Sent**
+- **Cause**: Cookie domain mismatch (localhost:8000 vs localhost:5173)
+- **Dev Mode**: SSE uses direct connection to `http://localhost:8000` (not through proxy)
+- **Check**: `APP_ENV=development` in backend `.env`
+- **Verify**: Cookie `secure` flag should be `False` in dev mode
+- **Backend Config**: Check `settings.cookie_secure` in `backend/app/config.py`
+
+**Issue 2: Token Expired**
+- **Cause**: Access token expired (15 min default)
+- **Solution**: Automatic token refresh should handle this
+- **Check**: Refresh token cookie should be present
+- **Backend**: Check refresh token rotation is enabled
+
+**Issue 3: CORS Issues**
+- **Symptoms**: CORS error in browser console
+- **Check**: `ALLOWED_ORIGINS` in backend `.env`
+- **Dev Mode**: Should include `http://localhost:5173`
+- **Production**: Should include your actual domain
+
+### SSE Connection Issues
+
+**Problem**: SSE (Server-Sent Events) not working or constantly reconnecting.
+
+**Symptoms**:
+- Real-time notifications not working
+- Console shows repeated SSE connection errors
+- `[SSE] [ERROR]` messages in console
+
+**Diagnosing**:
+
+**1. Check SSE Store**:
+```javascript
+// In browser console:
+import { useSSEStore } from './stores/sseStore'
+const sseStore = useSSEStore.getState()
+console.log('SSE Status:', sseStore.connectionStatus)
+console.log('Reconnect Attempts:', sseStore.reconnectAttempts)
+console.log('Last Error:', sseStore.lastError)
+console.log('Total Connected Time:', sseStore.totalConnectedTime)
+```
+
+**2. Check SSE Logs**:
+```javascript
+// Filter console for [SSE] logs:
+// [SSE] [INFO] Connecting to SSE
+// [SSE] [INFO] SSE connection established
+// [SSE] [ERROR] SSE connection error
+// [SSE] [INFO] Scheduling reconnect
+```
+
+**3. Check Connection URL**:
+- **Dev Mode**: Should connect to `http://localhost:8000/api/sse/notifications`
+- **Production**: Should connect to `/api/sse/notifications` (through Vite proxy)
+
+**Common Issues**:
+
+**Issue 1: 401 Error on SSE**
+- **Cause**: Cookie not being sent to SSE endpoint
+- **Dev Mode**: SSE uses direct connection (bypasses proxy)
+- **Solution**: Ensure `APP_ENV=development` and `COOKIE_SECURE=false` in backend
+- **Check**: Cookie should be set with `path=/api/sse` and `domain=localhost` in dev
+
+**Issue 2: Reconnect Limit Reached**
+- **Symptoms**: `[SSE] [ERROR] SSE reconnect limit reached`
+- **Cause**: 5 failed connection attempts
+- **Solution**: Manually reset or fix the underlying issue
+- **Reset**: `sseManager.resetReconnectAttempts()`
+
+**Issue 3: Connection Drops Frequently**
+- **Check**: Backend logs for SSE endpoint errors
+- **Network**: Verify network stability
+- **Backend**: Check if SSE endpoint is running: `curl http://localhost:8000/api/sse/notifications`
+
+### Debugging
+
+**Enable Extended Logging**:
+
+**Frontend**:
+```javascript
+// All logs are enabled by default in development
+// Filter console by prefix:
+// [HTTP] - HTTP requests and responses
+// [SSE] - SSE connection events
+// [IndexedDB] - IndexedDB operations
+// [QueryClient] - Query cache operations
+```
+
+**Backend**:
+```bash
+# In backend/.env:
+LOG_LEVEL=debug  # Set to debug for detailed logs
+
+# Check logs for:
+# "Auth attempt via header" or "Auth attempt via cookie"
+# "Token: xxxxxxxxxx...rest"
+# "User authenticated: {user-id}"
+# "Auth failed: {reason}"
+```
+
+**Check Network Requests**:
+1. Open Developer Tools (F12)
+2. Go to Network tab
+3. Filter by "api" to see API requests
+4. Check Request Headers for Authorization or Cookie
+5. Check Response status and body
+
+**Check Application State**:
+```javascript
+// In browser console:
+import { useAuthStore } from './stores/authStore'
+const authStore = useAuthStore.getState()
+console.log('Is Authenticated:', authStore.isAuthenticated)
+console.log('User:', authStore.user)
+console.log('Access Token:', authStore.accessToken?.substring(0, 10) + '...')
+```
+
 ## CI/CD
 
 The project uses GitHub Actions for continuous integration. The CI pipeline runs on:
@@ -464,7 +653,10 @@ todowkaapp/
 │   │   │   ├── Profile.tsx
 │   │   │   └── Settings.tsx
 │   │   ├── stores/         # Zustand stores
-│   │   │   └── authStore.ts
+│   │   │   ├── authStore.ts
+│   │   │   └── sseStore.ts
+│   │   ├── services/       # External services
+│   │   │   └── sseManager.ts
 │   │   ├── router.tsx      # React Router config
 │   │   └── main.tsx        # Entry point
 │   ├── public/             # Static assets
@@ -476,7 +668,7 @@ todowkaapp/
 │
 ├── docs/                    # Documentation
 │   ├── features.md         # Feature tracking
-│   └── plans/              # Implementation plans
+│   └── SSE_VITE_PROXY_RESEARCH.md  # SSE research findings
 │
 ├── docker/                  # Docker configuration
 │   ├── docker-compose.yml  # Multi-container setup
@@ -485,8 +677,7 @@ todowkaapp/
 │
 ├── .github/
 │   └── workflows/
-│       ├── ci.yml          # CI: lint + typecheck + test
-│       └── deploy.yml      # CD: deploy to production
+│       └── ci.yml          # CI: lint + typecheck + test
 │
 ├── .gitignore              # Git ignore rules
 ├── README.md               # This file
@@ -504,7 +695,7 @@ todowkaapp/
 
 ### Frontend Architecture
 - **Component-Based**: Reusable React components with TypeScript
-- **State Management**: Zustand for global state (auth), React hooks for local state
+- **State Management**: Zustand for global state (auth, SSE), React hooks for local state
 - **Routing**: React Router v7 for navigation
 - **API Client**: Custom fetch wrapper with automatic token refresh
 - **Form Handling**: react-hook-form with zod validation
@@ -514,7 +705,7 @@ todowkaapp/
 
 - **Password Hashing**: bcrypt with salt for secure password storage
 - **JWT Tokens**: Signed with HS256 algorithm, configurable expiration
-- **Refresh Tokens**: Stored in HttpOnly, Secure, SameSite=Strict cookies
+- **Refresh Tokens**: Stored in HttpOnly, Secure, SameSite=Strict cookies (configurable in dev)
 - **CORS**: Configured to allow only specified origins
 - **SQL Injection Prevention**: SQLAlchemy ORM with parameterized queries
 - **XSS Protection**: React's built-in escaping and Content Security Policy

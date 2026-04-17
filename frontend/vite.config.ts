@@ -76,6 +76,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            console.log('[Proxy] Forwarding request:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req) => {
+            console.log('[Proxy] Response status:', proxyRes.statusCode, req.url)
+          })
+        },
       },
       '/health': {
         target: 'http://localhost:8000',
