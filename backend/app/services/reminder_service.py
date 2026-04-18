@@ -26,7 +26,7 @@ class ReminderService:
             .options(selectinload(Task.user))
             .where(
                 Task.due_date.isnot(None),
-                not Task.is_completed,
+                Task.is_completed.is_(False),
             )
         )
         tasks = list(result.scalars().all())
@@ -126,7 +126,7 @@ class ReminderService:
     ) -> tuple[list[Notification], int]:
         count_stmt = select(func.count(Notification.id)).where(
             Notification.user_id == str(user_id),
-            not Notification.is_read
+            Notification.is_read.is_(False)
         )
         count_result = await self.db.execute(count_stmt)
         total = count_result.scalar() or 0
@@ -136,7 +136,7 @@ class ReminderService:
             .options(selectinload(Notification.task))
             .where(
                 Notification.user_id == str(user_id),
-                not Notification.is_read
+                Notification.is_read.is_(False)
             )
             .order_by(Notification.created_at.desc())
             .limit(limit)
@@ -161,7 +161,7 @@ class ReminderService:
     async def mark_all_as_read(self, user_id: str | UUID) -> int:
         stmt = (
             update(Notification)
-            .where(Notification.user_id == str(user_id), not Notification.is_read)
+            .where(Notification.user_id == str(user_id), Notification.is_read.is_(False))
             .values(is_read=True, read_at=datetime.now(ZoneInfo('UTC')))
         )
         result = await self.db.execute(stmt)
