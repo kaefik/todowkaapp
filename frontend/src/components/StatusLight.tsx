@@ -52,6 +52,7 @@ class BackendHealthChecker {
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn)
     fn(this.alive)
+    this.start()
     return () => {
       this.listeners.delete(fn)
       if (this.listeners.size === 0) {
