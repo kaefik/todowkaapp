@@ -194,6 +194,10 @@ async function fetchWithAuth<T>(
       throw error
     }
 
+    if (error instanceof OfflineQueueError) {
+      throw error
+    }
+
     if (error instanceof TypeError) {
       if ((config.method === 'GET' || !config.method)) {
         const cached = await getCache<T>(fullUrl)
