@@ -218,7 +218,16 @@ export function useTasks(filters?: TaskFilters, options?: UseTasksOptions): UseT
       const response = await httpClient.post<ApiTask>('/tasks', data)
       return mapTask(response.data)
     },
-    onSuccess: () => {
+    onSuccess: (newTask) => {
+      const listQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: taskKeys.lists(),
+      })
+      for (const [key] of listQueries) {
+        queryClient.setQueryData<Task[]>(key, (old) => {
+          if (!old) return [newTask]
+          return [newTask, ...old]
+        })
+      }
       queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
       notifyTasksChanged()
     },
