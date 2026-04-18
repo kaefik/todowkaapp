@@ -29,6 +29,7 @@ class SSEManager {
   private callbacks: SSEManagerCallbacks | null = null
   private reconnectAttempts: number = 0
   private readonly MAX_RECONNECT_ATTEMPTS = 5
+  private backendRecoveredHandler: (() => void) | null = null
 
   private token: string | null = null
 
@@ -39,6 +40,19 @@ class SSEManager {
     this.callbacks = callbacks
     this.token = token || null
     this.reconnectAttempts = 0
+
+    if (!this.backendRecoveredHandler) {
+      this.backendRecoveredHandler = () => {
+        if (!this.currentUserId || !this.callbacks) return
+        logger.info('Backend recovered, reconnecting SSE')
+        this.reconnectAttempts = 0
+        this.retryDelay = 1000
+        this.closeConnection()
+        this.setState('connecting')
+        this.openConnection()
+      }
+      window.addEventListener('BACKEND_RECOVERED', this.backendRecoveredHandler)
+    }
 
     const sseStore = useSSEStore.getState()
     sseStore.resetAttempts()
@@ -203,6 +217,11 @@ class SSEManager {
     this.token = null
     this.retryDelay = 1000
     this.reconnectAttempts = 0
+
+    if (this.backendRecoveredHandler) {
+      window.removeEventListener('BACKEND_RECOVERED', this.backendRecoveredHandler)
+      this.backendRecoveredHandler = null
+    }
   }
 
   resetReconnectAttempts(): void {

@@ -171,3 +171,9 @@ async function initializePersister() {
 }
 
 initializePersister()
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('BACKEND_RECOVERED', () => {
+    queryClient.invalidateQueries()
+  })
+}

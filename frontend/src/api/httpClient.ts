@@ -306,6 +306,12 @@ if (typeof window !== 'undefined') {
       console.error('[Offline] Failed to show offline event toast:', err)
     }
   })
+
+  window.addEventListener('BACKEND_RECOVERED', () => {
+    console.log('[Offline] Backend recovered event')
+    hasShownOfflineToast = false
+    hasShownQueueToast = false
+  })
 }
 
 export { ApiError, OfflineQueueError, type ApiResponse, type RequestConfig, type Mutation }

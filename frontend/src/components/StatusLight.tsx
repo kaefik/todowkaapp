@@ -86,9 +86,13 @@ class BackendHealthChecker {
   }
 
   private emit(value: boolean) {
-    if (this.alive === value) return
+    const wasAlive = this.alive
+    if (wasAlive === value) return
     this.alive = value
     this.listeners.forEach((fn) => fn(value))
+    if (value && wasAlive === false) {
+      window.dispatchEvent(new CustomEvent('BACKEND_RECOVERED'))
+    }
   }
 }
 
@@ -120,8 +124,8 @@ function useConnectionStatus(): Status {
   if (backendAlive === null) return 'loading'
   if (!backendAlive) return 'error'
   if (isSyncing) return 'syncing'
-  if (sseState === 'error') return 'error'
   if (queueSize > 0) return 'queued'
+  if (sseState === 'error') return 'syncing'
   return 'online'
 }
 
