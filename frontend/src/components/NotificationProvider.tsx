@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useToastStore } from '../stores/toastStore'
 import { useBrowserNotifications } from '../hooks/useBrowserNotifications'
+import { taskKeys } from '../hooks/useTasks'
 
 interface NotificationProviderProps {
   children: React.ReactNode
@@ -13,6 +15,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   const store = useNotificationStore()
   const { showReminder, enabled } = useBrowserNotifications()
   const addToast = useToastStore((s) => s.addToast)
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -29,6 +32,8 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       const customEvent = e as CustomEvent
       const { taskId } = customEvent.detail || {}
       if (!taskId) return
+
+      queryClient.invalidateQueries({ queryKey: taskKeys.all })
 
       const notifications = useNotificationStore.getState().notifications
       const notification = notifications.find(
