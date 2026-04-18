@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { sseSyncManager } from '../services/sseSyncManager'
+import { useAuthStore } from './authStore'
 
 export type SSESyncState = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -28,6 +29,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
 
   startSSE: (userId) => {
     set({ sseState: 'connecting' })
+    const token = useAuthStore.getState().accessToken
     sseSyncManager.connect(userId, {
       onSync: (data) => {
         console.log('Sync event received:', data)
@@ -44,7 +46,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
         console.error('SSE Sync error:', error)
         set({ sseState: 'error', isConnected: false })
       },
-    })
+    }, token || undefined)
   },
 
   stopSSE: () => {

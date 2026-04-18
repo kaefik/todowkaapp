@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
@@ -10,20 +10,34 @@ interface NotificationProviderProps {
   children: React.ReactNode
 }
 
+let activeSSEUserId: string | null = null
+
 export function NotificationProvider({ children }: NotificationProviderProps) {
   const { isAuthenticated, user } = useAuthStore()
   const store = useNotificationStore()
   const { showReminder, enabled } = useBrowserNotifications()
   const addToast = useToastStore((s) => s.addToast)
   const queryClient = useQueryClient()
+  const mountedRef = useRef(false)
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && user.id !== activeSSEUserId) {
+      activeSSEUserId = user.id
       store.startSSE(user.id)
       store.refetch()
-      return () => store.stopSSE()
+    }
+    if (!isAuthenticated && activeSSEUserId) {
+      activeSSEUserId = null
+      store.stopSSE()
     }
   }, [isAuthenticated, user])
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!enabled) return

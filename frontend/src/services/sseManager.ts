@@ -30,11 +30,14 @@ class SSEManager {
   private reconnectAttempts: number = 0
   private readonly MAX_RECONNECT_ATTEMPTS = 5
 
-  connect(userId: string, callbacks: SSEManagerCallbacks) {
+  private token: string | null = null
+
+  connect(userId: string, callbacks: SSEManagerCallbacks, token?: string) {
     this.disconnect()
 
     this.currentUserId = userId
     this.callbacks = callbacks
+    this.token = token || null
     this.reconnectAttempts = 0
 
     const sseStore = useSSEStore.getState()
@@ -51,15 +54,22 @@ class SSEManager {
       return
     }
 
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-
     let sseUrl: string
-
-    if (apiBaseUrl.startsWith('http')) {
-      const apiUrl = new URL(apiBaseUrl)
-      sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/notifications`
+    if (import.meta.env.DEV) {
+      sseUrl = 'http://127.0.0.1:8000/api/sse/notifications'
     } else {
-      sseUrl = `${apiBaseUrl}/sse/notifications`
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+      if (apiBaseUrl.startsWith('http')) {
+        const apiUrl = new URL(apiBaseUrl)
+        sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/notifications`
+      } else {
+        sseUrl = `${apiBaseUrl}/sse/notifications`
+      }
+    }
+
+    if (this.token) {
+      const sep = sseUrl.includes('?') ? '&' : '?'
+      sseUrl = `${sseUrl}${sep}token=${encodeURIComponent(this.token)}`
     }
 
     logger.debug('Opening SSE connection', { url: sseUrl, userId: this.currentUserId })
@@ -190,6 +200,7 @@ class SSEManager {
     this.closeConnection()
     this.currentUserId = null
     this.callbacks = null
+    this.token = null
     this.retryDelay = 1000
     this.reconnectAttempts = 0
   }

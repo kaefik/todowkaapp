@@ -21,11 +21,14 @@ class SSESyncManager {
   private readonly maxRetries: number = 5
   private callbacks: SSESyncManagerCallbacks | null = null
 
-  connect(userId: string, callbacks: SSESyncManagerCallbacks) {
+  private token: string | null = null
+
+  connect(userId: string, callbacks: SSESyncManagerCallbacks, token?: string) {
     this.disconnect()
 
     this.currentUserId = userId
     this.callbacks = callbacks
+    this.token = token || null
 
     this.setState('connecting')
     this.openConnection()
@@ -36,21 +39,27 @@ class SSESyncManager {
       return
     }
 
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-    
     let sseUrl: string
     if (import.meta.env.DEV) {
-      sseUrl = 'http://localhost:8000/api/sse/sync'
-    } else if (apiBaseUrl.startsWith('http')) {
-      const apiUrl = new URL(apiBaseUrl)
-      sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/sync`
+      sseUrl = 'http://127.0.0.1:8000/api/sse/sync'
     } else {
-      sseUrl = `${window.location.origin}${apiBaseUrl}/sse/sync`
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
+      if (apiBaseUrl.startsWith('http')) {
+        const apiUrl = new URL(apiBaseUrl)
+        sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/sync`
+      } else {
+        sseUrl = `${apiBaseUrl}/sse/sync`
+      }
+    }
+
+    if (this.token) {
+      const sep = sseUrl.includes('?') ? '&' : '?'
+      sseUrl = `${sseUrl}${sep}token=${encodeURIComponent(this.token)}`
     }
     
     console.log('Connecting to SSE Sync:', sseUrl)
     
-    this.eventSource = new EventSource(sseUrl)
+    this.eventSource = new EventSource(sseUrl, { withCredentials: true })
 
     this.eventSource.onopen = () => {
       this.retryDelay = 1000
@@ -135,6 +144,7 @@ class SSESyncManager {
     this.closeConnection()
     this.currentUserId = null
     this.callbacks = null
+    this.token = null
     this.retryDelay = 1000
     this.retryCount = 0
   }

@@ -24,7 +24,12 @@ function openDB(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
     
     request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
+    request.onsuccess = () => {
+      const database = request.result
+      database.onclose = () => { db = null }
+      database.onversionchange = () => { db = null; database.close() }
+      resolve(database)
+    }
     
     request.onupgradeneeded = (event) => {
       const database = (event.target as IDBOpenDBRequest).result
@@ -37,9 +42,10 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function getDB(): Promise<IDBDatabase> {
-  if (!db) {
-    db = await openDB()
+  if (db && !db.closed) {
+    return db
   }
+  db = await openDB()
   return db
 }
 
@@ -90,6 +96,8 @@ async function clearMutations(): Promise<void> {
     request.onerror = () => reject(request.error)
   })
 }
+
+let queueFnInitialized = false
 
 export function useOfflineQueue() {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
@@ -161,6 +169,8 @@ export function useOfflineQueue() {
   }, [isOnline, updateQueueSize])
 
   useEffect(() => {
+    if (queueFnInitialized) return
+    queueFnInitialized = true
     console.log('[OfflineQueue] Initializing queueMutationFn')
     setQueueMutationFn(async (mutation) => {
       console.log('[OfflineQueue] Queue mutation:', mutation)

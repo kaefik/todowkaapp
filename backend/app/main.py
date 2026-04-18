@@ -1,11 +1,13 @@
 import logging
 from contextlib import asynccontextmanager
+from urllib.parse import parse_qs
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.api.areas import areas_router
 from app.api.auth import auth_router
@@ -25,6 +27,25 @@ logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+
+
+class SSETokenMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            if path.startswith("/api/sse"):
+                headers: list[tuple[bytes, bytes]] = list(scope.get("headers", []))
+                has_auth = any(k.lower() == b"authorization" for k, _ in headers)
+                if not has_auth:
+                    qs = parse_qs(scope.get("query_string", b"").decode())
+                    token = qs.get("token", [None])[0]
+                    if token:
+                        headers.append((b"authorization", f"Bearer {token}".encode()))
+                        scope["headers"] = headers
+        await self.app(scope, receive, send)
 
 
 def get_client_ip(request: Request) -> str:
@@ -64,6 +85,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+    app.add_middleware(SSETokenMiddleware)
 
     api_router.include_router(areas_router)
     api_router.include_router(auth_router)

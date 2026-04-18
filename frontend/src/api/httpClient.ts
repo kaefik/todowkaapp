@@ -194,7 +194,7 @@ async function fetchWithAuth<T>(
       throw error
     }
 
-    if (error instanceof TypeError && error.message.includes('fetch')) {
+    if (error instanceof TypeError) {
       if ((config.method === 'GET' || !config.method)) {
         const cached = await getCache<T>(fullUrl)
         if (cached) {

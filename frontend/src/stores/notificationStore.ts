@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { notificationsApi } from '../api/notifications'
 import type { Notification } from '../api/notifications'
 import { sseManager } from '../services/sseManager'
+import { useAuthStore } from './authStore'
 
 export type SSEState = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -103,6 +104,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   startSSE: (userId) => {
     set({ sseState: 'connecting' })
+    const token = useAuthStore.getState().accessToken
     sseManager.connect(userId, {
       onMessage: (message) => {
         console.log('SSE message received in store:', message)
@@ -127,7 +129,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         console.error('SSE error:', error)
         set({ sseState: 'error' })
       },
-    })
+    }, token || undefined)
   },
 
   stopSSE: () => {

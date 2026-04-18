@@ -70,6 +70,10 @@ function getDB(): Promise<import('idb').IDBPDatabase> {
           }
         }
       },
+      terminated() {
+        console.warn('[IndexedDB] Cache database connection was terminated')
+        dbPromise = null
+      },
     })
   }
   return dbPromise
