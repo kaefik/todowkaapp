@@ -68,7 +68,7 @@ interface TaskEditModalProps {
   task: Task | null
   isOpen: boolean
   onClose: () => void
-  onSave: (id: string, data: UpdateTask) => void
+  onSave: (id: string, data: UpdateTask) => Promise<void>
 }
 
 function TagChips({ tags, selectedTagIds, onToggle }: {
@@ -247,9 +247,9 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     }
   }
 
-  const onSubmit = (data: EditTaskFormData) => {
+  const onSubmit = async (data: EditTaskFormData) => {
     if (!task) return
-    onSave(task.id, {
+    await onSave(task.id, {
       ...data,
       tag_ids: selectedTagIds,
       recurrence_type: recurrenceData.recurrence_type,
@@ -266,7 +266,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   return createPortal(
     <div
       className={`fixed inset-0 z-[9999] ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
-      onClick={onClose}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
         className={`bg-white dark:bg-gray-800 shadow-2xl mx-4 border-4 border-indigo-500 dark:border-indigo-400 ${
@@ -487,7 +487,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             Cancel
           </button>
           <button
-            type="submit"
+            type="button"
             onClick={handleSubmit(onSubmit)}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
           >

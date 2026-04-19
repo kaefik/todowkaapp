@@ -194,9 +194,12 @@ function deduplicateMutations(
   const toSend: MergedMutations['toSend'] = []
   const toDelete: string[] = []
 
+  const sentIds = new Set<string>()
+
   for (const [, group] of grouped) {
     if (group.length === 1) {
       toSend.push(group[0])
+      sentIds.add(group[0].id)
       continue
     }
 
@@ -204,18 +207,59 @@ function deduplicateMutations(
     const hasDelete = group.some(m => m.action === 'delete')
 
     if (hasCreate && hasDelete) {
-      for (const m of group) {
-        toDelete.push(m.id)
-      }
+      for (const m of group) toDelete.push(m.id)
       const table = getTableForType(group[0].entityType)
       table.delete(group[0].entityId).catch(() => {})
       continue
     }
 
-    const last = group[group.length - 1]
-    toSend.push(last)
-    for (let i = 0; i < group.length - 1; i++) {
-      toDelete.push(group[i].id)
+    const updatePayloads: Record<string, unknown> = {}
+    for (const m of group) {
+      if (m.action === 'update' && m.payload) {
+        Object.assign(updatePayloads, JSON.parse(m.payload))
+      }
+    }
+
+    if (hasDelete) {
+      const del = group.find(m => m.action === 'delete')!
+      toSend.push(del)
+      sentIds.add(del.id)
+      continue
+    }
+
+    if (hasCreate) {
+      const create = group.find(m => m.action === 'create')!
+      const createPayload = create.payload ? JSON.parse(create.payload) : {}
+      Object.assign(createPayload, updatePayloads)
+      toSend.push({ ...create, payload: JSON.stringify(createPayload) })
+      sentIds.add(create.id)
+
+      const lastAction = [...group].reverse().find(m => m.action !== 'create' && m.action !== 'update')
+      if (lastAction) {
+        toSend.push(lastAction)
+        sentIds.add(lastAction.id)
+      }
+      continue
+    }
+
+    const hasOtherActions = group.some(m => m.action !== 'update')
+
+    if (Object.keys(updatePayloads).length > 0) {
+      const lastUpdate = [...group].reverse().find(m => m.action === 'update')!
+      toSend.push({ ...lastUpdate, payload: JSON.stringify(updatePayloads) })
+      sentIds.add(lastUpdate.id)
+    }
+
+    if (hasOtherActions) {
+      const lastOther = [...group].reverse().find(m => m.action !== 'update')!
+      toSend.push(lastOther)
+      sentIds.add(lastOther.id)
+    }
+  }
+
+  for (const m of mutations) {
+    if (!sentIds.has(m.id)) {
+      toDelete.push(m.id)
     }
   }
 
