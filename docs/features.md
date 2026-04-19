@@ -149,6 +149,7 @@
 - LWW (Last-Writer-Wins) conflict resolution: серверная версия приоритетнее при равных updatedAt
 - Soft-delete: записи помечаются `_syncStatus='deleted'`, исключаются из запросов
 - Мутации записываются в таблицу `mutations` для offline-очереди, отправляются при reconnect
+- Дедупликация мутаций: payload нескольких update-мутаций для одной сущности объединяются (merge), а не отбрасываются; update + toggle/move отправляются вместе
 - Backend: принимает client-provided UUID (id в TaskCreate/ProjectCreate/AreaCreate/ContextCreate/TagCreate)
 - Автоматическая очистка Dexie при logout (по userId)
 - `httpClient.ts` упрощён: убраны offline queue, GET cache, toasts — только JWT auth + 401 refresh
