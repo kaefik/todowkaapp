@@ -26,7 +26,8 @@ class TaskScheduler:
                 'interval',
                 minutes=5,
                 id='generate_recurring_tasks',
-                replace_existing=True
+                replace_existing=True,
+                max_instances=1
             )
 
             self.scheduler.add_job(
@@ -34,7 +35,8 @@ class TaskScheduler:
                 'interval',
                 minutes=1,
                 id='send_due_reminders',
-                replace_existing=True
+                replace_existing=True,
+                max_instances=1
             )
 
             self.scheduler.add_job(
@@ -42,7 +44,8 @@ class TaskScheduler:
                 'interval',
                 days=1,
                 id='cleanup_old_notifications',
-                replace_existing=True
+                replace_existing=True,
+                max_instances=1
             )
 
             self.scheduler.add_job(
@@ -50,7 +53,8 @@ class TaskScheduler:
                 'date',
                 run_date=datetime.now(),
                 id='startup_recovery',
-                replace_existing=True
+                replace_existing=True,
+                max_instances=1
             )
 
             self.scheduler.add_job(
@@ -58,11 +62,64 @@ class TaskScheduler:
                 'interval',
                 days=1,
                 id='cleanup_old_trash',
-                replace_existing=True
+                replace_existing=True,
+                max_instances=1
+            )
+
+            self.scheduler.add_job(
+                self._job_reminder_recovery,
+                'date',
+                run_date=datetime.now(),
+                id='reminder_recovery',
+                replace_existing=True,
+                max_instances=1,
             )
 
             self.scheduler.start()
             logger.info("Scheduler started")
+
+    @staticmethod
+    async def _job_reminder_recovery():
+        logger.info("Running job: reminder_recovery")
+
+        try:
+            from app.services.reminder_service import ReminderService
+
+            async with AsyncSessionLocal() as session:
+                reminder_service = ReminderService(session)
+
+                due_items = await reminder_service.find_due_tasks()
+                logger.info(f"Recovery: found {len(due_items)} missed reminders")
+
+                sent_count = 0
+                for task, offset_minutes in due_items:
+                    try:
+                        if task.user:
+                            notification = await reminder_service.send_reminder(
+                                task, task.user, offset_minutes
+                            )
+                            await session.commit()
+
+                            from app.event_bus import event_bus
+                            await event_bus.publish(
+                                f"{task.user.id}:notifications",
+                                "notification_created",
+                                {
+                                    "notification_id": str(notification.id),
+                                    "type": notification.type,
+                                    "message": notification.message,
+                                    "task_id": str(task.id) if task.id else None,
+                                }
+                            )
+                            sent_count += 1
+                    except Exception as e:
+                        logger.error(f"Recovery error for task '{task.title}': {e}")
+                        await session.rollback()
+
+                logger.info(f"Recovery: sent {sent_count} missed reminders")
+
+        except Exception as e:
+            logger.error(f"Error in reminder_recovery: {e}")
 
     async def shutdown(self):
         if self.scheduler:
@@ -107,19 +164,15 @@ class TaskScheduler:
             async with AsyncSessionLocal() as session:
                 reminder_service = ReminderService(session)
 
-                due_tasks = await reminder_service.find_due_tasks()
-                logger.info(f"Found {len(due_tasks)} tasks with due reminders")
+                due_items = await reminder_service.find_due_tasks()
+                logger.info(f"Found {len(due_items)} tasks with due reminders")
 
-                for task in due_tasks:
+                for task, offset_minutes in due_items:
                     try:
-                        from app.models.user import User
-                        result = await session.execute(
-                            select(User).where(User.id == task.user_id)
-                        )
-                        user = result.scalar_one_or_none()
+                        user = task.user
 
                         if user:
-                            notification = await reminder_service.send_reminder(task, user)
+                            notification = await reminder_service.send_reminder(task, user, offset_minutes)
                             logger.info(f"Sent reminder for task '{task.title}' to user {user.username}")
                             await session.commit()
 
@@ -134,7 +187,7 @@ class TaskScheduler:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()
 
-                logger.info(f"Processed {len(due_tasks)} due tasks for reminders")
+                logger.info(f"Processed {len(due_items)} due tasks for reminders")
 
         except Exception as e:
             logger.error(f"Error in job_send_due_reminders: {e}")

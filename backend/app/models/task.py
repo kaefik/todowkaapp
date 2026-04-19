@@ -49,6 +49,7 @@ class Task(Base):
     recurrence_end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     reminder_offsets: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    sent_reminder_offsets: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
     reminder_fired: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     trashed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

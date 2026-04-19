@@ -160,6 +160,10 @@ class TaskService:
 
         update_data = data.model_dump(exclude_unset=True)
 
+        internal_fields = {'reminder_fired', 'last_reminder_sent_at', 'sent_reminder_offsets'}
+        for field in internal_fields:
+            update_data.pop(field, None)
+
         tag_ids = update_data.pop('tag_ids', None)
         if tag_ids is not None:
             tags = await self._resolve_tags(user_id, tag_ids)
@@ -167,6 +171,8 @@ class TaskService:
 
         if 'reminder_time' in update_data or 'reminder_offsets' in update_data:
             update_data['reminder_fired'] = False
+            update_data['sent_reminder_offsets'] = []
+            update_data['last_reminder_sent_at'] = None
 
         if 'gtd_status' in update_data:
             val = update_data.pop('gtd_status')

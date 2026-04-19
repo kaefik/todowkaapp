@@ -32,7 +32,8 @@ export function ReminderEditor({
   dueDate,
   onChange,
 }: ReminderEditorProps) {
-  const [enabled, setEnabled] = useState((!!reminderTime || !!reminderOffsets?.length) && !reminderFired)
+  const hasReminder = !!reminderTime || !!reminderOffsets?.length
+  const [enabled, setEnabled] = useState(hasReminder && !reminderFired)
   const [useTime, setUseTime] = useState(!!reminderTime)
   const [time, setTime] = useState(reminderTime || getDefaultReminderTime())
   const [useOffsets, setUseOffsets] = useState(!!reminderOffsets?.length)
@@ -109,6 +110,17 @@ export function ReminderEditor({
 
   return (
     <div className="space-y-3">
+      {reminderFired && hasReminder ? (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
+          <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm text-amber-700 dark:text-amber-300">
+            Напоминание для этой задачи уже отправлено.
+          </span>
+        </div>
+      ) : (
+      <>
       <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
@@ -178,6 +190,8 @@ export function ReminderEditor({
             </div>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   )

@@ -10,7 +10,7 @@ class EventBus:
         self._subscribers: dict[str, list[asyncio.Queue]] = defaultdict(list)
 
     def subscribe(self, user_id: str) -> asyncio.Queue:
-        queue: asyncio.Queue = asyncio.Queue(maxsize=10)
+        queue: asyncio.Queue = asyncio.Queue(maxsize=50)
         self._subscribers[user_id].append(queue)
         logger.debug(f"SSE subscriber added for user {user_id}, total: {len(self._subscribers[user_id])}")
         return queue
@@ -34,7 +34,11 @@ class EventBus:
             try:
                 queue.put_nowait(event)
             except asyncio.QueueFull:
-                logger.warning(f"Queue full for user {user_id}, dropping event {event_type}")
+                try:
+                    queue.get_nowait()
+                    queue.put_nowait({"type": "queue_overflow", "data": {}})
+                except Exception:
+                    pass
 
     def get_subscriber_count(self, user_id: str) -> int:
         return len(self._subscribers.get(user_id, []))

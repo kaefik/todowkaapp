@@ -70,8 +70,6 @@ class TaskUpdate(BaseModel):
     recurrence_end_date: datetime | None = None
     reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
-    reminder_fired: bool | None = None
-    last_reminder_sent_at: datetime | None = None
 
     @model_validator(mode='after')
     def validate_recurrence_requires_due_date(self):

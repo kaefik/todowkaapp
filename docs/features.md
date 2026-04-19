@@ -175,7 +175,7 @@
 - Удалены: React Query, старая offline-очередь, localTaskChanges, idb
 - Файлы: `frontend/src/db/` (database.ts, syncEngine.ts, conflictResolution.ts, mappers.ts, hooks.ts, init.ts, migration.ts)
 
-#### Уведомления и Real-time синхронизация ✅ (Реализовано 15.04.2026)
+#### Уведомления и Real-time синхронизация ✅ (Реализовано 15.04.2026, обновлено 19.04.2026)
 
 **Браузерные уведомления для напоминаний ✅ (Реализовано 15.04.2026)**
 - Показ напоминаний как системных уведомлений браузера (Browser Notifications API)
@@ -192,19 +192,36 @@
 
 1. **Планировщик напоминаний** запускается каждую минуту:
    - `ReminderService.find_due_tasks()` находит задачи, которые требуют напоминания
+   - Возвращает `list[tuple[Task, int | None]]` — задача + offset (или None для reminder_time)
    - Для каждой задачи вычисляется время напоминания:
      - **Режим 1 (конкретное время):** `reminder_time` в день `due_date`
-       - Если `reminder_time > due_date.time()`, то за день до
-     - **Режим 2 (смещение):** `due_date - reminder_offsets`
-   - Проверяется `last_reminder_sent_at` для предотвращения дубликатов (но не более 1 раза в 24 часа)
-   - Создаётся `Notification` с `is_read=False` и `delivered_at = now()`
-   - Отправляется событие через `event_bus.publish()` на канал `{user_id}:notifications`
+       - Timezone-aware клэмпинг: используется `due_date_local.time()` вместо UTC
+       - Если `reminder_time > due_local.time()`, клэмпится до времени дедлайна
+     - **Режим 2 (множественные смещения):** `reminder_offsets=[5, 60, 1440]` — каждый offset срабатывает независимо
+       - Отправленные offsets отслеживаются в `sent_reminder_offsets` (JSON-колонка)
+       - Каждый offset срабатывает ровно один раз
+       - `reminder_fired=True` только когда ВСЕ offsets отправлены
+   - SQL-фильтр `or_(reminder_time IS NOT NULL, reminder_offsets IS NOT NULL)` исключает задачи без напоминаний
+   - Per-task commit/rollback в try/except
+   - `max_instances=1` для всех scheduler jobs предотвращает параллельные tick'и
 
 2. **SSE (Server-Sent Events) для real-time доставки:**
    - Фронтенд подключается к `GET /api/sse/notifications`
    - При получении события SSE → `NotificationStore.refetch()` обновляет список
    - Колокольчик показывает `unreadCount` из API-ответа
-   - Автоматическое переподключение с exponential backoff (1s → 30s max)
+   - Бесконечный реконнект с exponential backoff (1s → 2s → 4s → ... → 30s cap)
+   - Проверка `navigator.onLine` — не пытаться реконнект offline
+   - `visibilitychange` listener — реконнект при возврате на вкладку
+   - Adaptive polling fallback (30s → 60s → 120s) активируется при SSE down > 30 секунд
+   - Polling деактивируется при восстановлении SSE
+
+3. **Recovery при перезапуске сервера:**
+   - `_job_reminder_recovery()` — one-shot job при старте, отправляет все пропущенные напоминания
+   - Использует `find_due_tasks()` для автоматического обнаружения past-due reminders
+
+4. **EventBus с overflow-обработкой:**
+   - Очередь увеличена с 10 до 50 событий
+   - При переполнении отправляется сигнал `queue_overflow` → клиент делает полный `refetch()`
 
 3. **Отображение времени уведомления:**
    - Формат абсолютного времени: `ДД.ММ.ГГГГ ЧЧ:ММ:СС`
@@ -286,9 +303,8 @@
 - Фронтенд: `frontend/src/components/NotificationBell.tsx`, `frontend/src/routes/Notifications.tsx`, `frontend/src/stores/notificationStore.ts`, `frontend/src/services/sseManager.ts`, `frontend/src/utils/notificationUtils.tsx`, `frontend/src/components/NotificationProvider.tsx`
 
 **Тесты:**
-- Бэкенд: 19 тестов в `tests/test_reminder_service.py`, 11 тестов в `tests/test_notifications_api.py`
-- Все тесты проходят успешно
-- Линтеры и type checking без ошибок
+- Бэкенд: 26 тестов в `tests/test_reminder_service.py`, 11 тестов в `tests/test_notifications_api.py`, 3 теста в `tests/test_scheduler.py`, 2 теста в `tests/test_dedup.py`
+- Фронтенд: тесты SSE/polling/eventbus в `frontend/src/services/__tests__/ssePolling.test.ts`
 
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Два режима напоминаний: конкретное время дня или смещение от дедлайна

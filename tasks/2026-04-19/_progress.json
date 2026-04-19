@@ -1,0 +1,38 @@
+{
+  "project": "todowka-notification-fix-v2",
+  "date": "2026-04-19",
+  "design_doc": "docs/plans/notifications/2026-04-19-notification-fix-v2.md",
+  "current_task": null,
+  "stats": {
+    "total": 22,
+    "done": 22,
+    "in_progress": 0,
+    "ready": 0,
+    "blocked": 0,
+    "backlog": 0
+  },
+  "tasks": {
+    "L1/01": {"status": "done", "file": "done/L1/01-add-sent-reminder-offsets-column.md"},
+    "L2/01": {"status": "done", "file": "done/L2/01-rewrite-find-due-tasks.md"},
+    "L2/02": {"status": "done", "file": "done/L2/02-update-send-reminder.md"},
+    "L2/03": {"status": "done", "file": "done/L2/03-update-scheduler-caller.md"},
+    "L2/04": {"status": "done", "file": "done/L2/04-add-recovery-job.md"},
+    "L2/05": {"status": "done", "file": "done/L2/05-add-max-instances.md"},
+    "L2/06": {"status": "done", "file": "done/L2/06-reset-dedup-fields-guard.md"},
+    "L2/07": {"status": "done", "file": "done/L2/07-delete-dead-code.md"},
+    "L2/08": {"status": "done", "file": "done/L2/08-sql-filter-optimization.md"},
+    "L3/01": {"status": "done", "file": "done/L3/01-remove-internal-fields-schema.md"},
+    "L5/01": {"status": "done", "file": "done/L5/01-fix-eventbus-queue.md"},
+    "L5/02": {"status": "done", "file": "done/L5/02-rewrite-sse-reconnect.md"},
+    "L5/03": {"status": "done", "file": "done/L5/03-add-polling-fallback.md"},
+    "L5/04": {"status": "done", "file": "done/L5/04-handle-queue-overflow-frontend.md"},
+    "L5/05": {"status": "done", "file": "done/L5/05-update-reminder-editor-banner.md"},
+    "L5/06": {"status": "done", "file": "done/L5/06-fix-onclick-race.md"},
+    "L7/01": {"status": "done", "file": "done/L7/01-tests-find-due-tasks.md"},
+    "L7/02": {"status": "done", "file": "done/L7/02-tests-send-reminder.md"},
+    "L7/03": {"status": "done", "file": "done/L7/03-tests-scheduler-recovery.md"},
+    "L7/04": {"status": "done", "file": "done/L7/04-tests-dedup-migration.md"},
+    "L7/05": {"status": "done", "file": "done/L7/05-tests-sse-polling-eventbus.md"},
+    "L8/01": {"status": "done", "file": "done/L8/01-update-features-md.md"}
+  }
+}

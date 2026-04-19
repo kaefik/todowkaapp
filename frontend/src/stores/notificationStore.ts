@@ -13,6 +13,9 @@ interface NotificationState {
   isLoading: boolean
   error: string | null
   sseState: SSEState
+  pollingTimerId: ReturnType<typeof setInterval> | null
+  pollingDelay: number
+  sseDownSince: number | null
 
   refetch: (params?: { unread_only?: boolean; limit?: number; offset?: number }) => Promise<void>
   markAsRead: (id: string) => Promise<void>
@@ -20,6 +23,8 @@ interface NotificationState {
   deleteNotification: (id: string) => Promise<void>
   startSSE: (userId: string) => void
   stopSSE: () => void
+  _startPolling: () => void
+  _stopPolling: () => void
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -29,6 +34,32 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   isLoading: false,
   error: null,
   sseState: 'disconnected',
+  pollingTimerId: null,
+  pollingDelay: 30000,
+  sseDownSince: null,
+
+  _startPolling: () => {
+    const state = get()
+    if (state.pollingTimerId) return
+    const auth = useAuthStore.getState()
+    if (!auth.accessToken) return
+
+    const delay = get().pollingDelay
+    const timerId = setInterval(() => {
+      get().refetch({ limit: 5 })
+      const currentDelay = get().pollingDelay
+      set({ pollingDelay: Math.min(currentDelay * 2, 120000) })
+    }, delay)
+    set({ pollingTimerId: timerId })
+  },
+
+  _stopPolling: () => {
+    const timerId = get().pollingTimerId
+    if (timerId) {
+      clearInterval(timerId)
+      set({ pollingTimerId: null, pollingDelay: 30000, sseDownSince: null })
+    }
+  },
 
   refetch: async (params) => {
     console.log('Fetching notifications with params:', params)
@@ -113,7 +144,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
           get().refetch()
           try {
             const data = JSON.parse(message.data)
-            if (data?.data?.type === 'due_reminder' && data?.data?.task_id) {
+            if (data?.type === 'queue_overflow') {
+              get().refetch()
+            } else if (data?.data?.type === 'due_reminder' && data?.data?.task_id) {
               window.dispatchEvent(new CustomEvent('task:reminder-fired', {
                 detail: { taskId: data.data.task_id }
               }))
@@ -124,6 +157,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       onStateChange: (state) => {
         console.log('SSE state changed:', state)
         set({ sseState: state })
+        if (state === 'connected') {
+          get()._stopPolling()
+        } else if (state === 'error' || state === 'disconnected') {
+          if (!get().sseDownSince) {
+            set({ sseDownSince: Date.now() })
+          }
+          if (!get().pollingTimerId) {
+            const sseDownSince = get().sseDownSince || Date.now()
+            const elapsed = Date.now() - sseDownSince
+            if (elapsed >= 30000) {
+              get()._startPolling()
+            } else {
+              setTimeout(() => {
+                if (get().sseState === 'error' || get().sseState === 'disconnected') {
+                  get()._startPolling()
+                }
+              }, 30000 - elapsed)
+            }
+          }
+        }
       },
       onError: (error) => {
         console.error('SSE error:', error)
@@ -134,6 +187,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   stopSSE: () => {
     sseManager.disconnect()
+    get()._stopPolling()
     set({ sseState: 'disconnected' })
   },
 }))

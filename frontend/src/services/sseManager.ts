@@ -28,8 +28,8 @@ class SSEManager {
   private readonly maxRetryDelay: number = 30000
   private callbacks: SSEManagerCallbacks | null = null
   private reconnectAttempts: number = 0
-  private readonly MAX_RECONNECT_ATTEMPTS = 5
   private backendRecoveredHandler: (() => void) | null = null
+  private visibilityHandler: (() => void) | null = null
 
   private token: string | null = null
 
@@ -45,13 +45,25 @@ class SSEManager {
       this.backendRecoveredHandler = () => {
         if (!this.currentUserId || !this.callbacks) return
         logger.info('Backend recovered, reconnecting SSE')
-        this.reconnectAttempts = 0
         this.retryDelay = 1000
+        this.reconnectAttempts = 0
         this.closeConnection()
         this.setState('connecting')
         this.openConnection()
       }
       window.addEventListener('BACKEND_RECOVERED', this.backendRecoveredHandler)
+    }
+
+    if (!this.visibilityHandler) {
+      this.visibilityHandler = () => {
+        if (document.visibilityState === 'visible' && this.currentUserId && this.getCurrentState() !== 'connected') {
+          logger.info('Tab became visible, reconnecting SSE')
+          this.closeConnection()
+          this.setState('connecting')
+          this.openConnection()
+        }
+      }
+      document.addEventListener('visibilitychange', this.visibilityHandler)
     }
 
     const sseStore = useSSEStore.getState()
@@ -155,13 +167,8 @@ class SSEManager {
     const sseStore = useSSEStore.getState()
     sseStore.incrementAttempts()
 
-    if (this.reconnectAttempts >= this.MAX_RECONNECT_ATTEMPTS) {
-      sseStore.recordError('SSE reconnect limit reached')
-      logger.error('SSE reconnect limit reached', { 
-        attempts: this.reconnectAttempts, 
-        maxAttempts: this.MAX_RECONNECT_ATTEMPTS 
-      })
-      this.setState('error')
+    if (!navigator.onLine) {
+      logger.info('Browser is offline, skipping reconnect')
       return
     }
 
@@ -170,8 +177,8 @@ class SSEManager {
 
     sseStore.updateStatus('connecting')
 
-    logger.info('Scheduling reconnect', { 
-      attempt: this.reconnectAttempts, 
+    logger.info('Scheduling reconnect', {
+      attempt: this.reconnectAttempts,
       delay: `${delay}ms`,
       nextDelay: `${this.retryDelay}ms`
     })
@@ -221,6 +228,11 @@ class SSEManager {
     if (this.backendRecoveredHandler) {
       window.removeEventListener('BACKEND_RECOVERED', this.backendRecoveredHandler)
       this.backendRecoveredHandler = null
+    }
+
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler)
+      this.visibilityHandler = null
     }
   }
 

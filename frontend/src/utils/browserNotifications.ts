@@ -62,6 +62,14 @@ export async function show(options: ShowOptions): Promise<boolean> {
       tag: options.tag,
     })
 
+    if (options.onClick) {
+      notification.onclick = () => {
+        window.focus()
+        notification.close()
+        options.onClick!()
+      }
+    }
+
     await new Promise<boolean>((resolve) => {
       notification.onshow = () => resolve(true)
       notification.onerror = () => {
@@ -73,14 +81,6 @@ export async function show(options: ShowOptions): Promise<boolean> {
         resolve(true)
       }, 10000)
     })
-
-    if (options.onClick) {
-      notification.onclick = () => {
-        window.focus()
-        notification.close()
-        options.onClick!()
-      }
-    }
 
     return true
   } catch {
