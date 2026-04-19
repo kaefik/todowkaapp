@@ -668,7 +668,26 @@
 
 ## История возможностей
 
-*Последнее обновление: 18 апреля 2026 года*
+*Последнее обновление: 19 апреля 2026 года*
+
+**19 апреля 2026:**
+- Исправление системы напоминаний (критические баги, v2)
+  - BUG-1: Множественные `reminder_offsets` — добавлено поле `sent_reminder_offsets` (JSON) в Task, унифицированный return type `list[tuple[Task, int | None]]` в `find_due_tasks()`, условная установка `reminder_fired` только когда все offsets отправлены
+  - BUG-2: Timezone-баг клэмпинга — сравнение `due_date_local.time()` вместо `due_date.time()`
+  - BUG-3: Recovery job при старте сервера — одноразовый `_job_reminder_recovery` для отправки пропущенных напоминаний
+  - BUG-4: Бесконечный SSE реконнект — убран лимит 5 попыток, exponential backoff (cap 30s), `visibilitychange`, `navigator.onLine`
+  - BUG-5: Polling fallback при падении SSE — adaptive backoff 30s→60s→120s, автостарт/остановка
+  - BUG-6: EventBus queue 10→50, overflow→`queue_overflow` сигнал→refetch на клиенте
+  - BUG-7: SQL-фильтрация `or_(reminder_time, reminder_offsets)` вместо загрузки всех задач
+  - BUG-7b: `max_instances=1` на всех scheduler jobs для предотвращения параллельных tick'ов
+  - BUG-8: Информационный баннер в ReminderEditor вместо полной блокировки UI
+  - BUG-10: `onclick` назначается до `await` в browserNotifications (race condition fix)
+  - BUG-13: Удалён мёртвый код `should_send_reminder()`
+  - BUG-14: Tuple unpacking в scheduler, `task.user` напрямую (без доп. запроса)
+  - BUG-1b: Сброс обоих dedup-полей при обновлении reminder-полей в `update_task()`
+  - BUG-1c: Внутренние поля защищены от API — удалены из `TaskUpdate`, guard в сервисе
+  - Миграция: `20260419_2040_add_sent_reminder_offsets_to_tasks_226054cdbcf5.py`
+  - Тесты: 19 новых тестов (reminder_service, scheduler, dedup, ssePolling)
 
 **18 апреля 2026:**
 - Перевод фронтенда на local-first архитектуру с Dexie.js (IndexedDB)

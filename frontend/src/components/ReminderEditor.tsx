@@ -116,7 +116,7 @@ export function ReminderEditor({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-sm text-amber-700 dark:text-amber-300">
-            Напоминание для этой задачи уже отправлено.
+            Напоминание для этой задачи уже отправлено. Для нового вхождения настройте напоминание в активной задаче.
           </span>
         </div>
       ) : (
