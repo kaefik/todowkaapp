@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 
-import { db, activeTable } from '../db/database'
+import { db, activeTable, activeTasksByProject } from '../db/database'
 import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 
@@ -61,18 +61,26 @@ export function useProjects(): UseProjectsReturn {
     async () => {
       if (!user) return []
       const records = await activeTable(db.projects, user.id).toArray()
-      return records.map(p => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        color: p.color,
-        area_id: p.areaId,
-        is_active: p.isActive,
-        user_id: p.userId,
-        progress: { tasks_total: 0, tasks_completed: 0, progress_percent: 0 },
-        created_at: p.createdAt,
-        updated_at: p.updatedAt,
-      }))
+      const results: Project[] = []
+      for (const p of records) {
+        const tasks = await activeTasksByProject(user.id, p.id).toArray()
+        const tasks_total = tasks.length
+        const tasks_completed = tasks.filter(t => t.isCompleted).length
+        const progress_percent = tasks_total > 0 ? Math.round((tasks_completed / tasks_total) * 1000) / 10 : 0.0
+        results.push({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          color: p.color,
+          area_id: p.areaId,
+          is_active: p.isActive,
+          user_id: p.userId,
+          progress: { tasks_total, tasks_completed, progress_percent },
+          created_at: p.createdAt,
+          updated_at: p.updatedAt,
+        })
+      }
+      return results
     },
     [user?.id]
   )
