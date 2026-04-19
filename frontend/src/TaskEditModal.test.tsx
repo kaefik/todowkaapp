@@ -24,6 +24,10 @@ vi.mock('./hooks/useProjects', () => ({
   useProjects: vi.fn(),
 }))
 
+vi.mock('./db/hooks', () => ({
+  useOnlineStatus: vi.fn().mockReturnValue(true),
+}))
+
 import { useTasks } from './hooks/useTasks'
 import { useContexts } from './hooks/useContexts'
 import { useAreas } from './hooks/useAreas'
@@ -51,7 +55,9 @@ describe('TaskEditModal', () => {
     recurrence_type: null,
     recurrence_config: null,
     recurrence_end_date: null,
+    reminder_time: null,
     reminder_offsets: null,
+    reminder_fired: false,
     is_recurring: false,
     project: null,
     context: null,
@@ -134,8 +140,8 @@ describe('TaskEditModal', () => {
       expect(screen.queryByText('Edit Task')).not.toBeInTheDocument()
     })
 
-    it('renders modal when isOpen is true (even with null task)', async () => {
-      renderModal(true, null)
+    it('renders modal when isOpen is true with task', async () => {
+      renderModal(true, mockTask)
 
       await waitFor(() => {
         expect(screen.getByText('Edit Task')).toBeInTheDocument()
@@ -156,15 +162,6 @@ describe('TaskEditModal', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Edit Task')).toBeInTheDocument()
-      })
-    })
-
-    it('shows error when fetch fails', async () => {
-      mockFetchTask.mockRejectedValue(new Error('Failed to load task'))
-      renderModal()
-
-      await waitFor(() => {
-        expect(screen.getByText('Failed to load task')).toBeInTheDocument()
       })
     })
   })
@@ -313,6 +310,7 @@ describe('TaskEditModal', () => {
           recurrence_type: null,
           recurrence_config: null,
           recurrence_end_date: null,
+          reminder_time: null,
           reminder_offsets: null,
         })
       })
@@ -347,6 +345,7 @@ describe('TaskEditModal', () => {
           recurrence_type: null,
           recurrence_config: null,
           recurrence_end_date: null,
+          reminder_time: null,
           reminder_offsets: null,
         })
       })
@@ -391,16 +390,12 @@ describe('TaskEditModal', () => {
   describe('edge cases', () => {
     it('handles task with null description', async () => {
       const taskWithNullDescription: Task = {
+        ...mockTask,
         id: '2',
         title: 'Task without description',
         description: null,
-        completed: false,
-        user_id: 'user1',
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
       }
 
-      mockFetchTask.mockResolvedValue(taskWithNullDescription)
       renderModal(true, taskWithNullDescription)
 
       await waitFor(() => {
@@ -411,16 +406,12 @@ describe('TaskEditModal', () => {
 
     it('handles task with empty string description', async () => {
       const taskWithEmptyDescription: Task = {
+        ...mockTask,
         id: '3',
         title: 'Task with empty description',
         description: '',
-        completed: false,
-        user_id: 'user1',
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01',
       }
 
-      mockFetchTask.mockResolvedValue(taskWithEmptyDescription)
       renderModal(true, taskWithEmptyDescription)
 
       await waitFor(() => {

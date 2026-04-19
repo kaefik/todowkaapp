@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class ContextCreate(BaseModel):
+    id: str | None = Field(default=None, max_length=36)
     name: str = Field(min_length=1, max_length=100)
     color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
     icon: str | None = Field(default=None, max_length=50)

@@ -29,6 +29,7 @@ class ProjectBriefResponse(BaseModel):
 
 
 class TaskCreate(BaseModel):
+    id: str | None = Field(default=None, max_length=36)
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     gtd_status: GtdStatus = GtdStatus.INBOX

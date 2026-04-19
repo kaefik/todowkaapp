@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react'
-import { httpClient, ApiError } from '../api/httpClient'
+import { useCallback } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from '../db/database'
+import { useAuthStore } from '../stores/authStore'
 import type { GtdStatus } from './useTasks'
 
 export const TASKS_CHANGED_EVENT = 'todowka:tasks-changed'
 
-export function notifyTasksChanged() {
-  window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT))
-}
+export function notifyTasksChanged() {}
 
 export interface GtdCounts {
   inbox: number
@@ -33,36 +33,28 @@ const defaultCounts: GtdCounts = {
   trash: 0,
 }
 
+const GTD_STATUSES: GtdStatus[] = ['inbox', 'next', 'waiting', 'someday', 'completed', 'trash']
+
 export function useGtdCounts(): UseGtdCountsReturn {
-  const [counts, setCounts] = useState<GtdCounts>(defaultCounts)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const user = useAuthStore(s => s.user)
 
-  const refetch = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await httpClient.get<GtdCounts>('/tasks/counts')
-      setCounts(response.data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('Failed to load counts')
-      }
-    } finally {
-      setIsLoading(false)
+  const counts = useLiveQuery(async () => {
+    if (!user) return defaultCounts
+
+    const result: GtdCounts = { ...defaultCounts }
+    for (const status of GTD_STATUSES) {
+      result[status] = await db.tasks
+        .where('[userId+gtdStatus]')
+        .equals([user.id, status])
+        .filter(t => t._syncStatus !== 'deleted')
+        .count()
     }
-  }, [])
+    return result
+  }, [user?.id], defaultCounts)
 
-  useEffect(() => {
-    refetch()
-    const handler = () => refetch()
-    window.addEventListener(TASKS_CHANGED_EVENT, handler)
-    return () => window.removeEventListener(TASKS_CHANGED_EVENT, handler)
-  }, [refetch])
+  const refetch = useCallback(async () => {}, [])
 
-  return { counts, isLoading, error, refetch }
+  return { counts: counts ?? defaultCounts, isLoading: counts === undefined, error: null, refetch }
 }
 
 export const GTD_STATUS_LABELS: Record<GtdStatus, string> = {

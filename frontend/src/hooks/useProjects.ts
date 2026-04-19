@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError } from '../api/httpClient'
+import { v4 as uuidv4 } from 'uuid'
+
+import { db, activeTable } from '../db/database'
+import { useDexieQuery } from '../db/hooks'
+import { useAuthStore } from '../stores/authStore'
 
 export interface ProjectProgress {
   tasks_total: number
@@ -52,88 +55,106 @@ export const projectKeys = {
 }
 
 export function useProjects(): UseProjectsReturn {
-  const queryClient = useQueryClient()
+  const user = useAuthStore(s => s.user)
 
-  const { data: projects = [], isLoading, error, refetch } = useQuery({
-    queryKey: projectKeys.lists(),
-    queryFn: async () => {
-      const response = await httpClient.get<{ items: Project[]; total: number }>('/projects')
-      return response.data.items
+  const { data: projects = [], isLoading } = useDexieQuery(
+    async () => {
+      if (!user) return []
+      const records = await activeTable(db.projects, user.id).toArray()
+      return records.map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        color: p.color,
+        area_id: p.areaId,
+        is_active: p.isActive,
+        user_id: p.userId,
+        progress: { tasks_total: 0, tasks_completed: 0, progress_percent: 0 },
+        created_at: p.createdAt,
+        updated_at: p.updatedAt,
+      }))
     },
-    staleTime: 1000 * 60 * 5,
-  })
-
-  const addProjectMutation = useMutation({
-    mutationFn: async (data: CreateProject) => {
-      const response = await httpClient.post<Project>('/projects', data)
-      return response.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
-    },
-  })
-
-  const updateProjectMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateProject }) => {
-      const response = await httpClient.put<Project>(`/projects/${id}`, data)
-      return response.data
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
-    },
-  })
-
-  const deleteProjectMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await httpClient.delete(`/projects/${id}`)
-      return id
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() })
-    },
-  })
+    [user?.id]
+  )
 
   const addProject = async (data: CreateProject) => {
-    try {
-      await addProjectMutation.mutateAsync(data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось создать проект')
-    }
+    if (!user) return
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    await db.projects.add({
+      id,
+      userId: user.id,
+      name: data.name,
+      description: data.description ?? null,
+      color: data.color ?? null,
+      areaId: data.area_id ?? null,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'local',
+      _lastSyncedAt: null,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'project',
+      entityId: id,
+      action: 'create',
+      payload: JSON.stringify({ ...data, id }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const updateProject = async (id: string, data: UpdateProject) => {
-    try {
-      await updateProjectMutation.mutateAsync({ id, data })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось обновить проект')
-    }
+    if (!user) return
+    const existing = await db.projects.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    const updates: Record<string, unknown> = { updatedAt: now, _syncStatus: 'modified' as const }
+    if (data.name !== undefined) { updates.name = data.name; (updates as Record<string, unknown>).name = data.name }
+    if (data.description !== undefined) updates.description = data.description
+    if (data.color !== undefined) updates.color = data.color
+    if (data.area_id !== undefined) updates.areaId = data.area_id
+    if (data.is_active !== undefined) updates.isActive = data.is_active
+    await db.projects.update(id, updates)
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'project',
+      entityId: id,
+      action: 'update',
+      payload: JSON.stringify(data),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const deleteProject = async (id: string) => {
-    try {
-      await deleteProjectMutation.mutateAsync(id)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось удалить проект')
-    }
+    if (!user) return
+    await db.projects.update(id, {
+      _syncStatus: 'deleted',
+      updatedAt: new Date().toISOString(),
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'project',
+      entityId: id,
+      action: 'delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   return {
     projects,
     isLoading,
-    error: error instanceof Error ? error.message : null,
+    error: null,
     addProject,
     updateProject,
     deleteProject,
-    refetch,
+    refetch: async () => {},
   }
 }

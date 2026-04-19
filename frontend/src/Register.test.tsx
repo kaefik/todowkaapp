@@ -304,7 +304,11 @@ describe('Register', () => {
 
     it('redirects to /tasks on successful registration', async () => {
       const user = userEvent.setup()
-      mockRegisterAndLogin.mockResolvedValueOnce(undefined)
+      mockRegisterAndLogin.mockImplementation(async () => {
+        vi.mocked(useAuthStore).getState = () => ({
+          user: { id: '1', username: 'testuser', email: 'test@example.com', is_active: true, is_admin: false, timezone: 'UTC', created_at: '2024-01-01' },
+        }) as any
+      })
 
       renderRegister()
 

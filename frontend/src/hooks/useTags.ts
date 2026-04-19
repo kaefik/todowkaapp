@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError } from '../api/httpClient'
+import { v4 as uuidv4 } from 'uuid'
+
+import { db, activeTable } from '../db/database'
+import { useDexieQuery } from '../db/hooks'
+import { useAuthStore } from '../stores/authStore'
 
 export interface Tag {
   id: string
@@ -37,88 +40,96 @@ export const tagKeys = {
 }
 
 export function useTags(): UseTagsReturn {
-  const queryClient = useQueryClient()
+  const user = useAuthStore(s => s.user)
 
-  const { data: tags = [], isLoading, error, refetch } = useQuery({
-    queryKey: tagKeys.lists(),
-    queryFn: async () => {
-      const response = await httpClient.get<{ items: Tag[]; total: number }>('/tags')
-      return response.data.items
+  const { data: tags = [], isLoading } = useDexieQuery(
+    async () => {
+      if (!user) return []
+      const records = await activeTable(db.tags, user.id).toArray()
+      return records.map(t => ({
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        user_id: t.userId,
+        created_at: t.createdAt,
+        updated_at: t.updatedAt,
+      }))
     },
-    staleTime: 1000 * 60 * 10,
-  })
-
-  const addTagMutation = useMutation({
-    mutationFn: async (data: CreateTag) => {
-      const response = await httpClient.post<Tag>('/tags', data)
-      return response.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tagKeys.lists() })
-    },
-  })
-
-  const updateTagMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateTag }) => {
-      const response = await httpClient.put<Tag>(`/tags/${id}`, data)
-      return response.data
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: tagKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: tagKeys.lists() })
-    },
-  })
-
-  const deleteTagMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await httpClient.delete(`/tags/${id}`)
-      return id
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: tagKeys.lists() })
-    },
-  })
+    [user?.id]
+  )
 
   const addTag = async (data: CreateTag) => {
-    try {
-      await addTagMutation.mutateAsync(data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось создать тег')
-    }
+    if (!user) return
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    await db.tags.add({
+      id,
+      userId: user.id,
+      name: data.name,
+      color: data.color ?? null,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'local',
+      _lastSyncedAt: null,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'tag',
+      entityId: id,
+      action: 'create',
+      payload: JSON.stringify({ ...data, id }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const updateTag = async (id: string, data: UpdateTag) => {
-    try {
-      await updateTagMutation.mutateAsync({ id, data })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось обновить тег')
-    }
+    if (!user) return
+    const existing = await db.tags.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    const updates: Record<string, unknown> = { updatedAt: now, _syncStatus: 'modified' as const }
+    if (data.name !== undefined) updates.name = data.name
+    if (data.color !== undefined) updates.color = data.color
+    await db.tags.update(id, updates)
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'tag',
+      entityId: id,
+      action: 'update',
+      payload: JSON.stringify(data),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const deleteTag = async (id: string) => {
-    try {
-      await deleteTagMutation.mutateAsync(id)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось удалить тег')
-    }
+    if (!user) return
+    await db.tags.update(id, {
+      _syncStatus: 'deleted',
+      updatedAt: new Date().toISOString(),
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'tag',
+      entityId: id,
+      action: 'delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   return {
     tags,
     isLoading,
-    error: error instanceof Error ? error.message : null,
+    error: null,
     addTag,
     updateTag,
     deleteTag,
-    refetch,
+    refetch: async () => {},
   }
 }

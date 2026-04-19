@@ -4,22 +4,23 @@ import './index.css'
 import { AppRouter } from './router'
 import { AuthInitializer } from './components/AuthInitializer'
 import { NotificationProvider } from './components/NotificationProvider'
+import { SyncProvider } from './components/SyncProvider'
 import { ToastContainer } from './components/ToastContainer'
 import { OfflineBanner } from './components/OfflineBanner'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { queryClient } from './lib/queryClient'
+import { migrateOldData } from './db/migration'
+
+migrateOldData().catch(() => {})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <OfflineBanner />
-      <AuthInitializer>
+    <OfflineBanner />
+    <AuthInitializer>
+      <SyncProvider>
         <NotificationProvider>
           <AppRouter />
           <ToastContainer />
         </NotificationProvider>
-      </AuthInitializer>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+      </SyncProvider>
+    </AuthInitializer>
   </StrictMode>,
 )

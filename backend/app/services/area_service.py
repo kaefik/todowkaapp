@@ -52,9 +52,12 @@ class AreaService:
             )
 
     async def create_area(self, user_id: UUID, data: AreaCreate) -> Area:
+        import uuid as uuid_mod
+
         await self._check_name_unique(user_id, data.name)
 
         area = Area(
+            id=data.id if data.id else str(uuid_mod.uuid4()),
             user_id=str(user_id),
             name=data.name,
             description=data.description,

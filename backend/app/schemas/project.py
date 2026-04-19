@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class ProjectCreate(BaseModel):
+    id: str | None = Field(default=None, max_length=36)
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=1000)
     color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')

@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
-import { httpClient, ApiError } from '../api/httpClient'
+import { v4 as uuidv4 } from 'uuid'
+
+import { db } from '../db/database'
+import { dbTaskToUi } from '../db/mappers'
+import { useDexieQuery } from '../db/hooks'
+import { useAuthStore } from '../stores/authStore'
 import type { Task } from './useTasks'
 
 interface UseSubtasksReturn {
@@ -12,127 +16,116 @@ interface UseSubtasksReturn {
   refetch: () => Promise<void>
 }
 
-function mapApiTask(t: Record<string, unknown>): Task {
-  return {
-    id: t.id as string,
-    title: t.title as string,
-    description: (t.description as string | null) ?? null,
-    completed: (t.is_completed as boolean) ?? false,
-    gtd_status: t.gtd_status as Task['gtd_status'],
-    context_id: (t.context_id as string | null) ?? null,
-    area_id: (t.area_id as string | null) ?? null,
-    project_id: (t.project_id as string | null) ?? null,
-    project: (t.project as Task['project']) ?? null,
-    parent_task_id: (t.parent_task_id as string | null) ?? null,
-    position: (t.position as number) ?? 0,
-    due_date: (t.due_date as string | null) ?? null,
-    notes: (t.notes as string | null) ?? null,
-    tags: (t.tags as Task['tags']) ?? [],
-    subtasks_count: (t.subtasks_count as number) ?? 0,
-    subtasks_completed: (t.subtasks_completed as number) ?? 0,
-    user_id: t.user_id as string,
-    created_at: t.created_at as string,
-    updated_at: t.updated_at as string,
-  }
-}
-
 export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
-  const [subtasks, setSubtasks] = useState<Task[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const user = useAuthStore(s => s.user)
 
-  const refetch = useCallback(async () => {
-    if (!parentTaskId) {
-      setSubtasks([])
-      return
-    }
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await httpClient.get<Record<string, unknown>[]>(
-        `/tasks/${parentTaskId}/subtasks`
-      )
-      setSubtasks(response.data.map(mapApiTask))
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-      } else {
-        setError('Failed to load subtasks')
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [parentTaskId])
-
-  useEffect(() => {
-    refetch()
-  }, [refetch])
-
-  const addSubtask = useCallback(
-    async (title: string, description?: string) => {
-      if (!parentTaskId) return
-      setError(null)
-      try {
-        const response = await httpClient.post<Record<string, unknown>>(
-          `/tasks/${parentTaskId}/subtasks`,
-          { title, description }
-        )
-        setSubtasks((prev) => [...prev, mapApiTask(response.data)])
-      } catch (err) {
-        if (err instanceof ApiError) {
-          setError(err.message)
-          throw err
-        }
-        setError('Failed to add subtask')
-        throw err
-      }
+  const { data: subtasks = [], isLoading } = useDexieQuery(
+    async () => {
+      if (!parentTaskId || !user) return []
+      const records = await db.tasks
+        .where('parentTaskId')
+        .equals(parentTaskId)
+        .filter(t => t._syncStatus !== 'deleted')
+        .toArray()
+      const uiTasks = await Promise.all(records.map(dbTaskToUi))
+      return uiTasks as Task[]
     },
-    [parentTaskId]
+    [user?.id, parentTaskId]
   )
 
-  const toggleSubtask = useCallback(
-    async (id: string) => {
-      setError(null)
-      try {
-        const response = await httpClient.patch<Record<string, unknown>>(
-          `/tasks/${id}/toggle`
-        )
-        const updated = mapApiTask(response.data)
-        setSubtasks((prev) => prev.map((s) => (s.id === id ? updated : s)))
-      } catch (err) {
-        if (err instanceof ApiError) {
-          setError(err.message)
-          throw err
-        }
-        setError('Failed to toggle subtask')
-        throw err
-      }
-    },
-    []
-  )
+  const addSubtask = async (title: string, description?: string) => {
+    if (!parentTaskId || !user) return
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    await db.tasks.add({
+      id,
+      userId: user.id,
+      title,
+      description: description ?? null,
+      isCompleted: false,
+      completedAt: null,
+      gtdStatus: 'inbox',
+      contextId: null,
+      areaId: null,
+      projectId: null,
+      parentTaskId,
+      position: 0,
+      dueDate: null,
+      notes: null,
+      recurrenceType: null,
+      recurrenceConfig: null,
+      recurrenceEndDate: null,
+      reminderTime: null,
+      reminderOffsets: null,
+      reminderFired: false,
+      isRecurring: false,
+      tagIds: [],
+      trashedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'local',
+      _lastSyncedAt: null,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'create',
+      payload: JSON.stringify({ title, description, parent_task_id: parentTaskId, id }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
 
-  const deleteSubtask = useCallback(async (id: string) => {
-    setError(null)
-    try {
-      await httpClient.delete(`/tasks/${id}`)
-      setSubtasks((prev) => prev.filter((s) => s.id !== id))
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message)
-        throw err
-      }
-      setError('Failed to delete subtask')
-      throw err
-    }
-  }, [])
+  const toggleSubtask = async (id: string) => {
+    if (!user) return
+    const existing = await db.tasks.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    await db.tasks.update(id, {
+      isCompleted: !existing.isCompleted,
+      completedAt: existing.isCompleted ? null : now,
+      updatedAt: now,
+      _syncStatus: 'modified',
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'toggle',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
+
+  const deleteSubtask = async (id: string) => {
+    if (!user) return
+    await db.tasks.update(id, {
+      _syncStatus: 'deleted',
+      updatedAt: new Date().toISOString(),
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
 
   return {
     subtasks,
     isLoading,
-    error,
+    error: null,
     addSubtask,
     toggleSubtask,
     deleteSubtask,
-    refetch,
+    refetch: async () => {},
   }
 }

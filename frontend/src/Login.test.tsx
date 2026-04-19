@@ -233,7 +233,23 @@ describe('Login', () => {
   describe('redirects', () => {
     it('redirects to /tasks on successful login', async () => {
       const user = userEvent.setup()
-      mockLogin.mockResolvedValueOnce(undefined)
+      mockLogin.mockImplementation(async () => {
+        vi.mocked(useAuthStore).mockReturnValue({
+          login: mockLogin,
+          clearError: mockClearError,
+          isLoading: false,
+          error: null,
+          user: { id: '1', username: 'testuser', email: 'test@test.com', is_active: true, is_admin: false, timezone: 'UTC', created_at: '2024-01-01' },
+          accessToken: 'token',
+          isAuthenticated: true,
+          register: vi.fn(),
+          logout: vi.fn(),
+          refreshToken: vi.fn(),
+        })
+        vi.mocked(useAuthStore).getState = () => ({
+          user: { id: '1', username: 'testuser', email: 'test@test.com', is_active: true, is_admin: false, timezone: 'UTC', created_at: '2024-01-01' },
+        }) as any
+      })
 
       vi.mocked(useAuthStore).mockReturnValue({
         login: mockLogin,

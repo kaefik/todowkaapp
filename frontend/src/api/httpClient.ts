@@ -1,6 +1,4 @@
 import { useAuthStore } from '../stores/authStore'
-import { useToastStore } from '../stores/toastStore'
-import { getCache, setCache } from '../lib/indexedDB'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -26,32 +24,8 @@ class ApiError extends Error {
   }
 }
 
-class OfflineQueueError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'OfflineQueueError'
-  }
-}
-
-interface Mutation {
-  id: string
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  url: string
-  body?: string
-  timestamp: number
-  retryCount: number
-}
-
-let queueMutationFn: ((mutation: Mutation) => Promise<void>) | null = null
-
-export const setQueueMutationFn = (fn: typeof queueMutationFn) => {
-  queueMutationFn = fn
-}
-
 let isRefreshing = false
 let refreshPromise: Promise<void> | null = null
-let hasShownOfflineToast = false
-let hasShownQueueToast = false
 
 async function fetchWithAuth<T>(
   url: string,
@@ -72,10 +46,6 @@ async function fetchWithAuth<T>(
 
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
 
-  console.debug(`[HTTP] Token: ${authStore.accessToken?.substring(0, 10)}...rest (from store)`)
-  console.debug(`[HTTP] Cookie has access_token: ${document.cookie.includes('access_token')}`)
-  console.debug(`[HTTP] Request: ${(config.method || 'GET').toUpperCase()} ${fullUrl}`)
-
   try {
     const response = await fetch(fullUrl, {
       ...fetchConfig,
@@ -89,8 +59,6 @@ async function fetchWithAuth<T>(
         errorMessage = errorData.detail || errorMessage
       } catch {
       }
-
-      console.error(`[HTTP] 401 Error: ${response.status} ${fullUrl} - ${errorMessage}`)
 
       if (errorMessage === 'Refresh token has been revoked') {
         isRefreshing = false
@@ -129,60 +97,10 @@ async function fetchWithAuth<T>(
       } catch {
       }
 
-      const isNetworkError = response.status >= 500 || response.status === 0
-
-      if (isNetworkError && !hasShownOfflineToast) {
-        hasShownOfflineToast = true
-        try {
-          const toastStore = useToastStore.getState()
-          console.log('[Offline] Adding offline toast', { toasts: toastStore.toasts.length })
-          toastStore.addToast({
-            title: 'Вы офлайн',
-            body: 'Проверьте подключение к интернету',
-            type: 'error'
-          })
-        } catch (err) {
-          console.error('[Offline] Failed to show offline toast:', err)
-        }
-      }
-
-      if (isNetworkError && queueMutationFn && !skipAuth && config.method && config.method !== 'GET') {
-        const mutation: Mutation = {
-          id: crypto.randomUUID(),
-          method: config.method as 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-          url,
-          body: config.body as string,
-          timestamp: Date.now(),
-          retryCount: 0
-        }
-
-        console.log('[Offline] Queuing mutation:', { method: mutation.method, url: mutation.url })
-        queueMutationFn(mutation).catch((err) => console.error('Failed to queue mutation:', err))
-
-        if (!hasShownQueueToast) {
-          hasShownQueueToast = true
-          try {
-            useToastStore.getState().addToast({
-              title: 'Офлайн режим',
-              body: 'Запрос сохранен и будет отправлен при восстановлении сети',
-              type: 'info'
-            })
-          } catch (err) {
-            console.error('[Offline] Failed to show queued mutation toast:', err)
-          }
-        }
-
-        throw new OfflineQueueError('Request saved to offline queue')
-      }
-
       throw new ApiError(response.status, response.statusText, errorMessage)
     }
 
     const data = response.status === 204 ? null : await response.json()
-
-    if ((config.method === 'GET' || !config.method) && data) {
-      await setCache(fullUrl, data)
-    }
 
     return {
       data,
@@ -194,46 +112,7 @@ async function fetchWithAuth<T>(
       throw error
     }
 
-    if (error instanceof OfflineQueueError) {
-      throw error
-    }
-
     if (error instanceof TypeError) {
-      if ((config.method === 'GET' || !config.method)) {
-        const cached = await getCache<T>(fullUrl)
-        if (cached) {
-          console.log('[Cache] Using cached data after error for:', fullUrl)
-          return { data: cached, status: 200, statusText: 'OK' }
-        }
-      }
-
-      if (queueMutationFn && config.method && config.method !== 'GET') {
-        const mutation: Mutation = {
-          id: crypto.randomUUID(),
-          method: config.method as 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-          url,
-          body: config.body as string,
-          timestamp: Date.now(),
-          retryCount: 0
-        }
-
-        queueMutationFn(mutation).catch((err) => console.error('Failed to queue mutation:', err))
-
-        if (!hasShownQueueToast) {
-          hasShownQueueToast = true
-          try {
-            useToastStore.getState().addToast({
-              title: 'Офлайн режим',
-              body: 'Запрос сохранен и будет отправлен при восстановлении сети',
-              type: 'info'
-            })
-          } catch {
-          }
-        }
-
-        throw new OfflineQueueError('Request saved to offline queue')
-      }
-
       throw new ApiError(0, 'Network Error', 'Network error. Please check your connection.')
     }
 
@@ -276,42 +155,4 @@ export const httpClient = {
     }),
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', async () => {
-    console.log('[Offline] Online event detected')
-    hasShownOfflineToast = false
-    hasShownQueueToast = false
-    try {
-      useToastStore.getState().addToast({
-        title: 'Сеть восстановлена',
-        body: 'Соединение с сервером восстановлено',
-        type: 'success'
-      })
-    } catch (err) {
-      console.error('[Offline] Failed to show online toast:', err)
-    }
-    window.dispatchEvent(new CustomEvent('ONLINE_RECONNECT'))
-  })
-
-  window.addEventListener('offline', async () => {
-    console.log('[Offline] Offline event detected')
-    hasShownOfflineToast = true
-    try {
-      useToastStore.getState().addToast({
-        title: 'Вы офлайн',
-        body: 'Проверьте подключение к интернету',
-        type: 'error'
-      })
-    } catch (err) {
-      console.error('[Offline] Failed to show offline event toast:', err)
-    }
-  })
-
-  window.addEventListener('BACKEND_RECOVERED', () => {
-    console.log('[Offline] Backend recovered event')
-    hasShownOfflineToast = false
-    hasShownQueueToast = false
-  })
-}
-
-export { ApiError, OfflineQueueError, type ApiResponse, type RequestConfig, type Mutation }
+export { ApiError, type ApiResponse, type RequestConfig }

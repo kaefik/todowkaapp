@@ -1,0 +1,391 @@
+import { db, type DbTask, type DbProject, type DbArea, type DbContext, type DbTag, type SyncStatus } from './database'
+import { shouldSkipMerge, mergeRecord } from './conflictResolution'
+import { apiTaskToDb } from './mappers'
+import { httpClient, ApiError } from '../api/httpClient'
+import { useToastStore } from '../stores/toastStore'
+import { useAuthStore } from '../stores/authStore'
+
+type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag'
+
+interface SyncResourceConfig {
+  endpoint: string
+  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags
+  entityType: EntityType
+  transform: (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }
+}
+
+function makeTransform<T extends { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }>(
+  mapFn: (item: Record<string, unknown>, userId: string) => T
+): (item: Record<string, unknown>, userId: string) => T {
+  return mapFn
+}
+
+const RESOURCES: SyncResourceConfig[] = [
+  {
+    endpoint: '/tasks',
+    table: db.tasks,
+    entityType: 'task',
+    transform: makeTransform((item, userId) => apiTaskToDb(item, userId)),
+  },
+  {
+    endpoint: '/projects',
+    table: db.projects,
+    entityType: 'project',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      name: item.name as string,
+      description: (item.description as string | null) ?? null,
+      color: (item.color as string | null) ?? null,
+      areaId: (item.area_id as string | null) ?? null,
+      isActive: (item.is_active as boolean) ?? true,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+  {
+    endpoint: '/contexts',
+    table: db.contexts,
+    entityType: 'context',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      name: item.name as string,
+      color: (item.color as string | null) ?? null,
+      icon: (item.icon as string | null) ?? null,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+  {
+    endpoint: '/areas',
+    table: db.areas,
+    entityType: 'area',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      name: item.name as string,
+      description: (item.description as string | null) ?? null,
+      color: (item.color as string | null) ?? null,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+  {
+    endpoint: '/tags',
+    table: db.tags,
+    entityType: 'tag',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      name: item.name as string,
+      color: (item.color as string | null) ?? null,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+]
+
+async function fetchAllPages(endpoint: string): Promise<Record<string, unknown>[]> {
+  const allItems: Record<string, unknown>[] = []
+  let offset = 0
+  const limit = 100
+
+  while (true) {
+    const response = await httpClient.get<{ items: Record<string, unknown>[]; total: number }>(
+      `${endpoint}?limit=${limit}&offset=${offset}`
+    )
+    const { items, total } = response.data
+    allItems.push(...items)
+    offset += limit
+    if (offset >= total) break
+  }
+
+  return allItems
+}
+
+async function mergeAndPut(
+  table: SyncResourceConfig['table'],
+  entityType: EntityType,
+  items: Record<string, unknown>[],
+  userId: string,
+  transform: SyncResourceConfig['transform']
+): Promise<void> {
+  for (const item of items) {
+    const id = item.id as string
+    const skip = await shouldSkipMerge(entityType, id)
+    if (skip) continue
+
+    const serverRecord = transform(item, userId) as typeof table extends { put(arg: infer T): unknown } ? T : never
+    const localRecord = await table.get(id) as typeof serverRecord | undefined
+    const merged = mergeRecord(localRecord, serverRecord)
+
+    try {
+      await table.put(merged)
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+        useToastStore.getState().addToast({
+          title: 'Хранилище заполнено',
+          body: 'Синхронизация остановлена. Освободите место.',
+          type: 'error',
+        })
+        throw err
+      }
+      throw err
+    }
+  }
+}
+
+export async function initialSync(userId: string): Promise<void> {
+  for (const resource of RESOURCES) {
+    const items = await fetchAllPages(resource.endpoint)
+    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+  }
+}
+
+export async function pull(userId: string): Promise<void> {
+  for (const resource of RESOURCES) {
+    const items = await fetchAllPages(resource.endpoint)
+    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+  }
+}
+
+interface MergedMutations {
+  toSend: {
+    id: string
+    action: string
+    entityId: string
+    entityType: EntityType
+    payload: string | null
+    retryCount: number
+  }[]
+  toDelete: string[]
+}
+
+function deduplicateMutations(
+  mutations: {
+    id: string
+    action: string
+    entityId: string
+    entityType: EntityType
+    payload: string | null
+    retryCount: number
+    timestamp: number
+  }[]
+): MergedMutations {
+  const grouped = new Map<string, typeof mutations>()
+
+  for (const m of mutations) {
+    const key = `${m.entityType}:${m.entityId}`
+    if (!grouped.has(key)) {
+      grouped.set(key, [])
+    }
+    grouped.get(key)!.push(m)
+  }
+
+  const toSend: MergedMutations['toSend'] = []
+  const toDelete: string[] = []
+
+  for (const [, group] of grouped) {
+    if (group.length === 1) {
+      toSend.push(group[0])
+      continue
+    }
+
+    const hasCreate = group.some(m => m.action === 'create')
+    const hasDelete = group.some(m => m.action === 'delete')
+
+    if (hasCreate && hasDelete) {
+      for (const m of group) {
+        toDelete.push(m.id)
+      }
+      const table = getTableForType(group[0].entityType)
+      table.delete(group[0].entityId).catch(() => {})
+      continue
+    }
+
+    const last = group[group.length - 1]
+    toSend.push(last)
+    for (let i = 0; i < group.length - 1; i++) {
+      toDelete.push(group[i].id)
+    }
+  }
+
+  return { toSend, toDelete }
+}
+
+function getTableForType(entityType: EntityType) {
+  switch (entityType) {
+    case 'task': return db.tasks
+    case 'project': return db.projects
+    case 'area': return db.areas
+    case 'context': return db.contexts
+    case 'tag': return db.tags
+  }
+}
+
+function getEndpointForType(entityType: EntityType): string {
+  switch (entityType) {
+    case 'task': return '/tasks'
+    case 'project': return '/projects'
+    case 'area': return '/areas'
+    case 'context': return '/contexts'
+    case 'tag': return '/tags'
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export async function push(): Promise<void> {
+  const userId = useAuthStore.getState().user?.id
+  if (!userId) return
+
+  const allMutations = await db.mutations.orderBy('timestamp').toArray()
+  if (allMutations.length === 0) return
+
+  const { toSend, toDelete } = deduplicateMutations(allMutations)
+
+  for (const id of toDelete) {
+    await db.mutations.delete(id)
+  }
+
+  for (const mutation of toSend) {
+    let success = false
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await executeMutation(mutation, userId)
+        success = true
+        break
+      } catch (err) {
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            try {
+              await useAuthStore.getState().refreshToken()
+              continue
+            } catch {
+              useAuthStore.getState().logout()
+              return
+            }
+          }
+
+          if (err.status === 404) {
+            console.debug(`[SyncEngine] 404 for ${mutation.action} ${mutation.entityType}/${mutation.entityId}: already gone`)
+            const table = getTableForType(mutation.entityType)
+            await table.delete(mutation.entityId).catch(() => {})
+            await db.mutations.delete(mutation.id)
+            success = true
+            break
+          }
+
+          if (err.status === 409) {
+            if (mutation.action === 'create') {
+              success = true
+              break
+            }
+            console.warn(`[SyncEngine] 409 for ${mutation.action} ${mutation.entityType}/${mutation.entityId}:`, err.message)
+            await db.mutations.delete(mutation.id)
+            success = true
+            break
+          }
+
+          if (err.status === 422) {
+            console.warn(`[SyncEngine] 422 for ${mutation.entityType}/${mutation.entityId}:`, err.message)
+            await db.mutations.delete(mutation.id)
+            success = true
+            break
+          }
+
+          if (err.status >= 500) {
+            if (attempt < 2) {
+              await sleep(1000 * Math.pow(2, attempt))
+              continue
+            }
+            console.error(`[SyncEngine] 500 after 3 retries for ${mutation.entityType}/${mutation.entityId}`)
+            await db.mutations.update(mutation.id, {
+              retryCount: mutation.retryCount + 1,
+              lastError: err.message,
+            })
+            break
+          }
+        }
+
+        if (err instanceof TypeError) {
+          console.warn('[SyncEngine] Network error, stopping push')
+          return
+        }
+
+        console.error('[SyncEngine] Unexpected error:', err)
+        await db.mutations.update(mutation.id, {
+          retryCount: mutation.retryCount + 1,
+          lastError: err instanceof Error ? err.message : String(err),
+        })
+        break
+      }
+    }
+
+    if (success) {
+      await db.mutations.delete(mutation.id)
+      const table = getTableForType(mutation.entityType)
+      await table.update(mutation.entityId, {
+        _syncStatus: 'synced',
+        _lastSyncedAt: new Date().toISOString(),
+      }).catch(() => {})
+    }
+  }
+
+  try {
+    await pull(userId)
+  } catch (err) {
+    console.warn('[SyncEngine] Pull after push failed:', err)
+  }
+}
+
+async function executeMutation(
+  mutation: {
+    action: string
+    entityId: string
+    entityType: EntityType
+    payload: string | null
+  },
+  _userId: string
+): Promise<void> {
+  const endpoint = getEndpointForType(mutation.entityType)
+  const payload = mutation.payload ? JSON.parse(mutation.payload) : null
+
+  switch (mutation.action) {
+    case 'create': {
+      await httpClient.post(endpoint, payload)
+      break
+    }
+    case 'update': {
+      await httpClient.put(`${endpoint}/${mutation.entityId}`, payload)
+      break
+    }
+    case 'toggle': {
+      await httpClient.patch(`${endpoint}/${mutation.entityId}/toggle`)
+      break
+    }
+    case 'move': {
+      const body = mutation.payload ? JSON.parse(mutation.payload) : {}
+      await httpClient.patch(`${endpoint}/${mutation.entityId}/move`, body)
+      break
+    }
+    case 'delete': {
+      await httpClient.delete(`${endpoint}/${mutation.entityId}`)
+      break
+    }
+    default:
+      console.warn(`[SyncEngine] Unknown action: ${mutation.action}`)
+  }
+}

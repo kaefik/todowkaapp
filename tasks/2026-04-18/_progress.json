@@ -1,0 +1,616 @@
+{
+  "project": "Todowka Offline (Dexie.js local-first)",
+  "created": "2026-04-18T09:00:00Z",
+  "updated": "2026-04-18T09:15:00Z",
+  "guide": "tasks/2026-04-18/00-guide.md",
+  "execution_style": "careful",
+  "metrics": {
+    "total": 41,
+    "done": 41,
+    "in_progress": 0,
+    "ready": 0,
+    "blocked": 0,
+    "with_tests": 4,
+    "pct_done": 100.0,
+    "pct_tested": 9.8
+  },
+  "tasks": {
+    "L0/01-install-dexie-packages": {
+      "title": "Установить npm-пакеты dexie, dexie-react-hooks, uuid",
+      "layer": 0,
+      "effort": "XS",
+      "priority_score": 11.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:15:00Z",
+      "completed_output": "Установлены пакеты dexie@4.4.2, dexie-react-hooks@4.4.0, uuid@13.0.0 в frontend/. npm ls подтверждает установку."
+    },
+    "L0/02-backend-task-client-uuid": {
+      "title": "Backend: Принимать client-provided UUID в TaskCreate",
+      "layer": 0,
+      "effort": "S",
+      "priority_score": 11.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:20:00Z",
+      "completed_output": "Добавлено поле id в TaskCreate schema. TaskService.create_task использует data.id если передан, иначе uuid4(). Ruff check пройден."
+    },
+    "L0/03-backend-project-client-uuid": {
+      "title": "Backend: Принимать client-provided UUID в ProjectCreate",
+      "layer": 0,
+      "effort": "XS",
+      "priority_score": 9.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:25:00Z",
+      "completed_output": "Добавлено поле id в ProjectCreate. ProjectService.create_project использует data.id если передан."
+    },
+    "L0/04-backend-area-client-uuid": {
+      "title": "Backend: Принимать client-provided UUID в AreaCreate",
+      "layer": 0,
+      "effort": "XS",
+      "priority_score": 9.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:25:00Z",
+      "completed_output": "Добавлено поле id в AreaCreate. AreaService.create_area использует data.id если передан."
+    },
+    "L0/05-backend-context-client-uuid": {
+      "title": "Backend: Принимать client-provided UUID в ContextCreate",
+      "layer": 0,
+      "effort": "XS",
+      "priority_score": 9.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:25:00Z",
+      "completed_output": "Добавлено поле id в ContextCreate. ContextService.create_context использует data.id если передан."
+    },
+    "L0/06-backend-tag-client-uuid": {
+      "title": "Backend: Принимать client-provided UUID в TagCreate",
+      "layer": 0,
+      "effort": "XS",
+      "priority_score": 9.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:25:00Z",
+      "completed_output": "Добавлено поле id в TagCreate. TagService.create_tag использует data.id если передан."
+    },
+    "L0/07-backend-test-client-uuid": {
+      "title": "Backend: Тест — POST с client-provided ID",
+      "layer": 0,
+      "effort": "S",
+      "priority_score": 8.0,
+      "depends_on": [
+        "L0/02",
+        "L0/03",
+        "L0/04",
+        "L0/05",
+        "L0/06"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": true,
+      "completed_at": "2026-04-18T09:35:00Z",
+      "completed_output": "Создан backend/tests/test_client_uuid.py с 6 тестами. Все проходят: task с/без id, project/area/context/tag с id."
+    },
+    "L1/01-create-dexie-database": {
+      "title": "Создать Dexie database.ts (схема, типы, хелперы запросов)",
+      "layer": 1,
+      "effort": "S",
+      "priority_score": 6.0,
+      "depends_on": [
+        "L0/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:40:00Z",
+      "completed_output": "Создан frontend/src/db/database.ts с TodowkaDB, 7 таблиц, типы Db*, SyncStatus, хелперы activeTasks/activeTasksByStatus/activeTasksByProject/activeTable. TypeScript компилируется без ошибок."
+    },
+    "L1/02-create-migration": {
+      "title": "Создать migration.ts (удаление старых IDB баз)",
+      "layer": 1,
+      "effort": "XS",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L1/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:05:00Z",
+      "completed_output": "Создан frontend/src/db/migration.ts с migrateOldData(). Удаляет 4 старые IDB базы, обрабатывает onsuccess/onerror/onblocked. TypeScript компилируется."
+    },
+    "L2/01-create-conflict-resolution": {
+      "title": "Создать conflictResolution.ts (LWW merge + shouldSkipMerge)",
+      "layer": 2,
+      "effort": "S",
+      "priority_score": 5.5,
+      "depends_on": [
+        "L1/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:55:00Z",
+      "completed_output": "Создан frontend/src/db/conflictResolution.ts с shouldSkipMerge (pending mutations check) и mergeRecord (LWW по updatedAt). TypeScript компилируется."
+    },
+    "L2/02-create-mappers": {
+      "title": "Создать mappers.ts (dbTaskToUi, apiTaskToDb, UiTask)",
+      "layer": 2,
+      "effort": "S",
+      "priority_score": 6.0,
+      "depends_on": [
+        "L1/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:50:00Z",
+      "completed_output": "Создан frontend/src/db/mappers.ts с UiTask, dbTaskToUi (join tags/project/context, dynamic subtasks), apiTaskToDb (synced status). TypeScript компилируется."
+    },
+    "L2/03-create-sync-engine": {
+      "title": "Создать syncEngine.ts (initialSync, push, pull)",
+      "layer": 2,
+      "effort": "L",
+      "priority_score": 3.5,
+      "depends_on": [
+        "L1/01",
+        "L2/01",
+        "L2/02"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:00:00Z",
+      "completed_output": "Создан frontend/src/db/syncEngine.ts с initialSync (5 ресурсов с пагинацией), push (дедупликация мутаций, error handling 401/404/422/500/network), pull (merge через mergeRecord). QuotaExceededError обработан. TypeScript компилируется."
+    },
+    "L3/01-create-db-hooks": {
+      "title": "Создать db/hooks.ts (useDexieQuery, useOnlineStatus)",
+      "layer": 3,
+      "effort": "XS",
+      "priority_score": 11.0,
+      "depends_on": [
+        "L1/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:45:00Z",
+      "completed_output": "Создан frontend/src/db/hooks.ts с useDexieQuery (wraps useLiveQuery, возвращает {data, isLoading}) и useOnlineStatus (window online/offline listeners)."
+    },
+    "L3/02-rewrite-use-tasks": {
+      "title": "Переписать useTasks на useDexieQuery + локальный CRUD",
+      "layer": 3,
+      "effort": "M",
+      "priority_score": 4.33,
+      "depends_on": [
+        "L1/01",
+        "L2/02",
+        "L3/01",
+        "L0/02"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:30:00Z",
+      "completed_output": "useTasks + useTask переписаны на Dexie: useDexieQuery + activeTasks + dbTaskToUi, CRUD через db.tasks + db.mutations, soft-delete. useTask тоже переписан. Фильтрация на клиенте. TypeScript компилируется."
+    },
+    "L3/03-rewrite-use-task": {
+      "title": "Переписать useTask (одна задача) на useDexieQuery + joins",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L3/02"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:30:00Z",
+      "completed_output": "useTask переписан вместе с useTasks в рамках L3/02. Использует useDexieQuery + dbTaskToUi."
+    },
+    "L3/04-rewrite-use-gtd-counts": {
+      "title": "Переписать useGtdCounts на useLiveQuery",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.5,
+      "depends_on": [
+        "L1/01",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:10:00Z",
+      "completed_output": "useGtdCounts переписан на useLiveQuery. Счётчики из Dexie по [userId+gtdStatus]. notifyTasksChanged — заглушка, refetch — no-op. TypeScript компилируется."
+    },
+    "L3/05-rewrite-use-subtasks": {
+      "title": "Переписать useSubtasks на useLiveQuery",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.0,
+      "depends_on": [
+        "L1/01",
+        "L2/02",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:40:00Z",
+      "completed_output": "useSubtasks переписан на Dexie: useDexieQuery + dbTaskToUi, CRUD через db.tasks + db.mutations. TypeScript компилируется."
+    },
+    "L3/06-adapt-notification-provider": {
+      "title": "Адаптировать NotificationProvider — убрать useQueryClient",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L3/02"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:35:00Z",
+      "completed_output": "Убраны useQueryClient и taskKeys из NotificationProvider. queryClient.invalidateQueries удалён. TypeScript компилируется."
+    },
+    "L3/07-adapt-trash": {
+      "title": "Адаптировать Trash.tsx — убрать useQueryClient, использовать Dexie soft-delete",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.0,
+      "depends_on": [
+        "L3/02",
+        "L3/04"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:45:00Z",
+      "completed_output": "Trash.tsx переписан: убраны useQueryClient, httpClient, taskKeys, notifyTasksChanged. Очистка через db.tasks + db.mutations. TypeScript компилируется."
+    },
+    "L3/08-create-sync-provider": {
+      "title": "Создать SyncProvider.tsx (оркестратор синхронизации)",
+      "layer": 3,
+      "effort": "M",
+      "priority_score": 4.33,
+      "depends_on": [
+        "L2/03",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:20:00Z",
+      "completed_output": "Создан SyncProvider.tsx: periodic pull каждые 15 мин, push при mount и online, SyncContext с isSyncing/pendingCount/lastSyncAt/isOnline, useSyncStatus hook. TypeScript компилируется."
+    },
+    "L3/09-add-sync-provider-to-main": {
+      "title": "Добавить SyncProvider в main.tsx",
+      "layer": 3,
+      "effort": "XS",
+      "priority_score": 11.0,
+      "depends_on": [
+        "L3/08"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:25:00Z",
+      "completed_output": "SyncProvider добавлен в main.tsx между AuthInitializer и NotificationProvider. TypeScript компилируется."
+    },
+    "L3/10-update-service-worker": {
+      "title": "Обновить Service Worker — убрать api-cache для /api/*",
+      "layer": 3,
+      "effort": "XS",
+      "priority_score": 8.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T09:30:00Z",
+      "completed_output": "Убран runtimeCaching entry для /api/* из vite.config.ts. Оставлен image-cache (CacheFirst)."
+    },
+    "L3/11-rewrite-use-contexts": {
+      "title": "Переписать useContexts на useDexieQuery + CRUD",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.5,
+      "depends_on": [
+        "L1/01",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:15:00Z",
+      "completed_output": "useContexts переписан на Dexie: useDexieQuery + activeTable, CRUD через db.contexts + db.mutations, soft-delete. contextKeys — заглушка. TypeScript компилируется."
+    },
+    "L3/12-rewrite-use-areas": {
+      "title": "Переписать useAreas на useDexieQuery + CRUD",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.5,
+      "depends_on": [
+        "L1/01",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:16:00Z",
+      "completed_output": "useAreas переписан на Dexie: useDexieQuery + activeTable, CRUD через db.areas + db.mutations, soft-delete. areaKeys — заглушка. TypeScript компилируется."
+    },
+    "L3/13-rewrite-use-tags": {
+      "title": "Переписать useTags на useDexieQuery + CRUD",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.5,
+      "depends_on": [
+        "L1/01",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:17:00Z",
+      "completed_output": "useTags переписан на Dexie: useDexieQuery + activeTable, CRUD через db.tags + db.mutations, soft-delete. tagKeys — заглушка. TypeScript компилируется."
+    },
+    "L3/14-rewrite-use-projects": {
+      "title": "Переписать useProjects на useDexieQuery + CRUD",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L1/01",
+        "L3/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:00:00Z",
+      "completed_output": "Переписан useProjects.ts на Dexie: useDexieQuery + activeTable, CRUD через db.projects + db.mutations, soft-delete. Интерфейс сохранён. TypeScript компилируется."
+    },
+    "L3/15-extend-sync-engine-dictionaries": {
+      "title": "Расширить syncEngine push/pull для справочников",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L2/03",
+        "L3/11",
+        "L3/12",
+        "L3/13",
+        "L3/14"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:12:00Z",
+      "completed_output": "Уже реализовано в L2/03 — syncEngine обрабатывает все 5 ресурсов (tasks, projects, areas, contexts, tags) в initialSync, pull и push."
+    },
+    "L3/16-verify-task-edit-modal": {
+      "title": "Проверить интеграцию TaskEditModal + TaskFilterPanel",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 4.0,
+      "depends_on": [
+        "L3/02",
+        "L3/11",
+        "L3/12",
+        "L3/13",
+        "L3/14"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T21:27:00Z",
+      "completed_output": "Интеграция проверена: TaskEditModal и TaskFilterPanel используют переписанные хуки (useTasks, useContexts, useAreas, useTags, useProjects). Нет RQ импортов. tsc --noEmit OK."
+    },
+    "L3/17-rewrite-use-recurrences": {
+      "title": "Переписать useRecurrences (оставить httpClient, серверная логика)",
+      "layer": 3,
+      "effort": "XS",
+      "priority_score": 5.0,
+      "depends_on": [],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T10:06:00Z",
+      "completed_output": "useRecurrences.ts уже не содержит React Query — использует useState + httpClient.get/post. Изменений не потребовалось."
+    },
+    "L3/18-create-sync-status": {
+      "title": "Создать SyncStatus UI компонент",
+      "layer": 3,
+      "effort": "S",
+      "priority_score": 3.5,
+      "depends_on": [
+        "L3/08"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-19T10:00:00Z",
+      "completed_output": "Создан frontend/src/components/SyncStatus.tsx с 4 состояниями (offline/syncing/pending/online), SVG-иконки, Tailwind dark theme, compact дизайн. tsc --noEmit OK."
+    },
+    "L5/01-create-init-sync": {
+      "title": "Создать init.ts (initialSync при логине)",
+      "layer": 5,
+      "effort": "S",
+      "priority_score": 6.5,
+      "depends_on": [
+        "L2/03"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:05:00Z",
+      "completed_output": "Создан frontend/src/db/init.ts с performInitialSync (retry ×3 с exponential backoff) и clearLocalData (очистка всех таблиц по userId). TypeScript компилируется."
+    },
+    "L5/02-handle-logout-cleanup": {
+      "title": "Обработка logout — очистка Dexie по userId",
+      "layer": 5,
+      "effort": "XS",
+      "priority_score": 7.0,
+      "depends_on": [
+        "L5/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:10:00Z",
+      "completed_output": "authStore.logout() теперь вызывает clearLocalData(userId) перед очисткой стора. TypeScript компилируется."
+    },
+    "L7/01-test-conflict-resolution": {
+      "title": "Unit-тесты для conflictResolution.ts",
+      "layer": 7,
+      "effort": "S",
+      "priority_score": 7.0,
+      "depends_on": [
+        "L2/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": true,
+      "completed_at": "2026-04-18T21:03:45Z",
+      "completed_output": "Создан frontend/src/db/__tests__/conflictResolution.test.ts с 7 тестами. Все проходят: 5 mergeRecord + 2 shouldSkipMerge."
+    },
+    "L7/02-test-mappers": {
+      "title": "Unit-тесты для mappers.ts",
+      "layer": 7,
+      "effort": "S",
+      "priority_score": 7.0,
+      "depends_on": [
+        "L2/02"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": true,
+      "completed_at": "2026-04-18T21:08:42Z",
+      "completed_output": "Создан frontend/src/db/__tests__/mappers.test.ts с 11 тестами. Все проходят: 4 apiTaskToDb + 7 dbTaskToUi."
+    },
+    "L7/03-update-existing-tests": {
+      "title": "Обновить существующие тесты — заменить RQ mocks на Dexie mocks",
+      "layer": 7,
+      "effort": "M",
+      "priority_score": 3.67,
+      "depends_on": [
+        "L3/02",
+        "L3/05",
+        "L3/14"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": true,
+      "completed_at": "2026-04-18T21:35:00Z",
+      "completed_output": "Обновлены тесты: TaskEditModal (18), Login (12), Register (18). Добавлены reminder_time/reminder_fired в mockTask, мок useOnlineStatus, фиксы timezone redirect. Все 257 тестов в 15 файлах проходят."
+    },
+    "L8/01-remove-query-client-provider": {
+      "title": "Убрать QueryClientProvider + ReactQueryDevtools из main.tsx",
+      "layer": 8,
+      "effort": "XS",
+      "priority_score": 8.0,
+      "depends_on": [
+        "L3/02",
+        "L3/11",
+        "L3/12",
+        "L3/13",
+        "L3/14",
+        "L3/17"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T11:30:00Z",
+      "completed_output": "Убраны QueryClientProvider, ReactQueryDevtools, queryClient из main.tsx. tsc --noEmit проходит."
+    },
+    "L8/02-delete-query-client": {
+      "title": "Удалить queryClient.ts",
+      "layer": 8,
+      "effort": "XS",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L8/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T21:20:30Z",
+      "completed_output": "Удалён frontend/src/lib/queryClient.ts. Нет импортов в других файлах. tsc --noEmit OK."
+    },
+    "L8/03-simplify-http-client": {
+      "title": "Упростить httpClient.ts — убрать offline queue, GET cache, toasts",
+      "layer": 8,
+      "effort": "S",
+      "priority_score": 5.5,
+      "depends_on": [
+        "L8/01"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T21:12:32Z",
+      "completed_output": "httpClient.ts упрощён: убраны OfflineQueueError, setQueueMutationFn, queueMutationFn, getCache/setCache, offline/online toast логика, BACKEND_RECOVERED/ONLINE_RECONNECT handlers. Оставлены ApiError, JWT auth, 401 refresh, HTTP методы. 26 тестов проходят, tsc --noEmit OK."
+    },
+    "L8/04-delete-unused-code": {
+      "title": "Удалить неиспользуемый код",
+      "layer": 8,
+      "effort": "S",
+      "priority_score": 8.0,
+      "depends_on": [
+        "L3/02",
+        "L3/06",
+        "L3/07",
+        "L8/03"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T21:19:00Z",
+      "completed_output": "Удалены: useOfflineQueue.ts, useLocalTaskChanges.ts, localTaskChanges.ts, indexedDB.ts, sseSyncManager.ts, syncStore.ts, useSyncSSE.ts, SyncIndicator.tsx, sseManager.test.ts. TaskEditModal и StatusLight переписаны на useOnlineStatus/useSyncStatus. tsc --noEmit OK."
+    },
+    "L8/05-remove-rq-packages": {
+      "title": "Удалить пакеты React Query и idb из package.json",
+      "layer": 8,
+      "effort": "XS",
+      "priority_score": 7.0,
+      "depends_on": [
+        "L8/01",
+        "L8/02",
+        "L8/03",
+        "L8/04"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T21:22:00Z",
+      "completed_output": "Удалены: @tanstack/react-query, @tanstack/react-query-devtools, @tanstack/react-query-persist-client, @tanstack/query-async-storage-persister, @tanstack/query-sync-storage-persister, idb. tsc --noEmit OK."
+    },
+    "L8/06-update-features-md": {
+      "title": "Обновить docs/features.md",
+      "layer": 8,
+      "effort": "S",
+      "priority_score": 5.0,
+      "depends_on": [
+        "L8/05"
+      ],
+      "status": "done",
+      "folder": "done",
+      "has_test": false,
+      "completed_at": "2026-04-18T21:25:00Z",
+      "completed_output": "Обновлён docs/features.md: добавлена секция Local-first офлайн-режим на Dexie.js, обновлены секции StatusLight, Frontend архитектура, история от 18.04.2026."
+    }
+  }
+}

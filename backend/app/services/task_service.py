@@ -123,7 +123,11 @@ class TaskService:
         return list(result.scalars().all())
 
     async def create_task(self, user_id: UUID, data: TaskCreate) -> Task:
+        import uuid as uuid_mod
+
+        task_id = data.id if data.id else str(uuid_mod.uuid4())
         task = Task(
+            id=task_id,
             user_id=str(user_id),
             title=data.title,
             description=data.description,

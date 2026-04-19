@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError } from '../api/httpClient'
+import { v4 as uuidv4 } from 'uuid'
+
+import { db, activeTable } from '../db/database'
+import { useDexieQuery } from '../db/hooks'
+import { useAuthStore } from '../stores/authStore'
 
 export interface Area {
   id: string
@@ -40,88 +43,99 @@ export const areaKeys = {
 }
 
 export function useAreas(): UseAreasReturn {
-  const queryClient = useQueryClient()
+  const user = useAuthStore(s => s.user)
 
-  const { data: areas = [], isLoading, error, refetch } = useQuery({
-    queryKey: areaKeys.lists(),
-    queryFn: async () => {
-      const response = await httpClient.get<{ items: Area[]; total: number }>('/areas')
-      return response.data.items
+  const { data: areas = [], isLoading } = useDexieQuery(
+    async () => {
+      if (!user) return []
+      const records = await activeTable(db.areas, user.id).toArray()
+      return records.map(a => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        color: a.color,
+        user_id: a.userId,
+        created_at: a.createdAt,
+        updated_at: a.updatedAt,
+      }))
     },
-    staleTime: 1000 * 60 * 10,
-  })
-
-  const addAreaMutation = useMutation({
-    mutationFn: async (data: CreateArea) => {
-      const response = await httpClient.post<Area>('/areas', data)
-      return response.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: areaKeys.lists() })
-    },
-  })
-
-  const updateAreaMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateArea }) => {
-      const response = await httpClient.put<Area>(`/areas/${id}`, data)
-      return response.data
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: areaKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: areaKeys.lists() })
-    },
-  })
-
-  const deleteAreaMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await httpClient.delete(`/areas/${id}`)
-      return id
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: areaKeys.lists() })
-    },
-  })
+    [user?.id]
+  )
 
   const addArea = async (data: CreateArea) => {
-    try {
-      await addAreaMutation.mutateAsync(data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось создать область')
-    }
+    if (!user) return
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    await db.areas.add({
+      id,
+      userId: user.id,
+      name: data.name,
+      description: data.description ?? null,
+      color: data.color ?? null,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'local',
+      _lastSyncedAt: null,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'area',
+      entityId: id,
+      action: 'create',
+      payload: JSON.stringify({ ...data, id }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const updateArea = async (id: string, data: UpdateArea) => {
-    try {
-      await updateAreaMutation.mutateAsync({ id, data })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось обновить область')
-    }
+    if (!user) return
+    const existing = await db.areas.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    const updates: Record<string, unknown> = { updatedAt: now, _syncStatus: 'modified' as const }
+    if (data.name !== undefined) updates.name = data.name
+    if (data.description !== undefined) updates.description = data.description
+    if (data.color !== undefined) updates.color = data.color
+    await db.areas.update(id, updates)
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'area',
+      entityId: id,
+      action: 'update',
+      payload: JSON.stringify(data),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const deleteArea = async (id: string) => {
-    try {
-      await deleteAreaMutation.mutateAsync(id)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось удалить область')
-    }
+    if (!user) return
+    await db.areas.update(id, {
+      _syncStatus: 'deleted',
+      updatedAt: new Date().toISOString(),
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'area',
+      entityId: id,
+      action: 'delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   return {
     areas,
     isLoading,
-    error: error instanceof Error ? error.message : null,
+    error: null,
     addArea,
     updateArea,
     deleteArea,
-    refetch,
+    refetch: async () => {},
   }
 }

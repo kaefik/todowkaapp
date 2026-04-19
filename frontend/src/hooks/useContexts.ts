@@ -1,5 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError } from '../api/httpClient'
+import { v4 as uuidv4 } from 'uuid'
+
+import { db, activeTable } from '../db/database'
+import { useDexieQuery } from '../db/hooks'
+import { useAuthStore } from '../stores/authStore'
 
 export interface Context {
   id: string
@@ -40,88 +43,99 @@ export const contextKeys = {
 }
 
 export function useContexts(): UseContextsReturn {
-  const queryClient = useQueryClient()
+  const user = useAuthStore(s => s.user)
 
-  const { data: contexts = [], isLoading, error, refetch } = useQuery({
-    queryKey: contextKeys.lists(),
-    queryFn: async () => {
-      const response = await httpClient.get<{ items: Context[]; total: number }>('/contexts')
-      return response.data.items
+  const { data: contexts = [], isLoading } = useDexieQuery(
+    async () => {
+      if (!user) return []
+      const records = await activeTable(db.contexts, user.id).toArray()
+      return records.map(c => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        icon: c.icon,
+        user_id: c.userId,
+        created_at: c.createdAt,
+        updated_at: c.updatedAt,
+      }))
     },
-    staleTime: 1000 * 60 * 10,
-  })
-
-  const addContextMutation = useMutation({
-    mutationFn: async (data: CreateContext) => {
-      const response = await httpClient.post<Context>('/contexts', data)
-      return response.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: contextKeys.lists() })
-    },
-  })
-
-  const updateContextMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateContext }) => {
-      const response = await httpClient.put<Context>(`/contexts/${id}`, data)
-      return response.data
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: contextKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: contextKeys.lists() })
-    },
-  })
-
-  const deleteContextMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await httpClient.delete(`/contexts/${id}`)
-      return id
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: contextKeys.lists() })
-    },
-  })
+    [user?.id]
+  )
 
   const addContext = async (data: CreateContext) => {
-    try {
-      await addContextMutation.mutateAsync(data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось создать контекст')
-    }
+    if (!user) return
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    await db.contexts.add({
+      id,
+      userId: user.id,
+      name: data.name,
+      color: data.color ?? null,
+      icon: data.icon ?? null,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'local',
+      _lastSyncedAt: null,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'context',
+      entityId: id,
+      action: 'create',
+      payload: JSON.stringify({ ...data, id }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const updateContext = async (id: string, data: UpdateContext) => {
-    try {
-      await updateContextMutation.mutateAsync({ id, data })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось обновить контекст')
-    }
+    if (!user) return
+    const existing = await db.contexts.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    const updates: Record<string, unknown> = { updatedAt: now, _syncStatus: 'modified' as const }
+    if (data.name !== undefined) updates.name = data.name
+    if (data.color !== undefined) updates.color = data.color
+    if (data.icon !== undefined) updates.icon = data.icon
+    await db.contexts.update(id, updates)
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'context',
+      entityId: id,
+      action: 'update',
+      payload: JSON.stringify(data),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const deleteContext = async (id: string) => {
-    try {
-      await deleteContextMutation.mutateAsync(id)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Не удалось удалить контекст')
-    }
+    if (!user) return
+    await db.contexts.update(id, {
+      _syncStatus: 'deleted',
+      updatedAt: new Date().toISOString(),
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'context',
+      entityId: id,
+      action: 'delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   return {
     contexts,
     isLoading,
-    error: error instanceof Error ? error.message : null,
+    error: null,
     addContext,
     updateContext,
     deleteContext,
-    refetch,
+    refetch: async () => {},
   }
 }

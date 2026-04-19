@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useOfflineQueue } from '../hooks/useOfflineQueue'
+import { useSyncStatus } from './SyncProvider'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -116,7 +116,7 @@ function useBackendAlive(): boolean | null {
 }
 
 function useConnectionStatus(): Status {
-  const { isOnline, queueSize, isSyncing } = useOfflineQueue()
+  const { isOnline, pendingCount, isSyncing } = useSyncStatus()
   const sseState = useNotificationStore((s) => s.sseState)
   const backendAlive = useBackendAlive()
 
@@ -124,7 +124,7 @@ function useConnectionStatus(): Status {
   if (backendAlive === null) return 'loading'
   if (!backendAlive) return 'error'
   if (isSyncing) return 'syncing'
-  if (queueSize > 0) return 'queued'
+  if (pendingCount > 0) return 'queued'
   if (sseState === 'error') return 'syncing'
   return 'online'
 }

@@ -53,9 +53,12 @@ class TagService:
             )
 
     async def create_tag(self, user_id: UUID, data: TagCreate) -> Tag:
+        import uuid as uuid_mod
+
         await self._check_name_unique(user_id, data.name)
 
         tag = Tag(
+            id=data.id if data.id else str(uuid_mod.uuid4()),
             user_id=str(user_id),
             name=data.name,
             color=data.color,

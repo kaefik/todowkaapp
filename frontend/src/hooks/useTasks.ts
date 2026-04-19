@@ -1,15 +1,11 @@
-import { useCallback, useState, useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError, OfflineQueueError } from '../api/httpClient'
+import { useCallback } from 'react'
+import { v4 as uuidv4 } from 'uuid'
+
+import { db, activeTasks } from '../db/database'
+import { dbTaskToUi, type UiTask } from '../db/mappers'
+import { useDexieQuery } from '../db/hooks'
+import { useAuthStore } from '../stores/authStore'
 import type { Tag } from './useTags'
-import { tagKeys } from './useTags'
-import { notifyTasksChanged } from './useGtdCounts'
-import {
-  setLocalTaskChange,
-  deleteLocalTaskChange,
-  mergeTaskWithLocalChanges,
-  getLocalTaskChange,
-} from '../lib/localTaskChanges'
 
 export type GtdStatus = 'inbox' | 'next' | 'waiting' | 'someday' | 'completed' | 'trash'
 
@@ -41,36 +37,6 @@ export interface Task {
   title: string
   description: string | null
   completed: boolean
-  gtd_status: GtdStatus
-  context_id: string | null
-  area_id: string | null
-  project_id: string | null
-  project: ProjectBrief | null
-  context: ContextBrief | null
-  parent_task_id: string | null
-  position: number
-  due_date: string | null
-  notes: string | null
-  recurrence_type: string | null
-  recurrence_config: RecurrenceConfig | null
-  recurrence_end_date: string | null
-  reminder_time: string | null
-  reminder_offsets: number[] | null
-  reminder_fired: boolean
-  is_recurring: boolean
-  tags: Tag[]
-  subtasks_count: number
-  subtasks_completed: number
-  user_id: string
-  created_at: string
-  updated_at: string
-}
-
-interface ApiTask {
-  id: string
-  title: string
-  description: string | null
-  is_completed: boolean
   gtd_status: GtdStatus
   context_id: string | null
   area_id: string | null
@@ -151,28 +117,6 @@ interface UseTasksReturn {
   refetch: () => Promise<unknown>
 }
 
-function mapTask(t: ApiTask): Task {
-  return { ...t, completed: t.is_completed }
-}
-
-function buildQueryString(filters?: TaskFilters): string {
-  if (!filters) return ''
-  const params = new URLSearchParams()
-  if (filters.gtd_status) params.set('gtd_status', filters.gtd_status)
-  if (filters.context_id) params.set('context_id', filters.context_id)
-  if (filters.area_id) params.set('area_id', filters.area_id)
-  if (filters.project_id) params.set('project_id', filters.project_id)
-  if (filters.tag_id) params.set('tag_id', filters.tag_id)
-  if (filters.is_completed !== undefined) params.set('is_completed', String(filters.is_completed))
-  if (filters.search) params.set('search', filters.search)
-  if (filters.sort_by) params.set('sort_by', filters.sort_by)
-  if (filters.sort_order) params.set('sort_order', filters.sort_order)
-  if (filters.due_date_from) params.set('due_date_from', filters.due_date_from)
-  if (filters.due_date_to) params.set('due_date_to', filters.due_date_to)
-  const qs = params.toString()
-  return qs ? `?${qs}` : ''
-}
-
 export const taskKeys = {
   all: ['tasks'] as const,
   lists: () => [...taskKeys.all, 'list'] as const,
@@ -181,16 +125,52 @@ export const taskKeys = {
   detail: (id: string) => [...taskKeys.details(), id] as const,
 }
 
-function buildOptimisticPatch(data: UpdateTask, allTags: Tag[]) {
-  const patch: Record<string, unknown> = { ...data }
-  if (data.tag_ids) {
-    const tagMap = new Map(allTags.map(t => [t.id, t]))
-    patch.tags = data.tag_ids
-      .map(id => tagMap.get(id))
-      .filter((t): t is Tag => !!t)
-    delete patch.tag_ids
+function applyFilters(records: UiTask[], filters?: TaskFilters): UiTask[] {
+  let result = records
+  if (filters?.gtd_status) {
+    result = result.filter(t => t.gtd_status === filters.gtd_status)
   }
-  return patch
+  if (filters?.context_id) {
+    result = result.filter(t => t.context_id === filters.context_id)
+  }
+  if (filters?.area_id) {
+    result = result.filter(t => t.area_id === filters.area_id)
+  }
+  if (filters?.project_id) {
+    result = result.filter(t => t.project_id === filters.project_id)
+  }
+  if (filters?.tag_id) {
+    result = result.filter(t => t.tags.some(tag => tag.id === filters.tag_id))
+  }
+  if (filters?.is_completed !== undefined) {
+    result = result.filter(t => t.completed === filters.is_completed)
+  }
+  if (filters?.search) {
+    const q = filters.search.toLowerCase()
+    result = result.filter(t => t.title.toLowerCase().includes(q))
+  }
+  if (filters?.due_date_from) {
+    result = result.filter(t => t.due_date !== null && t.due_date >= filters.due_date_from!)
+  }
+  if (filters?.due_date_to) {
+    result = result.filter(t => t.due_date !== null && t.due_date <= filters.due_date_to!)
+  }
+  if (filters?.sort_by) {
+    const dir = filters.sort_order === 'desc' ? -1 : 1
+    result.sort((a, b) => {
+      const aVal = a[filters.sort_by as keyof UiTask]
+      const bVal = b[filters.sort_by as keyof UiTask]
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return 1
+      if (bVal == null) return -1
+      if (aVal < bVal) return -1 * dir
+      if (aVal > bVal) return 1 * dir
+      return 0
+    })
+  } else {
+    result.sort((a, b) => a.position - b.position)
+  }
+  return result
 }
 
 interface UseTasksOptions {
@@ -198,289 +178,204 @@ interface UseTasksOptions {
   refetchOnMount?: boolean | 'always'
 }
 
-export function useTasks(filters?: TaskFilters, options?: UseTasksOptions): UseTasksReturn {
-  const queryClient = useQueryClient()
+export function useTasks(filters?: TaskFilters, _options?: UseTasksOptions): UseTasksReturn {
+  const user = useAuthStore(s => s.user)
 
-  const qs = buildQueryString(filters)
-
-  const { data: tasks = [], isLoading, error, refetch } = useQuery({
-    queryKey: taskKeys.list(filters || {}),
-    queryFn: async () => {
-      const response = await httpClient.get<{ items: ApiTask[]; total: number }>(`/tasks${qs}`)
-      return response.data.items.map(mapTask)
+  const { data: rawTasks = [], isLoading } = useDexieQuery(
+    async () => {
+      if (!user) return []
+      const dbRecords = await activeTasks(user.id).toArray()
+      const uiTasks = await Promise.all(dbRecords.map(dbTaskToUi))
+      return applyFilters(uiTasks, filters)
     },
-    staleTime: options?.staleTime ?? 1000 * 60 * 2,
-    refetchOnMount: options?.refetchOnMount,
-  })
+    [user?.id]
+  )
 
-  const addTaskMutation = useMutation({
-    mutationFn: async (data: CreateTask) => {
-      const response = await httpClient.post<ApiTask>('/tasks', data)
-      return mapTask(response.data)
-    },
-    onSuccess: (newTask) => {
-      const listQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists(),
-      })
-      for (const [key] of listQueries) {
-        queryClient.setQueryData<Task[]>(key, (old) => {
-          if (!old) return [newTask]
-          return [newTask, ...old]
-        })
-      }
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
-      notifyTasksChanged()
-    },
-  })
-
-  const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: UpdateTask }) => {
-      const updateData: Record<string, unknown> = {}
-      if (data.title !== undefined) updateData.title = data.title
-      if (data.description !== undefined) updateData.description = data.description
-      if (data.completed !== undefined) updateData.is_completed = data.completed
-      if (data.gtd_status !== undefined) updateData.gtd_status = data.gtd_status
-      if (data.context_id !== undefined) updateData.context_id = data.context_id
-      if (data.area_id !== undefined) updateData.area_id = data.area_id
-      if (data.project_id !== undefined) updateData.project_id = data.project_id
-      if (data.due_date !== undefined) updateData.due_date = data.due_date
-      if (data.notes !== undefined) updateData.notes = data.notes
-      if (data.tag_ids !== undefined) updateData.tag_ids = data.tag_ids
-      if (data.recurrence_type !== undefined) updateData.recurrence_type = data.recurrence_type
-      if (data.recurrence_config !== undefined) updateData.recurrence_config = data.recurrence_config
-      if (data.recurrence_end_date !== undefined) updateData.recurrence_end_date = data.recurrence_end_date
-      if (data.reminder_time !== undefined) updateData.reminder_time = data.reminder_time
-      if (data.reminder_offsets !== undefined) updateData.reminder_offsets = data.reminder_offsets
-
-      const response = await httpClient.put<ApiTask>(`/tasks/${id}`, updateData)
-      return mapTask(response.data)
-    },
-    onMutate: async ({ id, data }) => {
-      console.log('[updateTaskMutation] Starting update for task:', id, 'with data:', data)
-      
-      await queryClient.cancelQueries({ queryKey: taskKeys.detail(id) })
-      await queryClient.cancelQueries({ queryKey: taskKeys.lists() })
-
-      const previousTask = queryClient.getQueryData<Task>(taskKeys.detail(id))
-      const previousListQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists(),
-      })
-
-      const allTags = queryClient.getQueryData<Tag[]>(tagKeys.lists()) ?? []
-      const patch = buildOptimisticPatch(data, allTags)
-
-      queryClient.setQueryData<Task>(taskKeys.detail(id), (old) => {
-        if (!old) return old
-        return { ...old, ...patch }
-      })
-
-      const listQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists(),
-      })
-      for (const [key] of listQueries) {
-        queryClient.setQueryData<Task[]>(key, (old) => {
-          if (!old) return old
-          return old.map((t) => (t.id === id ? { ...t, ...patch } : t))
-        })
-      }
-
-      console.log('[updateTaskMutation] Saving local changes to IndexedDB...')
-      await setLocalTaskChange(id, data)
-      console.log('[updateTaskMutation] Local changes saved to IndexedDB')
-
-      return { previousTask, previousListQueries }
-    },
-    onError: (err, { id }, context) => {
-      console.error('[updateTaskMutation] Update failed:', err)
-      
-      if (err instanceof OfflineQueueError) {
-        console.log('[updateTaskMutation] Offline queue error, keeping local changes for task:', id)
-        return
-      }
-
-      console.error('[updateTaskMutation] Update failed, but keeping local changes in IndexedDB:', err)
-      
-      if (context?.previousTask) {
-        queryClient.setQueryData(taskKeys.detail(id), context.previousTask)
-      }
-      if (context?.previousListQueries) {
-        for (const [key, data] of context.previousListQueries) {
-          queryClient.setQueryData(key, data)
-        }
-      }
-    },
-    onSuccess: (updatedTask, { id }) => {
-      console.log('[updateTaskMutation] Update successful, clearing local changes for task:', id)
-      deleteLocalTaskChange(id).catch(console.error)
-
-      queryClient.setQueryData<Task>(taskKeys.detail(id), updatedTask)
-
-      const listQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: taskKeys.lists(),
-      })
-      for (const [key] of listQueries) {
-        queryClient.setQueryData<Task[]>(key, (old) => {
-          if (!old) return old
-          return old.map((t) => (t.id === id ? updatedTask : t))
-        })
-      }
-
-      notifyTasksChanged()
-    },
-  })
-
-  const toggleTaskMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await httpClient.patch<ApiTask>(`/tasks/${id}/toggle`)
-      return mapTask(response.data)
-    },
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
-      notifyTasksChanged()
-    },
-  })
-
-  const moveTaskMutation = useMutation({
-    mutationFn: async ({ id, gtd_status }: { id: string; gtd_status: GtdStatus }) => {
-      const response = await httpClient.patch<ApiTask>(`/tasks/${id}/move`, { gtd_status })
-      return mapTask(response.data)
-    },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.detail(id) })
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
-      notifyTasksChanged()
-    },
-  })
-
-  const deleteTaskMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await httpClient.delete(`/tasks/${id}`)
-      return id
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
-      notifyTasksChanged()
-    },
-  })
+  const tasks = rawTasks as Task[]
 
   const addTask = async (data: CreateTask) => {
-    try {
-      await addTaskMutation.mutateAsync(data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Failed to add task')
-    }
+    if (!user) return
+    const id = uuidv4()
+    const now = new Date().toISOString()
+    await db.tasks.add({
+      id,
+      userId: user.id,
+      title: data.title,
+      description: data.description ?? null,
+      isCompleted: false,
+      completedAt: null,
+      gtdStatus: data.gtd_status ?? 'inbox',
+      contextId: data.context_id ?? null,
+      areaId: data.area_id ?? null,
+      projectId: data.project_id ?? null,
+      parentTaskId: null,
+      position: 0,
+      dueDate: null,
+      notes: null,
+      recurrenceType: null,
+      recurrenceConfig: null,
+      recurrenceEndDate: null,
+      reminderTime: null,
+      reminderOffsets: null,
+      reminderFired: false,
+      isRecurring: false,
+      tagIds: data.tag_ids ?? [],
+      trashedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      _syncStatus: 'local',
+      _lastSyncedAt: null,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'create',
+      payload: JSON.stringify({ ...data, id }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const updateTask = async (id: string, data: UpdateTask) => {
-    try {
-      await updateTaskMutation.mutateAsync({ id, data })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Failed to update task')
+    if (!user) return
+    const existing = await db.tasks.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    const updates: Record<string, unknown> = { updatedAt: now, _syncStatus: 'modified' as const }
+    if (data.title !== undefined) updates.title = data.title
+    if (data.description !== undefined) updates.description = data.description
+    if (data.completed !== undefined) {
+      updates.isCompleted = data.completed
+      updates.completedAt = data.completed ? now : null
     }
+    if (data.gtd_status !== undefined) updates.gtdStatus = data.gtd_status
+    if (data.context_id !== undefined) updates.contextId = data.context_id
+    if (data.area_id !== undefined) updates.areaId = data.area_id
+    if (data.project_id !== undefined) updates.projectId = data.project_id
+    if (data.due_date !== undefined) updates.dueDate = data.due_date
+    if (data.notes !== undefined) updates.notes = data.notes
+    if (data.tag_ids !== undefined) updates.tagIds = data.tag_ids
+    if (data.recurrence_type !== undefined) updates.recurrenceType = data.recurrence_type
+    if (data.recurrence_config !== undefined) {
+      updates.recurrenceConfig = data.recurrence_config ? JSON.stringify(data.recurrence_config) : null
+    }
+    if (data.recurrence_end_date !== undefined) updates.recurrenceEndDate = data.recurrence_end_date
+    if (data.reminder_time !== undefined) updates.reminderTime = data.reminder_time
+    if (data.reminder_offsets !== undefined) {
+      updates.reminderOffsets = data.reminder_offsets ? JSON.stringify(data.reminder_offsets) : null
+    }
+    await db.tasks.update(id, updates)
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'update',
+      payload: JSON.stringify(data),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const toggleTask = async (id: string) => {
-    try {
-      await toggleTaskMutation.mutateAsync(id)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Failed to toggle task')
-    }
+    if (!user) return
+    const existing = await db.tasks.get(id)
+    if (!existing) return
+    const now = new Date().toISOString()
+    await db.tasks.update(id, {
+      isCompleted: !existing.isCompleted,
+      completedAt: existing.isCompleted ? null : now,
+      updatedAt: now,
+      _syncStatus: 'modified',
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'toggle',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const moveTask = async (id: string, gtd_status: GtdStatus) => {
-    try {
-      await moveTaskMutation.mutateAsync({ id, gtd_status })
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Failed to move task')
-    }
+    if (!user) return
+    const now = new Date().toISOString()
+    await db.tasks.update(id, {
+      gtdStatus: gtd_status,
+      updatedAt: now,
+      _syncStatus: 'modified',
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'move',
+      payload: JSON.stringify({ gtd_status }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const deleteTask = async (id: string) => {
-    try {
-      await deleteTaskMutation.mutateAsync(id)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Failed to delete task')
-    }
+    if (!user) return
+    await db.tasks.update(id, {
+      _syncStatus: 'deleted',
+      updatedAt: new Date().toISOString(),
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
   }
 
   const fetchTask = useCallback(async (id: string): Promise<Task> => {
-    try {
-      const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
-      return mapTask(response.data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw err
-      }
-      throw new Error('Failed to fetch task')
-    }
+    const record = await db.tasks.get(id)
+    if (!record) throw new Error('Task not found')
+    return dbTaskToUi(record) as Promise<Task>
   }, [])
 
   return {
     tasks,
     isLoading,
-    error: error instanceof Error ? error.message : null,
+    error: null,
     addTask,
     updateTask,
     toggleTask,
     moveTask,
     deleteTask,
     fetchTask,
-    refetch,
+    refetch: async () => {},
   }
 }
 
 export function useTask(id: string) {
-  const queryClient = useQueryClient()
-  const query = useQuery({
-    queryKey: taskKeys.detail(id),
-    queryFn: async () => {
-      const response = await httpClient.get<ApiTask>(`/tasks/${id}`)
-      return mapTask(response.data)
+  const user = useAuthStore(s => s.user)
+
+  const { data, isLoading } = useDexieQuery(
+    async () => {
+      if (!user || !id) return null
+      const record = await db.tasks.get(id)
+      if (!record || record._syncStatus === 'deleted') return null
+      return dbTaskToUi(record)
     },
-    enabled: !!id,
-  })
-
-  const { data: task, ...rest } = query
-
-  const [mergedTask, setMergedTask] = useState<Task | null>(null)
-
-  useEffect(() => {
-    if (!task) {
-      setMergedTask(null)
-      return
-    }
-
-    getLocalTaskChange(id).then((localChange) => {
-      if (localChange) {
-        const allTags = queryClient.getQueryData<Tag[]>(tagKeys.lists()) ?? []
-        const merged = mergeTaskWithLocalChanges(task, localChange, allTags)
-        setMergedTask(merged)
-      } else {
-        setMergedTask(task)
-      }
-    }).catch(() => {
-      setMergedTask(task)
-    })
-  }, [task, id, queryClient])
+    [user?.id, id]
+  )
 
   return {
-    ...rest,
-    data: mergedTask,
+    data: data ?? null,
+    isLoading,
+    error: null,
   }
 }

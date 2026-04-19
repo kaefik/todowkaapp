@@ -1,34 +1,51 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { httpClient, ApiError } from '../api/httpClient'
-import { notifyTasksChanged, useGtdCounts } from '../hooks/useGtdCounts'
-import { taskKeys } from '../hooks/useTasks'
+import { db } from '../db/database'
+import { useGtdCounts } from '../hooks/useGtdCounts'
+import { useAuthStore } from '../stores/authStore'
+import { v4 as uuidv4 } from 'uuid'
 import { GtdTaskList } from './GtdTaskList'
 
 export function Trash() {
-  const queryClient = useQueryClient()
   const [isClearing, setIsClearing] = useState(false)
   const [clearError, setClearError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const { counts } = useGtdCounts()
+  const user = useAuthStore(s => s.user)
   const isEmpty = counts.trash === 0
 
   const handleClearTrash = async () => {
     if (!confirm('Удалить все задачи из корзины навсегда? Это действие нельзя отменить.')) return
+    if (!user) return
 
     setIsClearing(true)
     setClearError(null)
     try {
-      await httpClient.delete<{ deleted: number }>('/tasks/trash/clear')
-      await queryClient.invalidateQueries({ queryKey: taskKeys.lists() })
-      notifyTasksChanged()
-      setRefreshKey((k) => k + 1)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setClearError(err.message)
-      } else {
-        setClearError('Не удалось очистить корзину')
+      const trashTasks = await db.tasks
+        .where('[userId+gtdStatus]')
+        .equals([user.id, 'trash'])
+        .filter(t => t._syncStatus !== 'deleted')
+        .toArray()
+
+      const now = new Date().toISOString()
+      for (const task of trashTasks) {
+        await db.tasks.update(task.id, {
+          _syncStatus: 'deleted',
+          updatedAt: now,
+        })
+        await db.mutations.add({
+          id: uuidv4(),
+          entityType: 'task',
+          entityId: task.id,
+          action: 'delete',
+          payload: null,
+          timestamp: Date.now(),
+          retryCount: 0,
+          lastError: null,
+        })
       }
+      setRefreshKey((k) => k + 1)
+    } catch {
+      setClearError('Не удалось очистить корзину')
     } finally {
       setIsClearing(false)
     }

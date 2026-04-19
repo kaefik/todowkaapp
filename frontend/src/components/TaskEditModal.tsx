@@ -8,7 +8,7 @@ import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
-import { useOfflineQueue } from '../hooks/useOfflineQueue'
+import { useOnlineStatus } from '../db/hooks'
 import { RecurrenceEditor } from './RecurrenceEditor'
 import { ReminderEditor } from './ReminderEditor'
 
@@ -110,7 +110,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const { areas } = useAreas()
   const { tags } = useTags()
   const { projects } = useProjects()
-  const { isOnline } = useOfflineQueue()
+  const isOnline = useOnlineStatus()
   const [isMobile, setIsMobile] = useState(false)
   const [accordionStates, setAccordionStates] = useState({
     tags: true,

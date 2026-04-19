@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { clearLocalData, performInitialSync } from '../db/init'
 
 export interface User {
   id: string
@@ -64,6 +65,11 @@ export const useAuthStore = create<AuthState>()(
       })
       if (data.access_token) {
         localStorage.setItem('accessToken', data.access_token)
+      }
+      if (data.user?.id) {
+        performInitialSync(data.user.id).catch((err) => {
+          console.warn('[Auth] Initial sync after login failed:', err)
+        })
       }
     } catch (error) {
       set({
@@ -159,6 +165,11 @@ export const useAuthStore = create<AuthState>()(
       if (loginData.access_token) {
         localStorage.setItem('accessToken', loginData.access_token)
       }
+      if (loginData.user?.id) {
+        performInitialSync(loginData.user.id).catch((err) => {
+          console.warn('[Auth] Initial sync after registration failed:', err)
+        })
+      }
     } catch (error) {
       set({
         isLoading: false,
@@ -169,11 +180,17 @@ export const useAuthStore = create<AuthState>()(
   },
 
   logout: () => {
+    const userId = useAuthStore.getState().user?.id
     fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
     }).catch(() => {})
     localStorage.removeItem('accessToken')
+    if (userId) {
+      clearLocalData(userId).catch((err) => {
+        console.error('[Auth] Failed to clear local data:', err)
+      })
+    }
     set({
       user: null,
       accessToken: null,

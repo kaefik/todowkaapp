@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Table, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, Table, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base as Base
@@ -16,6 +16,9 @@ task_tags = Table(
 
 class Tag(Base):
     __tablename__ = 'tags'
+    __table_args__ = (
+        UniqueConstraint('user_id', 'name', name='uq_tags_user_name'),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id'), nullable=False)

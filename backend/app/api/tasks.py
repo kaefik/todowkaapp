@@ -2,6 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -142,7 +143,13 @@ async def update_task(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaskResponse:
     service = TaskService(db)
-    task = await service.update_task(user_id=current_user.id, task_id=task_id, data=data)
+    try:
+        task = await service.update_task(user_id=current_user.id, task_id=task_id, data=data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid reference: related resource not found",
+        ) from None
 
     if task is None:
         raise HTTPException(
