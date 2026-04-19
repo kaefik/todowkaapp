@@ -11,6 +11,12 @@ interface ReminderEditorProps {
   }) => void
 }
 
+function getDefaultReminderTime(): string {
+  const now = new Date()
+  now.setHours(now.getHours() + 1, 0, 0, 0)
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
 const REMINDER_PRESETS = [
   { value: 0, label: 'Во время' },
   { value: 5, label: 'За 5 минут' },
@@ -28,7 +34,7 @@ export function ReminderEditor({
 }: ReminderEditorProps) {
   const [enabled, setEnabled] = useState((!!reminderTime || !!reminderOffsets?.length) && !reminderFired)
   const [useTime, setUseTime] = useState(!!reminderTime)
-  const [time, setTime] = useState(reminderTime || '09:00')
+  const [time, setTime] = useState(reminderTime || getDefaultReminderTime())
   const [useOffsets, setUseOffsets] = useState(!!reminderOffsets?.length)
   const [selected, setSelected] = useState<number[]>(reminderOffsets || [])
 
@@ -45,7 +51,7 @@ export function ReminderEditor({
     const hasReminder = (!!reminderTime || !!reminderOffsets?.length) && !reminderFired
     setEnabled(hasReminder)
     setUseTime(!!reminderTime)
-    setTime(reminderTime || '09:00')
+    setTime(reminderTime || getDefaultReminderTime())
     setUseOffsets(!!reminderOffsets?.length)
     setSelected(reminderOffsets || [])
   }, [reminderTime, reminderOffsets, reminderFired])
