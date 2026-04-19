@@ -19,9 +19,11 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   useEffect(() => {
     if (isAuthenticated && user && user.id !== activeSSEUserId) {
-      activeSSEUserId = user.id
-      store.startSSE(user.id)
-      store.refetch()
+      if (navigator.onLine) {
+        activeSSEUserId = user.id
+        store.startSSE(user.id)
+        store.refetch()
+      }
     }
     if (!isAuthenticated && activeSSEUserId) {
       activeSSEUserId = null
@@ -33,6 +35,30 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (!mountedRef.current) return
+      const { isAuthenticated: authed, user: u } = useAuthStore.getState()
+      if (authed && u && !activeSSEUserId) {
+        activeSSEUserId = u.id
+        store.startSSE(u.id)
+        store.refetch()
+      }
+    }
+    const handleOffline = () => {
+      if (activeSSEUserId) {
+        store.stopSSE()
+        activeSSEUserId = null
+      }
+    }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
   }, [])
 

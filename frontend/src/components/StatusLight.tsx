@@ -22,6 +22,7 @@ class BackendHealthChecker {
   private listeners = new Set<Listener>()
   private checking = false
   private started = false
+  private failCount = 0
 
   private getHealthUrl(): string {
     const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -32,11 +33,21 @@ class BackendHealthChecker {
     return '/health'
   }
 
+  private getCheckInterval(): number {
+    if (this.failCount === 0) return 10000
+    return Math.min(10000 * Math.pow(2, this.failCount - 1), 120000)
+  }
+
+  private scheduleNext() {
+    if (this.intervalId) clearInterval(this.intervalId)
+    this.intervalId = setInterval(() => this.check(), this.getCheckInterval())
+  }
+
   start() {
     if (this.started) return
     this.started = true
     this.check()
-    this.intervalId = setInterval(() => this.check(), 10000)
+    this.scheduleNext()
   }
 
   stop() {
@@ -46,6 +57,7 @@ class BackendHealthChecker {
     }
     this.started = false
     this.alive = null
+    this.failCount = 0
     this.listeners.clear()
   }
 
@@ -64,6 +76,7 @@ class BackendHealthChecker {
   private async check() {
     if (this.checking) return
     if (!navigator.onLine) {
+      this.failCount++
       this.emit(false)
       return
     }
@@ -77,9 +90,17 @@ class BackendHealthChecker {
         signal: controller.signal,
       })
       clearTimeout(timeout)
+      if (res.ok) {
+        this.failCount = 0
+      } else {
+        this.failCount++
+      }
       this.emit(res.ok)
+      this.scheduleNext()
     } catch {
+      this.failCount++
       this.emit(false)
+      this.scheduleNext()
     } finally {
       this.checking = false
     }

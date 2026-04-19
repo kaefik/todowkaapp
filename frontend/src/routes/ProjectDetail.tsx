@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { httpClient, ApiError } from '../api/httpClient'
-import type { Project } from '../hooks/useProjects'
+import { useProjects } from '../hooks/useProjects'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { useTaskFilter } from '../hooks/useTaskFilter'
 import { TaskFilterPanel } from '../components/TaskFilterPanel'
@@ -23,31 +22,9 @@ function ProgressBar({ percent, color }: { percent: number; color: string | null
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [project, setProject] = useState<Project | null>(null)
-  const [isLoadingProject, setIsLoadingProject] = useState(true)
-  const [projectError, setProjectError] = useState<string | null>(null)
+  const { projects, isLoading: isLoadingProjects } = useProjects()
 
-  const fetchProject = useCallback(async () => {
-    if (!id) return
-    setIsLoadingProject(true)
-    setProjectError(null)
-    try {
-      const response = await httpClient.get<Project>(`/projects/${id}`)
-      setProject(response.data)
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setProjectError(err.message)
-      } else {
-        setProjectError('Не удалось загрузить проект')
-      }
-    } finally {
-      setIsLoadingProject(false)
-    }
-  }, [id])
-
-  useEffect(() => {
-    fetchProject()
-  }, [fetchProject])
+  const project = useMemo(() => projects.find(p => p.id === id) ?? null, [projects, id])
 
   const {
     filters,
@@ -74,33 +51,28 @@ export function ProjectDetail() {
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
     await addTask({ ...data, project_id: id })
-    fetchProject()
   }
 
   const handleDeleteTask = async (taskId: string) => {
     await moveTask(taskId, 'trash')
-    fetchProject()
     notifyTasksChanged()
   }
 
   const handleSaveTask = async (taskId: string, data: UpdateTask) => {
     await updateTask(taskId, data)
-    fetchProject()
   }
 
   const handleMoveTask = async (taskId: string, status: GtdStatus) => {
     await moveTask(taskId, status)
     refetch()
-    fetchProject()
     notifyTasksChanged()
   }
 
   const handleToggleTask = async (taskId: string) => {
     await toggleTask(taskId)
-    fetchProject()
   }
 
-  if (isLoadingProject) {
+  if (isLoadingProjects) {
     return (
       <div className="space-y-4">
         <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
@@ -114,7 +86,7 @@ export function ProjectDetail() {
     )
   }
 
-  if (projectError || !project) {
+  if (!project) {
     return (
       <div className="space-y-4">
         <button
@@ -124,7 +96,7 @@ export function ProjectDetail() {
           &larr; Назад к проектам
         </button>
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-          <p className="text-sm text-red-800 dark:text-red-400">{projectError || 'Проект не найден'}</p>
+          <p className="text-sm text-red-800 dark:text-red-400">Проект не найден</p>
         </div>
       </div>
     )
@@ -193,7 +165,7 @@ export function ProjectDetail() {
         onDeleteTask={handleDeleteTask}
         onMoveTask={handleMoveTask}
         onSaveTask={handleSaveTask}
-        onRefetch={() => { refetch(); fetchProject() }}
+        onRefetch={() => refetch()}
         emptyMessage="В проекте пока нет задач."
       />
     </div>

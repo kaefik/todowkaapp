@@ -254,6 +254,10 @@ export const useAuthStore = create<AuthState>()(
           })
           return
         }
+        if (response.status === 502 || response.status === 503 || response.status === 504) {
+          set({ isLoading: false })
+          return
+        }
         throw new Error('Failed to fetch user')
       }
 
@@ -269,6 +273,10 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('accessToken', data.access_token)
       }
     } catch (error) {
+      if (!navigator.onLine) {
+        set({ isLoading: false })
+        return
+      }
       localStorage.removeItem('accessToken')
       set({
         isLoading: false,
