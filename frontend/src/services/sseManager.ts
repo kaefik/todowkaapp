@@ -1,4 +1,5 @@
 import { useSSEStore } from '../stores/sseStore'
+import { useNotificationStore } from '../stores/notificationStore'
 
 export type SSEState = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -108,15 +109,21 @@ class SSEManager {
     this.eventSource.onopen = () => {
       this.retryDelay = 1000
       this.reconnectAttempts = 0
-      
+
       sseStore.updateStatus('connected')
       sseStore.resetAttempts()
-      
-      const duration = sseStore.currentConnectionStartTime 
-        ? Date.now() - sseStore.currentConnectionStartTime 
+
+      const duration = sseStore.currentConnectionStartTime
+        ? Date.now() - sseStore.currentConnectionStartTime
         : 0
-      logger.info('SSE connection established', { url: sseUrl, duration: `${duration}ms` })
-      
+      logger.info('[SSE] Connection established', { url: sseUrl, duration: `${duration}ms` })
+
+      const notificationStore = useNotificationStore.getState()
+      if (notificationStore && notificationStore.pollingInterval) {
+        logger.info('[SSE] SSE restored, stopping polling fallback')
+        notificationStore.stopPolling()
+      }
+
       this.setState('connected')
     }
 
@@ -135,23 +142,29 @@ class SSEManager {
 
     this.eventSource.addEventListener('error', () => {
       const error = new Error('SSE connection error')
-      
+
       sseStore.updateStatus('error')
       sseStore.recordError(error.message)
       sseStore.recordConnectionEnd()
-      
-      const duration = sseStore.currentConnectionStartTime 
-        ? Date.now() - sseStore.currentConnectionStartTime 
+
+      const duration = sseStore.currentConnectionStartTime
+        ? Date.now() - sseStore.currentConnectionStartTime
         : 0
-      logger.error('SSE connection error', { 
-        error: error.message, 
+      logger.error('SSE connection error', {
+        error: error.message,
         attempt: this.reconnectAttempts,
         duration: `${duration}ms`,
         url: sseUrl
       })
-      
+
       this.setState('error')
       this.closeConnection()
+
+      const notificationStore = useNotificationStore.getState()
+      if (notificationStore && !notificationStore.pollingInterval) {
+        logger.info('[SSE] Starting polling fallback due to SSE error')
+        notificationStore.startPolling()
+      }
 
       if (this.callbacks?.onError) {
         this.callbacks.onError(error)

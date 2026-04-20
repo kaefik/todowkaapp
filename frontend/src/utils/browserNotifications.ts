@@ -89,6 +89,12 @@ export async function show(options: ShowOptions): Promise<boolean> {
 }
 
 export async function showReminder(taskTitle: string, taskId?: string): Promise<boolean> {
+  console.log('[BrowserNotifications] Showing notification:', {
+    title: 'Напоминание о задаче',
+    body: taskTitle,
+    permission: getPermission(),
+    enabled: isEnabled()
+  })
   return show({
     title: 'Напоминание о задаче',
     body: taskTitle,

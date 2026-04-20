@@ -101,6 +101,7 @@ class TaskScheduler:
                             await session.commit()
 
                             from app.event_bus import event_bus
+                            logger.info(f"Publishing notification {notification.id} for user {task.user.id}")
                             await event_bus.publish(
                                 f"{task.user.id}:notifications",
                                 "notification_created",
@@ -109,6 +110,12 @@ class TaskScheduler:
                                     "type": notification.type,
                                     "message": notification.message,
                                     "task_id": str(task.id) if task.id else None,
+                                    "notification_data": {
+                                        "id": str(notification.id),
+                                        "message": notification.message,
+                                        "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                                        "due_date": task.due_date.isoformat() if task.due_date else None
+                                    }
                                 }
                             )
                             sent_count += 1
@@ -177,11 +184,18 @@ class TaskScheduler:
                             await session.commit()
 
                             from app.event_bus import event_bus
+                            logger.info(f"Publishing notification {notification.id} for user {user.id}")
                             await event_bus.publish(f"{user.id}:notifications", "notification_created", {
                                 "notification_id": str(notification.id),
                                 "type": notification.type,
                                 "message": notification.message,
                                 "task_id": str(task.id) if task.id else None,
+                                "notification_data": {
+                                    "id": str(notification.id),
+                                    "message": notification.message,
+                                    "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                                    "due_date": task.due_date.isoformat() if task.due_date else None
+                                }
                             })
                     except Exception as e:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
