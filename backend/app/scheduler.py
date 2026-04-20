@@ -17,7 +17,11 @@ class TaskScheduler:
         jobstores = {
             'default': SQLAlchemyJobStore(url=settings.database_url.replace('+aiosqlite', ''))
         }
-        self.scheduler = AsyncIOScheduler(jobstores=jobstores, timezone='UTC')
+        self.scheduler = AsyncIOScheduler(
+            jobstores=jobstores,
+            timezone='UTC',
+            job_defaults={'misfire_grace_time': 300, 'coalesce': True},
+        )
 
     async def startup(self):
         if self.scheduler:

@@ -108,7 +108,14 @@ async def create_task(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaskResponse:
     service = TaskService(db)
-    task = await service.create_task(user_id=current_user.id, data=data)
+    try:
+        task = await service.create_task(user_id=current_user.id, data=data)
+    except IntegrityError:
+        await db.rollback()
+        existing = await service.get_task(user_id=current_user.id, task_id=data.id)
+        if existing:
+            return existing
+        raise HTTPException(status_code=409, detail="Task already exists") from None
     await _publish_task_event(current_user.id, task.id, "created")
     return task
 
