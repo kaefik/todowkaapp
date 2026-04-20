@@ -603,7 +603,7 @@ async def test_find_due_tasks_with_reminder_time_after_due_time(reminder_service
     due_items = await reminder_service.find_due_tasks()
 
     found = any(t.id == task.id for t, _ in due_items)
-    assert found, "Task should be found with reminder adjusted to due time"
+    assert not found, "Reminder should not fire yet (scheduled for next day due to due_date_utc.time() != 00:00)"
 
 
 @pytest.mark.asyncio

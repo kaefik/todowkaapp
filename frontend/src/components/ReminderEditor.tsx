@@ -52,7 +52,9 @@ export function ReminderEditor({
     const hasReminder = (!!reminderTime || !!reminderOffsets?.length) && !reminderFired
     setEnabled(hasReminder)
     setUseTime(!!reminderTime)
-    setTime(reminderTime || getDefaultReminderTime())
+    if (reminderTime) {
+      setTime(reminderTime)
+    }
     setUseOffsets(!!reminderOffsets?.length)
     setSelected(reminderOffsets || [])
   }, [reminderTime, reminderOffsets, reminderFired])
@@ -79,8 +81,11 @@ export function ReminderEditor({
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = e.target.value
     setTime(newTime)
-    if (enabled && useTime) {
-      onChange({ reminder_time: newTime, reminder_offsets: null })
+  }
+
+  const handleTimeBlur = () => {
+    if (enabled && useTime && time) {
+      onChange({ reminder_time: time, reminder_offsets: null })
     }
   }
 
@@ -110,17 +115,17 @@ export function ReminderEditor({
 
   return (
     <div className="space-y-3">
-      {reminderFired && hasReminder ? (
+      {reminderFired && hasReminder && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700">
           <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-sm text-amber-700 dark:text-amber-300">
-            Напоминание для этой задачи уже отправлено. Для нового вхождения настройте напоминание в активной задаче.
+            Напоминание для этой задачи уже отправлено. Вы можете изменить его или настроить новое.
           </span>
         </div>
-      ) : (
-      <>
+      )}
+
       <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
@@ -151,6 +156,7 @@ export function ReminderEditor({
                 type="time"
                 value={time}
                 onChange={handleTimeChange}
+                onBlur={handleTimeBlur}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               />
               {isReminderInPast && (
@@ -190,8 +196,6 @@ export function ReminderEditor({
             </div>
           )}
         </div>
-      )}
-      </>
       )}
     </div>
   )

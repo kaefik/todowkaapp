@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "plan_date": "2026-04-20",
+    "plan_name": "notification-fix",
+    "created_at": "2026-04-20T00:00:00Z"
+  },
+  "tasks": {
+    "L1-01": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L6-01": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L5-01": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L5-02": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L6-02": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L9-01": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L7-01": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L7-02": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L7-03": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L7-04": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L7-05": {"status": "backlog", "started_at": null, "completed_at": null},
+    "L7-06": {"status": "backlog", "started_at": null, "completed_at": null}
+  },
+  "summary": {
+    "total": 12,
+    "completed": 0,
+    "in_progress": 0,
+    "backlog": 12,
+    "blocked": 0
+  }
+}
