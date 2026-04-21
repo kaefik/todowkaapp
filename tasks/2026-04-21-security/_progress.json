@@ -1,0 +1,162 @@
+{
+  "project": "Todowka Security Fix (Cookie-only Auth)",
+  "created": "2026-04-21T10:00:00Z",
+  "updated": "2026-04-21T14:30:00Z",
+  "guide": "tasks/2026-04-21-security/00-guide.md",
+  "execution_style": "careful",
+  "metrics": {
+    "total": 20,
+    "done": 20,
+    "in_progress": 0,
+    "ready": 0,
+    "blocked": 0,
+    "with_tests": 1,
+    "pct_done": 100.0,
+    "pct_tested": 5.0
+  },
+  "tasks": {
+    "L1/01-user-lockout-fields": {
+      "title": "Добавить поля блокировки в User model + Alembic миграция",
+      "layer": 1, "effort": "S", "priority_score": 5.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:40:00Z",
+      "completed_output": "Добавлены failed_login_attempts и locked_until в User, создана Alembic миграция"
+    },
+    "L2/01-login-lockout-logic": {
+      "title": "Добавить логику блокировки аккаунта при login",
+      "layer": 2, "effort": "M", "priority_score": 3.67, "depends_on": ["L1/01-user-lockout-fields"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T14:20:00Z",
+      "completed_output": "Логика блокировки в login(): проверка locked_until, инкремент failed_login_attempts, сброс при успехе. Все ошибки = 401. Настройки в config.py."
+    },
+    "L3/01-remove-token-from-response-schema": {
+      "title": "Убрать access_token из TokenResponse",
+      "layer": 3, "effort": "XS", "priority_score": 6.5, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:28:00Z",
+      "completed_output": "Убраны access_token и token_type из TokenResponse в обоих файлах схем"
+    },
+    "L3/02-update-login-refresh-endpoints": {
+      "title": "Обновить login/refresh эндпоинты",
+      "layer": 3, "effort": "S", "priority_score": 7.0, "depends_on": ["L3/01-remove-token-from-response-schema"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:38:00Z",
+      "completed_output": "login() и refresh() возвращают TokenResponse(user=user) без access_token в JSON"
+    },
+    "L4/01-samesite-lax": {
+      "title": "Изменить SameSite на lax в security.py",
+      "layer": 4, "effort": "XS", "priority_score": 12.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:10:00Z",
+      "completed_output": "Заменён samesite='strict' на samesite='lax' во всех 4 cookie-функциях"
+    },
+    "L4/02-cookie-first-dependencies": {
+      "title": "Переписать get_current_user как cookie-first",
+      "layer": 4, "effort": "S", "priority_score": 5.0, "depends_on": ["L4/01-samesite-lax"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:42:00Z",
+      "completed_output": "get_current_user переписан: cookie-first + Bearer fallback, get_current_user_from_cookie = алиас"
+    },
+    "L4/03-remove-sse-middleware": {
+      "title": "Удалить SSETokenMiddleware и обновить sse.py",
+      "layer": 4, "effort": "XS", "priority_score": 5.5, "depends_on": ["L4/02-cookie-first-dependencies"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T13:10:00Z",
+      "completed_output": "Удалён SSETokenMiddleware из main.py, обновлён sse.py: get_current_user_from_cookie → get_current_user"
+    },
+    "L5/01-sse-manager-no-token": {
+      "title": "Обновить sseManager.ts — убрать token из URL",
+      "layer": 5, "effort": "S", "priority_score": 5.5, "depends_on": ["L4/03-remove-sse-middleware"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T14:20:00Z",
+      "completed_output": "Удалены поле token, параметр token из connect(), блок ?token= в URL. SSE URL = /api/sse/notifications."
+    },
+    "L5/02-http-client-credentials": {
+      "title": "Обновить httpClient.ts — credentials + убрать Authorization header",
+      "layer": 5, "effort": "S", "priority_score": 7.0, "depends_on": ["L3/02-update-login-refresh-endpoints"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T13:05:00Z",
+      "completed_output": "Добавлен credentials: 'include', удалены skipAuth, Authorization header, accessToken/localStorage"
+    },
+    "L5/03-auth-store-no-token": {
+      "title": "Обновить authStore.ts — убрать accessToken и localStorage",
+      "layer": 5, "effort": "S", "priority_score": 4.67,
+      "depends_on": ["L3/02-update-login-refresh-endpoints", "L5/02-http-client-credentials"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T14:20:00Z",
+      "completed_output": "Удалены accessToken из AuthState, все localStorage.setItem/removeItem('accessToken'), partialize = { user, isAuthenticated }. notificationStore.ts обновлён."
+    },
+    "L5/04-session-restoration": {
+      "title": "Восстановление сессии при загрузке + cross-tab logout",
+      "layer": 5, "effort": "S", "priority_score": 5.5, "depends_on": ["L5/03-auth-store-no-token"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T14:25:00Z",
+      "completed_output": "AuthInitializer.tsx переписан: всегда вызывает fetchCurrentUser() при загрузке, storage event listener для cross-tab logout."
+    },
+    "L6/01-secret-key-validation": {
+      "title": "Валидация secret_key в production",
+      "layer": 6, "effort": "XS", "priority_score": 10.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:15:00Z",
+      "completed_output": "Добавлен field_validator для secret_key: ValueError в production, warnings.warn в dev"
+    },
+    "L6/02-login-request-max-length": {
+      "title": "Добавить max_length в LoginRequest",
+      "layer": 6, "effort": "XS", "priority_score": 5.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T13:08:00Z",
+      "completed_output": "Добавлен Field(min_length=1, max_length=255) для username и Field(min_length=1, max_length=128) для password"
+    },
+    "L6/03-token-logging-user-id": {
+      "title": "Заменить логирование части токена на user_id",
+      "layer": 6, "effort": "XS", "priority_score": 7.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:18:00Z",
+      "completed_output": "Удалена строка logger.debug с token[:10], заменена на logger.debug с user_id"
+    },
+    "L6/04-cookie-secure-warning": {
+      "title": "Усилить валидацию cookie_secure",
+      "layer": 6, "effort": "XS", "priority_score": 7.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:25:00Z",
+      "completed_output": "Добавлен warnings.warn при cookie_secure=False в non-dev"
+    },
+    "L6/05-console-warn-production": {
+      "title": "Убрать console.warn в production (frontend)",
+      "layer": 6, "effort": "XS", "priority_score": 5.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T13:09:00Z",
+      "completed_output": "Все console.warn/error/log в authStore.ts и sseManager.ts обёрнуты в if (import.meta.env.DEV)"
+    },
+    "L6/06-workbox-exclude-auth": {
+      "title": "Исключить /api/auth/* из Workbox кеширования",
+      "layer": 6, "effort": "XS", "priority_score": 8.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:16:00Z",
+      "completed_output": "Добавлен navigateFallbackDenylist: [/^\/api/] в VitePWA"
+    },
+    "L6/07-rate-limit-reduce": {
+      "title": "Уменьшить rate limit и добавить логирование",
+      "layer": 6, "effort": "XS", "priority_score": 7.0, "depends_on": [],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T10:27:00Z",
+      "completed_output": "login_rate_limit 5→3, кастомный rate limit handler с logging.warning + IP"
+    },
+    "L7/01-update-backend-tests": {
+      "title": "Обновить backend-тесты для cookie-based аутентификации",
+      "layer": 7, "effort": "M", "priority_score": 4.67,
+      "depends_on": ["L3/02-update-login-refresh-endpoints", "L4/02-cookie-first-dependencies"],
+      "status": "done", "folder": "done",
+      "has_test": true, "completed_at": "2026-04-21T13:14:00Z",
+      "completed_output": "test_auth.py переписан: cookies вместо Authorization header, убраны проверки access_token в JSON, cookie secure через Set-Cookie заголовки. 22 теста PASS."
+    },
+    "L8/01-update-features-md": {
+      "title": "Обновить features.md",
+      "layer": 8, "effort": "XS", "priority_score": 5.0,
+      "depends_on": ["L7/01-update-backend-tests", "L5/04-session-restoration", "L2/01-login-lockout-logic", "L6/01-secret-key-validation", "L6/06-workbox-exclude-auth"],
+      "status": "done", "folder": "done",
+      "has_test": false, "completed_at": "2026-04-21T14:28:00Z",
+      "completed_output": "Добавлены секции: cookie-only аутентификация, защита от брутфорса с блокировкой, session restoration, cross-tab logout, SECRET_KEY валидация, rate limit обновлён."
+    }
+  }
+}

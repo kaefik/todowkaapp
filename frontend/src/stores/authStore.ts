@@ -14,7 +14,6 @@ export interface User {
 
 interface AuthState {
   user: User | null
-  accessToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
@@ -32,7 +31,6 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
   user: null,
-  accessToken: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -58,17 +56,15 @@ export const useAuthStore = create<AuthState>()(
       const data = await response.json()
       set({
         user: data.user,
-        accessToken: data.access_token,
         isAuthenticated: true,
         isLoading: false,
         error: null,
       })
-      if (data.access_token) {
-        localStorage.setItem('accessToken', data.access_token)
-      }
       if (data.user?.id) {
         performInitialSync(data.user.id).catch((err) => {
-          console.warn('[Auth] Initial sync after login failed:', err)
+          if (import.meta.env.DEV) {
+            console.warn('[Auth] Initial sync after login failed:', err)
+          }
         })
       }
     } catch (error) {
@@ -157,17 +153,15 @@ export const useAuthStore = create<AuthState>()(
       const loginData = await loginResponse.json()
       set({
         user: loginData.user,
-        accessToken: loginData.access_token,
         isAuthenticated: true,
         isLoading: false,
         error: null,
       })
-      if (loginData.access_token) {
-        localStorage.setItem('accessToken', loginData.access_token)
-      }
       if (loginData.user?.id) {
         performInitialSync(loginData.user.id).catch((err) => {
-          console.warn('[Auth] Initial sync after registration failed:', err)
+          if (import.meta.env.DEV) {
+            console.warn('[Auth] Initial sync after registration failed:', err)
+          }
         })
       }
     } catch (error) {
@@ -185,15 +179,15 @@ export const useAuthStore = create<AuthState>()(
       method: 'POST',
       credentials: 'include',
     }).catch(() => {})
-    localStorage.removeItem('accessToken')
     if (userId) {
       clearLocalData(userId).catch((err) => {
-        console.error('[Auth] Failed to clear local data:', err)
+        if (import.meta.env.DEV) {
+          console.error('[Auth] Failed to clear local data:', err)
+        }
       })
     }
     set({
       user: null,
-      accessToken: null,
       isAuthenticated: false,
       error: null,
     })
@@ -213,17 +207,12 @@ export const useAuthStore = create<AuthState>()(
 
       const data = await response.json()
       set({
-        accessToken: data.access_token,
+        user: data.user,
         isAuthenticated: true,
       })
-      if (data.access_token) {
-        localStorage.setItem('accessToken', data.access_token)
-      }
     } catch (error) {
-      localStorage.removeItem('accessToken')
       set({
         user: null,
-        accessToken: null,
         isAuthenticated: false,
       })
       throw error
@@ -244,12 +233,10 @@ export const useAuthStore = create<AuthState>()(
 
       if (!response.ok) {
         if (response.status === 401) {
-          localStorage.removeItem('accessToken')
           set({
             isLoading: false,
             error: null,
             user: null,
-            accessToken: null,
             isAuthenticated: false,
           })
           return
@@ -264,25 +251,19 @@ export const useAuthStore = create<AuthState>()(
       const data = await response.json()
       set({
         user: data,
-        accessToken: data.access_token,
         isAuthenticated: true,
         isLoading: false,
         error: null,
       })
-      if (data.access_token) {
-        localStorage.setItem('accessToken', data.access_token)
-      }
     } catch (error) {
       if (!navigator.onLine) {
         set({ isLoading: false })
         return
       }
-      localStorage.removeItem('accessToken')
       set({
         isLoading: false,
         error: error instanceof Error ? error.message : 'Failed to fetch user',
         user: null,
-        accessToken: null,
         isAuthenticated: false,
       })
       throw error
@@ -297,7 +278,6 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }

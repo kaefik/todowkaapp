@@ -6,7 +6,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
-from app.dependencies import get_current_user_from_cookie
+from app.dependencies import get_current_user
 from app.event_bus import event_bus
 from app.models.user import User
 
@@ -17,7 +17,7 @@ sse_router = APIRouter(prefix="/sse", tags=["sse"])
 
 @sse_router.get("/notifications")
 async def notification_stream(
-    current_user: Annotated[User, Depends(get_current_user_from_cookie)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> EventSourceResponse:
     user_id = str(current_user.id)
 
@@ -43,7 +43,7 @@ async def notification_stream(
 
 @sse_router.get("/sync")
 async def sync_stream(
-    current_user: Annotated[User, Depends(get_current_user_from_cookie)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ) -> EventSourceResponse:
     user_id = str(current_user.id)
 

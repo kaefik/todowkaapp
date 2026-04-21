@@ -2,9 +2,7 @@ import { useAuthStore } from '../stores/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-interface RequestConfig extends RequestInit {
-  skipAuth?: boolean
-}
+type RequestConfig = RequestInit
 
 interface ApiResponse<T = unknown> {
   data: T
@@ -32,27 +30,22 @@ async function fetchWithAuth<T>(
   config: RequestConfig = {}
 ): Promise<ApiResponse<T>> {
   const authStore = useAuthStore.getState()
-  const { skipAuth, ...fetchConfig } = config
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(fetchConfig.headers as Record<string, string>),
-  }
-
-  const token = authStore.accessToken || localStorage.getItem('accessToken')
-  if (!skipAuth && token) {
-    headers['Authorization'] = `Bearer ${token}`
+    ...(config.headers as Record<string, string>),
   }
 
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
 
   try {
     const response = await fetch(fullUrl, {
-      ...fetchConfig,
+      ...config,
       headers,
+      credentials: 'include',
     })
 
-    if (response.status === 401 && !skipAuth) {
+    if (response.status === 401) {
       let errorMessage = response.statusText
       try {
         const errorData = await response.json()
@@ -81,7 +74,7 @@ async function fetchWithAuth<T>(
 
       try {
         await refreshPromise
-        return fetchWithAuth<T>(url, { ...config, skipAuth: false })
+        return fetchWithAuth<T>(url, config)
       } catch {
         authStore.logout()
         window.location.href = '/login?reason=session_expired'

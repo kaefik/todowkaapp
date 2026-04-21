@@ -1,3 +1,5 @@
+import logging
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
@@ -24,6 +26,8 @@ from app.security import (
     set_refresh_cookie,
     verify_password,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_client_ip(request: Request) -> str:
@@ -104,20 +108,35 @@ async def login(
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TokenResponse:
+    _unauthorized = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password",
+    )
+
     result = await db.execute(select(User).where(User.username == data.username))
     user = result.scalar_one_or_none()
 
-    if user is None or not verify_password(data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-        )
+    if user is None:
+        raise _unauthorized
+
+    if user.locked_until and user.locked_until > datetime.now(UTC):
+        raise _unauthorized
+
+    if not verify_password(data.password, user.password_hash):
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= settings.login_max_failed_attempts:
+            user.locked_until = datetime.now(UTC) + timedelta(
+                minutes=settings.login_lockout_minutes
+            )
+        await db.commit()
+        raise _unauthorized
 
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User is blocked",
-        )
+        raise _unauthorized
+
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    await db.commit()
 
     access_token = create_access_token(data={"sub": str(user.id)})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
@@ -125,7 +144,7 @@ async def login(
     set_refresh_cookie(response, refresh_token)
     set_access_cookie(response, access_token)
 
-    return TokenResponse(access_token=access_token, user=user)
+    return TokenResponse(user=user)
 
 
 @auth_router.post("/refresh", response_model=TokenResponse)
@@ -197,7 +216,7 @@ async def refresh(
         db.add(revoked_token)
         await db.commit()
 
-    return TokenResponse(access_token=access_token, user=user)
+    return TokenResponse(user=user)
 
 
 @auth_router.post("/logout")

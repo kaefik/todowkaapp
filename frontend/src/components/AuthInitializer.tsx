@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 
 interface AuthInitializerProps {
@@ -6,18 +6,37 @@ interface AuthInitializerProps {
 }
 
 export function AuthInitializer({ children }: AuthInitializerProps) {
-  const { fetchCurrentUser, isAuthenticated } = useAuthStore()
+  const { fetchCurrentUser } = useAuthStore()
   const [initializing, setInitializing] = useState(true)
+  const initializedRef = useRef(false)
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setInitializing(false)
-      return
-    }
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     fetchCurrentUser()
       .catch(() => {})
       .finally(() => setInitializing(false))
-  }, [fetchCurrentUser, isAuthenticated])
+  }, [fetchCurrentUser])
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key !== 'auth-storage') return
+      if (!e.newValue) return
+      try {
+        const parsed = JSON.parse(e.newValue)
+        if (parsed?.state?.isAuthenticated === false) {
+          useAuthStore.setState({
+            user: null,
+            isAuthenticated: false,
+            error: null,
+          })
+        }
+      } catch {}
+    }
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   if (initializing) {
     return (
