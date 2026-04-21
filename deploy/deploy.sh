@@ -29,6 +29,7 @@ fi
 echo "[3/7] Backend: running migrations..."
 mkdir -p data
 venv/bin/python -m alembic upgrade head
+chown -R www-data:www-data data
 
 echo "[4/7] Frontend: installing deps..."
 cd "$APP_DIR/frontend"
