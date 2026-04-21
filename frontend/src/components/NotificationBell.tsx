@@ -22,9 +22,15 @@ export function NotificationBell() {
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
+      const dropdownWidth = 320
+      const padding = 16
+      let left = rect.right - dropdownWidth
+      if (left < padding) {
+        left = padding
+      }
       setDropdownPosition({
         top: rect.bottom + 4,
-        left: rect.left,
+        left,
       })
     }
   }, [isOpen])
