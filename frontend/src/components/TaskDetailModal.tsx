@@ -214,7 +214,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
                 {task.due_date && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дедлайн</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(task.due_date, user?.timezone)}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(task.due_date, user?.timezone ?? null)}</p>
                   </div>
                 )}
 
@@ -277,8 +277,8 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               )}
 
               <div className="text-xs text-gray-400 dark:text-gray-500 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p>Создано: {formatDateTime(task.created_at, user?.timezone)}</p>
-                <p>Обновлено: {formatDateTime(task.updated_at, user?.timezone)}</p>
+                <p>Создано: {formatDateTime(task.created_at, user?.timezone ?? null)}</p>
+                <p>Обновлено: {formatDateTime(task.updated_at, user?.timezone ?? null)}</p>
               </div>
             </div>
           ) : null}

@@ -259,6 +259,7 @@ export function TaskListView({
       })
       return () => cancelAnimationFrame(id)
     }
+    return undefined
   }, [isLoading])
 
   const handleAddTask = async (data: TaskCreateFormData) => {

@@ -32,7 +32,7 @@ const logger = {
 class SSEManager {
   private eventSource: EventSource | null = null
   private currentUserId: string | null = null
-  private retryTimeout: NodeJS.Timeout | null = null
+  private retryTimeout: ReturnType<typeof setTimeout> | null = null
   private retryDelay: number = 1000
   private readonly maxRetryDelay: number = 30000
   private callbacks: SSEManagerCallbacks | null = null

@@ -266,7 +266,7 @@ export function useTasks(filters?: TaskFilters, _options?: UseTasksOptions): Use
     if (data.reminder_offsets !== undefined) {
       updates.reminderOffsets = data.reminder_offsets ? JSON.stringify(data.reminder_offsets) : null
     }
-    await db.tasks.update(id, updates)
+    await db.tasks.update(id, updates as never)
     await db.mutations.add({
       id: uuidv4(),
       entityType: 'task',

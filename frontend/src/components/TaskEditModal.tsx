@@ -145,8 +145,8 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       title: task.title,
       description: task.description,
       context_id: task.context_id ?? null,
-      area_id: (task as Record<string, unknown>).area_id as string | null ?? null,
-      project_id: (task as Record<string, unknown>).project_id as string | null ?? null,
+      area_id: task.area_id ?? null,
+      project_id: task.project_id ?? null,
       gtd_status: task.gtd_status,
       due_date: dueDateStr,
       notes: task.notes ?? null,
@@ -160,8 +160,8 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     watch,
     formState: { errors },
   } = useForm<EditTaskFormData>({
-    resolver: zodResolver(editTaskSchema),
-    defaultValues,
+    resolver: zodResolver(editTaskSchema) as unknown as never,
+    defaultValues: defaultValues ?? { title: '', context_id: null, area_id: null, project_id: null, due_date: null },
   })
 
   useEffect(() => {
@@ -173,8 +173,8 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         title: task.title,
         description: task.description,
         context_id: task.context_id ?? null,
-        area_id: (task as Record<string, unknown>).area_id as string | null ?? null,
-        project_id: (task as Record<string, unknown>).project_id as string | null ?? null,
+        area_id: task.area_id ?? null,
+        project_id: task.project_id ?? null,
         gtd_status: task.gtd_status,
         due_date: dueDateStr,
         notes: task.notes ?? null,
@@ -251,6 +251,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     if (!task) return
     await onSave(task.id, {
       ...data,
+      gtd_status: data.gtd_status as GtdStatus | undefined,
       tag_ids: selectedTagIds,
       recurrence_type: recurrenceData.recurrence_type,
       recurrence_config: recurrenceData.recurrence_config,
@@ -285,7 +286,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </h2>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <form onSubmit={handleSubmit(onSubmit as never)} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -442,7 +443,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 reminderTime={reminderData.reminder_time}
                 reminderOffsets={reminderData.reminder_offsets}
                 reminderFired={task?.reminder_fired ?? false}
-                dueDate={watch('due_date')}
+                dueDate={watch('due_date') ?? null}
                 onChange={handleReminderChange}
               />
             </div>
@@ -452,7 +453,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 recurrenceType={recurrenceData.recurrence_type}
                 recurrenceConfig={recurrenceData.recurrence_config}
                 recurrenceEndDate={recurrenceData.recurrence_end_date}
-                dueDate={watch('due_date')}
+                dueDate={watch('due_date') ?? null}
                 onChange={setRecurrenceData}
               />
             </div>
@@ -488,7 +489,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </button>
           <button
             type="button"
-            onClick={handleSubmit(onSubmit)}
+            onClick={handleSubmit(onSubmit as never)}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
           >
             Save

@@ -469,6 +469,12 @@
 - Автоматический линтинг и проверка типов
 - Автоматическое тестирование (backend: pytest, frontend: vitest)
 - Конфигурация переменных окружения
+- Нативный деплой (без Docker) на сервер с nginx
+  - Frontend отдаётся nginx как статика (vite build → dist/)
+  - Backend работает как systemd сервис (uvicorn на 127.0.0.1:8000, не доступен снаружи)
+  - Nginx проксирует /api/ и /health на backend
+  - Домен todowka.nn-88-nn.ru
+  - Файлы: `deploy/nginx.conf`, `deploy/todowka-backend.service`, `deploy/deploy.sh`
 
 #### Тестирование
 - Юнит-тесты бэкенда с pytest

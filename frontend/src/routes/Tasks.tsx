@@ -128,6 +128,7 @@ function TasksContent() {
       })
       return () => cancelAnimationFrame(id)
     }
+    return undefined
   }, [isLoading])
 
   useEffect(() => {
@@ -161,7 +162,7 @@ function TasksContent() {
   const handleAddTask = async (data: TaskCreateFormData) => {
     setIsAdding(true)
     try {
-      const taskData: Record<string, unknown> = { title: data.title }
+      const taskData: { title: string; description?: string } = { title: data.title }
       if (data.description && data.description.trim()) {
         taskData.description = data.description
       }

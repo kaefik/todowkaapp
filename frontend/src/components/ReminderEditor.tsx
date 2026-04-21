@@ -42,9 +42,12 @@ export function ReminderEditor({
   const isReminderInPast = useTime && dueDate && time ? (() => {
     const now = new Date()
     const dueDateObj = new Date(dueDate + 'T00:00:00')
-    const [hours, minutes] = time.split(':').map(Number)
+    const parts = time.split(':').map(Number)
+    const h = parts[0]
+    const m = parts[1]
+    if (h == null || m == null) return false
     const reminderDate = new Date(dueDateObj)
-    reminderDate.setHours(hours, minutes, 0, 0)
+    reminderDate.setHours(h, m, 0, 0)
     return reminderDate < now
   })() : false
 

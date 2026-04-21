@@ -142,7 +142,7 @@ function ProjectForm({
               name="color"
               control={control}
               render={({ field }) => (
-                <ColorPickerField value={field.value} onChange={field.onChange} />
+                <ColorPickerField value={field.value ?? null} onChange={field.onChange} />
               )}
             />
           </div>

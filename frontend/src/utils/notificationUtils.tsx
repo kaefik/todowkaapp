@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 export function formatTime(dateStr: string, deliveredAtStr: string | null = null): string {
   const dateToFormat = deliveredAtStr ? new Date(deliveredAtStr) : new Date(dateStr)

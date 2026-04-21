@@ -63,7 +63,7 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq, req) => {
+          proxy.on('proxyReq', (_proxyReq, req) => {
             console.log('[Proxy] Forwarding request:', req.method, req.url)
           })
           proxy.on('proxyRes', (proxyRes, req) => {

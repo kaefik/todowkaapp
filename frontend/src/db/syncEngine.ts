@@ -1,4 +1,4 @@
-import { db, type DbTask, type DbProject, type DbArea, type DbContext, type DbTag, type SyncStatus } from './database'
+import { db, type SyncStatus } from './database'
 import { shouldSkipMerge, mergeRecord } from './conflictResolution'
 import { apiTaskToDb } from './mappers'
 import { httpClient, ApiError } from '../api/httpClient'
@@ -14,9 +14,9 @@ interface SyncResourceConfig {
   transform: (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }
 }
 
-function makeTransform<T extends { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }>(
-  mapFn: (item: Record<string, unknown>, userId: string) => T
-): (item: Record<string, unknown>, userId: string) => T {
+function makeTransform(
+  mapFn: (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }
+): (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null } {
   return mapFn
 }
 
@@ -25,7 +25,7 @@ const RESOURCES: SyncResourceConfig[] = [
     endpoint: '/tasks',
     table: db.tasks,
     entityType: 'task',
-    transform: makeTransform((item, userId) => apiTaskToDb(item, userId)),
+    transform: makeTransform((item, userId) => apiTaskToDb(item, userId) as unknown as Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }),
   },
   {
     endpoint: '/projects',
@@ -124,12 +124,12 @@ async function mergeAndPut(
     const skip = await shouldSkipMerge(entityType, id)
     if (skip) continue
 
-    const serverRecord = transform(item, userId) as typeof table extends { put(arg: infer T): unknown } ? T : never
-    const localRecord = await table.get(id) as typeof serverRecord | undefined
-    const merged = mergeRecord(localRecord, serverRecord)
+    const serverRecord = transform(item, userId)
+    const localRecord = await table.get(id)
+    const merged = mergeRecord(localRecord as Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null } | undefined, serverRecord)
 
     try {
-      await table.put(merged)
+      await table.put(merged as never)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'QuotaExceededError') {
         useToastStore.getState().addToast({
@@ -197,9 +197,12 @@ function deduplicateMutations(
   const sentIds = new Set<string>()
 
   for (const [, group] of grouped) {
+    const first = group[0]
+    if (!first) continue
+
     if (group.length === 1) {
-      toSend.push(group[0])
-      sentIds.add(group[0].id)
+      toSend.push(first)
+      sentIds.add(first.id)
       continue
     }
 
@@ -208,8 +211,8 @@ function deduplicateMutations(
 
     if (hasCreate && hasDelete) {
       for (const m of group) toDelete.push(m.id)
-      const table = getTableForType(group[0].entityType)
-      table.delete(group[0].entityId).catch(() => {})
+      const table = getTableForType(first.entityType)
+      table.delete(first.entityId).catch(() => {})
       continue
     }
 
