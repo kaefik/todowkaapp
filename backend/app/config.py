@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -16,10 +17,26 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:5173,http://localhost:80"
     app_env: str = "development"
     log_level: str = "info"
-    login_rate_limit: int = 5
+    login_rate_limit: int = 3
     register_rate_limit: int = 3
     refresh_token_rotation_enabled: bool = True
+    login_max_failed_attempts: int = 5
+    login_lockout_minutes: int = 15
     cookie_secure: bool = False
+
+    @field_validator("secret_key")
+    @classmethod
+    def validate_secret_key(cls, v: str, info: Any) -> str:
+        default_key = "changeme-generate-random-string-64-chars"
+        if v == default_key:
+            app_env = info.data.get("app_env", "development")
+            if app_env == "production":
+                raise ValueError("SECRET_KEY must be changed from default in production")
+            warnings.warn(
+                "SECRET_KEY is set to default value. Change it in production!",
+                stacklevel=2,
+            )
+        return v
 
     @field_validator("invite_code", "max_users", mode="before")
     @classmethod
@@ -32,9 +49,16 @@ class Settings(BaseSettings):
     @classmethod
     def set_cookie_secure_for_production(cls, v: Any, info: Any) -> Any:
         if v is not None:
-            return v
-        app_env = info.data.get("app_env", "development")
-        return app_env == "production"
+            result = v
+        else:
+            app_env = info.data.get("app_env", "development")
+            result = app_env == "production"
+        if not result and info.data.get("app_env", "development") != "development":
+            warnings.warn(
+                "cookie_secure is False in non-development environment. Cookies will be sent over HTTP.",
+                stacklevel=2,
+            )
+        return result
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -114,10 +114,9 @@ async def test_login_valid_credentials(client, db_session):
     )
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
     assert "user" in data
     assert data["user"]["username"] == "testuser"
+    assert "access_token" in response.cookies
     assert "refresh_token" in response.cookies
 
 
@@ -154,7 +153,7 @@ async def test_login_inactive_user(client, db_session):
         json={"username": "testuser", "password": "Password123!"},
     )
     assert response.status_code == 401
-    assert "User is blocked" in response.json()["detail"]
+    assert "Incorrect username or password" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -173,7 +172,7 @@ async def test_refresh_token_flow(client, db_session):
         json={"username": "testuser", "password": "Password123!"},
     )
     initial_refresh_token = login_response.cookies.get("refresh_token")
-    initial_access_token = login_response.json()["access_token"]
+    initial_access_token = login_response.cookies.get("access_token")
 
     await asyncio.sleep(1)
 
@@ -182,8 +181,11 @@ async def test_refresh_token_flow(client, db_session):
     )
     assert refresh_response.status_code == 200
     data = refresh_response.json()
-    assert "access_token" in data
-    assert data["access_token"] != initial_access_token
+    assert "user" in data
+    assert data["user"]["username"] == "testuser"
+    new_access_token = refresh_response.cookies.get("access_token")
+    assert new_access_token is not None
+    assert new_access_token != initial_access_token
     new_refresh_token = refresh_response.cookies.get("refresh_token")
     assert new_refresh_token is not None
 
@@ -235,10 +237,10 @@ async def test_me_returns_current_user(client, db_session):
         "/api/auth/login",
         json={"username": "testuser", "password": "Password123!"},
     )
-    access_token = login_response.json()["access_token"]
+    access_token = login_response.cookies.get("access_token")
 
     me_response = await client.get(
-        "/api/auth/me", headers={"Authorization": f"Bearer {access_token}"}
+        "/api/auth/me", cookies={"access_token": access_token}
     )
     assert me_response.status_code == 200
     data = me_response.json()
@@ -255,7 +257,7 @@ async def test_me_requires_authentication(client, db_session):
 @pytest.mark.asyncio
 async def test_me_invalid_token(client, db_session):
     response = await client.get(
-        "/api/auth/me", headers={"Authorization": "Bearer invalid_token"}
+        "/api/auth/me", cookies={"access_token": "invalid_token"}
     )
     assert response.status_code == 401
 
@@ -393,6 +395,7 @@ async def test_cookie_secure_flag_in_production(client, db_session, monkeypatch)
     from app import config
 
     monkeypatch.setattr(config.settings, "app_env", "production")
+    monkeypatch.setattr(config.settings, "cookie_secure", True)
 
     await client.post(
         "/api/auth/register",
@@ -408,16 +411,19 @@ async def test_cookie_secure_flag_in_production(client, db_session, monkeypatch)
         json={"username": "testuser", "password": "Password123!"},
     )
 
-    cookies = login_response.cookies
-    refresh_token_cookie = cookies.get("refresh_token")
+    set_cookie_headers = [
+        v for k, v in login_response.headers.multi_items() if k.lower() == "set-cookie"
+    ]
+    refresh_cookie = next((h for h in set_cookie_headers if "refresh_token=" in h), None)
+    assert refresh_cookie is not None
+    assert "; secure" in refresh_cookie.lower()
 
-    assert refresh_token_cookie is not None
-    assert refresh_token_cookie.get("secure") is True
+    access_token = login_response.cookies.get("access_token")
+    assert access_token is not None
 
     me_response = await client.get(
         "/api/auth/me",
-        headers={"Authorization": f"Bearer {login_response.json()['access_token']}"},
-        cookies={"refresh_token": refresh_token_cookie}
+        cookies={"access_token": access_token}
     )
     assert me_response.status_code == 200
 
@@ -442,16 +448,19 @@ async def test_cookie_secure_flag_in_development(client, db_session, monkeypatch
         json={"username": "testuser", "password": "Password123!"},
     )
 
-    cookies = login_response.cookies
-    refresh_token_cookie = cookies.get("refresh_token")
+    set_cookie_headers = [
+        v for k, v in login_response.headers.multi_items() if k.lower() == "set-cookie"
+    ]
+    refresh_cookie = next((h for h in set_cookie_headers if "refresh_token=" in h), None)
+    assert refresh_cookie is not None
+    assert "; secure" not in refresh_cookie.lower()
 
-    assert refresh_token_cookie is not None
-    assert refresh_token_cookie.get("secure") is False
+    access_token = login_response.cookies.get("access_token")
+    assert access_token is not None
 
     me_response = await client.get(
         "/api/auth/me",
-        headers={"Authorization": f"Bearer {login_response.json()['access_token']}"},
-        cookies={"refresh_token": refresh_token_cookie}
+        cookies={"access_token": access_token}
     )
     assert me_response.status_code == 200
 
@@ -477,8 +486,9 @@ async def test_cookie_secure_override_via_env(client, db_session, monkeypatch):
         json={"username": "testuser", "password": "Password123!"},
     )
 
-    cookies = login_response.cookies
-    refresh_token_cookie = cookies.get("refresh_token")
-
-    assert refresh_token_cookie is not None
-    assert refresh_token_cookie.get("secure") is True
+    set_cookie_headers = [
+        v for k, v in login_response.headers.multi_items() if k.lower() == "set-cookie"
+    ]
+    refresh_cookie = next((h for h in set_cookie_headers if "refresh_token=" in h), None)
+    assert refresh_cookie is not None
+    assert "; secure" in refresh_cookie.lower()

@@ -28,6 +28,18 @@ interface NotificationState {
   cleanup: () => void
 }
 
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.log(...args)
+}
+
+const devWarn = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.warn(...args)
+}
+
+const devError = (...args: unknown[]) => {
+  if (import.meta.env.DEV) console.error(...args)
+}
+
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   total: 0,
@@ -42,19 +54,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   startPolling: () => {
     const state = get()
     if (state.pollingInterval) {
-      console.log('[NotificationStore] Polling already running')
+      devLog('[NotificationStore] Polling already running')
       return
     }
     const auth = useAuthStore.getState()
-    if (!auth.accessToken) {
-      console.log('[NotificationStore] Cannot start polling: no access token')
+    if (!auth.isAuthenticated) {
+      devLog('[NotificationStore] Cannot start polling: not authenticated')
       return
     }
 
-    console.log('[NotificationStore] Starting polling')
+    devLog('[NotificationStore] Starting polling')
     get().refetch({ limit: 5 })
     const intervalId = setInterval(() => {
-      console.log('[NotificationStore] Polling tick')
+      devLog('[NotificationStore] Polling tick')
       get().refetch({ limit: 5 })
       const currentDelay = get().pollingDelay
       set({ pollingDelay: Math.min(currentDelay * 2, 120000) })
@@ -65,20 +77,20 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   stopPolling: () => {
     const intervalId = get().pollingInterval
     if (intervalId) {
-      console.log('[NotificationStore] Stopping polling')
+      devLog('[NotificationStore] Stopping polling')
       clearInterval(intervalId)
       set({ pollingInterval: null, pollingDelay: 30000, sseDownSince: null })
     } else {
-      console.log('[NotificationStore] Polling not running')
+      devLog('[NotificationStore] Polling not running')
     }
   },
 
   refetch: async (params) => {
-    console.log('[NotificationStore] Refetching notifications...', params)
+    devLog('[NotificationStore] Refetching notifications...', params)
     set({ isLoading: true, error: null })
     try {
       const data = await notificationsApi.getAll(params)
-      console.log('[NotificationStore] Notifications loaded:', {
+      devLog('[NotificationStore] Notifications loaded:', {
         count: data.items.length,
         total: data.total,
         unreadCount: data.unread_count
@@ -90,7 +102,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         isLoading: false,
       })
     } catch (err) {
-      console.error('[NotificationStore] Failed to fetch notifications:', err)
+      devError('[NotificationStore] Failed to fetch notifications:', err)
       set({
         isLoading: false,
         error: err instanceof Error ? err.message : 'Failed to load notifications',
@@ -151,28 +163,27 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   startSSE: (userId) => {
     set({ sseState: 'connecting' })
-    const token = useAuthStore.getState().accessToken
     sseManager.connect(userId, {
       onMessage: (message) => {
-        console.log('[NotificationStore] SSE event:', { event: message.event, data: message.data })
+        devLog('[NotificationStore] SSE event:', { event: message.event, data: message.data })
         if (message.event === 'notification') {
-          console.log('[NotificationStore] Notification event received, calling refetch')
+          devLog('[NotificationStore] Notification event received, calling refetch')
           get().refetch()
           try {
             const data = JSON.parse(message.data)
-            console.log('[NotificationStore] SSE data parsed:', data)
+            devLog('[NotificationStore] SSE data parsed:', data)
 
             if (!data || typeof data !== 'object') {
-              console.warn('[NotificationStore] Invalid data structure received:', data)
+              devWarn('[NotificationStore] Invalid data structure received:', data)
               return
             }
 
             if (data?.type === 'queue_overflow') {
-              console.log('[NotificationStore] Queue overflow detected, refetching')
+              devLog('[NotificationStore] Queue overflow detected, refetching')
               get().refetch()
             } else if (data?.data?.type === 'due_reminder' && data?.data?.task_id) {
               const notificationData = data?.data?.notification_data
-              console.log('[NotificationStore] Due reminder fired:', { taskId: data.data.task_id, notificationData })
+              devLog('[NotificationStore] Due reminder fired:', { taskId: data.data.task_id, notificationData })
               window.dispatchEvent(new CustomEvent('task:reminder-fired', {
                 detail: {
                   taskId: data.data.task_id,
@@ -180,15 +191,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
                 }
               }))
             } else {
-              console.warn('[NotificationStore] Unknown event type:', data?.data?.type)
+              devWarn('[NotificationStore] Unknown event type:', data?.data?.type)
             }
           } catch (error) {
-            console.error('[NotificationStore] Failed to parse SSE message:', error, 'Raw data:', message.data)
+            devError('[NotificationStore] Failed to parse SSE message:', error, 'Raw data:', message.data)
           }
         }
       },
       onStateChange: (state) => {
-        console.log('[NotificationStore] SSE state changed:', state)
+        devLog('[NotificationStore] SSE state changed:', state)
         set({ sseState: state })
         if (state === 'connected') {
           get().stopPolling()
@@ -212,21 +223,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         }
       },
       onError: (error) => {
-        console.error('SSE error:', error)
+        devError('SSE error:', error)
         set({ sseState: 'error' })
       },
-    }, token || undefined)
+    })
   },
 
   stopSSE: () => {
-    console.log('[NotificationStore] Stopping SSE')
+    devLog('[NotificationStore] Stopping SSE')
     sseManager.disconnect()
     get().stopPolling()
     set({ sseState: 'disconnected' })
   },
 
   cleanup: () => {
-    console.log('[NotificationStore] Cleanup called')
+    devLog('[NotificationStore] Cleanup called')
     get().stopPolling()
   },
 }))

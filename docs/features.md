@@ -389,7 +389,11 @@
 #### Безопасность
 - Хеширование паролей с bcrypt и salt
 - JWT-токены, подписанные алгоритмом HS256
-- HttpOnly, Secure, SameSite=Strict cookies для refresh-токенов
+- Cookie-only аутентификация: access и refresh токены хранятся только в httpOnly cookies
+  - Токены НЕ выдаются в JSON-ответе (предотвращение утечки через XSS)
+  - httpOnly cookies недоступны из JavaScript
+  - SameSite=lax для защиты от CSRF при сохранении навигации с внешних сайтов
+  - Secure флаг автоматически включается в production
 - Проверка is_active при логине, refresh токене и get_current_user
 - Проверка is_blocked при логине, refresh токене и get_current_user
 - Защищённые API-эндпоинты для управления пользователями (только администраторы)
@@ -415,12 +419,25 @@
   - Миграция: alembic/versions/20260410_1503_66f131828079_add_revoked_tokens_table.py
   - Тесты: tests/test_revoked_tokens.py
 - Rate limiting для предотвращения brute-force атак:
-  - POST /api/auth/login — 5 попыток в минуту с одного IP
+  - POST /api/auth/login — 3 попытки в минуту с одного IP
   - POST /api/auth/register — 3 регистрации в час с одного IP
   - Конфигурируется через переменные окружения LOGIN_RATE_LIMIT и REGISTER_RATE_LIMIT
   - Реализовано с помощью slowapi библиотеки
   - Поддержка X-Forwarded-For для корректного определения IP за прокси
   - Понятные сообщения об ошибках rate limiting на фронтенде (HTTP 429)
+- Защита от брутфорса с блокировкой аккаунта:
+  - После 5 неверных попыток входа аккаунт блокируется на 15 минут
+  - Все ошибочные ответы идентичны: 401 "Incorrect username or password" (без раскрытия информации)
+  - Успешный вход сбрасывает счётчик неудачных попыток
+  - Конфигурируется через LOGIN_MAX_FAILED_ATTEMPTS и LOGIN_LOCKOUT_MINUTES
+  - Поля: failed_login_attempts, locked_until в модели User
+- Bearer token fallback полностью удалён — авторизация только через httpOnly cookie (нет вектора атаки через XSS)
+- Восстановление сессии при загрузке приложения (cookie-based, без localStorage токена)
+- Синхронизация logout между вкладками через storage event
+- Валидация SECRET_KEY: ошибка запуска в production со значением по умолчанию
+- console.log/warn/error в notificationStore обёрнуты в import.meta.env.DEV — нет утечки информации в production console
+- /api/auth/* исключено из кэширования Workbox (PWA)
+- Логирование user_id вместо фрагментов токена
 
 #### Архитектура бэкенда
 - FastAPI для высокопроизводительного API

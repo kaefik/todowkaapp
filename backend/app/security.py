@@ -63,7 +63,7 @@ def set_access_cookie(response: Response, token: str) -> None:
         path="/",
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="strict",
+        samesite="lax",
     )
 
 
@@ -75,7 +75,7 @@ def clear_access_cookie(response: Response) -> None:
         path="/",
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="strict",
+        samesite="lax",
     )
 
 
@@ -87,7 +87,7 @@ def set_refresh_cookie(response: Response, token: str) -> None:
         path="/api/auth",
         secure=settings.cookie_secure,
         httponly=True,
-        samesite="strict",
+        samesite="lax",
     )
 
 
@@ -99,7 +99,7 @@ def clear_refresh_cookie(response: Response) -> None:
         path="/api/auth",
         secure=settings.cookie_secure,
         httponly=True,
-        samesite="strict",
+        samesite="lax",
     )
 
 

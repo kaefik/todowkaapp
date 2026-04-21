@@ -15,10 +15,18 @@ export interface SSEManagerCallbacks {
 }
 
 const logger = {
-  info: (msg: string, data?: unknown) => console.log(`[SSE] [INFO] ${new Date().toISOString()} - ${msg}`, data || ''),
-  warn: (msg: string, data?: unknown) => console.warn(`[SSE] [WARN] ${new Date().toISOString()} - ${msg}`, data || ''),
-  error: (msg: string, data?: unknown) => console.error(`[SSE] [ERROR] ${new Date().toISOString()} - ${msg}`, data || ''),
-  debug: (msg: string, data?: unknown) => console.debug(`[SSE] [DEBUG] ${new Date().toISOString()} - ${msg}`, data || ''),
+  info: (msg: string, data?: unknown) => {
+    if (import.meta.env.DEV) console.log(`[SSE] [INFO] ${new Date().toISOString()} - ${msg}`, data || '')
+  },
+  warn: (msg: string, data?: unknown) => {
+    if (import.meta.env.DEV) console.warn(`[SSE] [WARN] ${new Date().toISOString()} - ${msg}`, data || '')
+  },
+  error: (msg: string, data?: unknown) => {
+    if (import.meta.env.DEV) console.error(`[SSE] [ERROR] ${new Date().toISOString()} - ${msg}`, data || '')
+  },
+  debug: (msg: string, data?: unknown) => {
+    if (import.meta.env.DEV) console.debug(`[SSE] [DEBUG] ${new Date().toISOString()} - ${msg}`, data || '')
+  },
 }
 
 class SSEManager {
@@ -32,14 +40,11 @@ class SSEManager {
   private backendRecoveredHandler: (() => void) | null = null
   private visibilityHandler: (() => void) | null = null
 
-  private token: string | null = null
-
-  connect(userId: string, callbacks: SSEManagerCallbacks, token?: string) {
+  connect(userId: string, callbacks: SSEManagerCallbacks) {
     this.disconnect()
 
     this.currentUserId = userId
     this.callbacks = callbacks
-    this.token = token || null
     this.reconnectAttempts = 0
 
     if (!this.backendRecoveredHandler) {
@@ -81,23 +86,7 @@ class SSEManager {
       return
     }
 
-    let sseUrl: string
-    if (import.meta.env.DEV) {
-      sseUrl = 'http://127.0.0.1:8000/api/sse/notifications'
-    } else {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-      if (apiBaseUrl.startsWith('http')) {
-        const apiUrl = new URL(apiBaseUrl)
-        sseUrl = `${apiUrl.origin}${apiUrl.pathname}/sse/notifications`
-      } else {
-        sseUrl = `${apiBaseUrl}/sse/notifications`
-      }
-    }
-
-    if (this.token) {
-      const sep = sseUrl.includes('?') ? '&' : '?'
-      sseUrl = `${sseUrl}${sep}token=${encodeURIComponent(this.token)}`
-    }
+    const sseUrl = '/api/sse/notifications'
 
     logger.debug('Opening SSE connection', { url: sseUrl, userId: this.currentUserId })
     
@@ -234,7 +223,6 @@ class SSEManager {
     this.closeConnection()
     this.currentUserId = null
     this.callbacks = null
-    this.token = null
     this.retryDelay = 1000
     this.reconnectAttempts = 0
 
