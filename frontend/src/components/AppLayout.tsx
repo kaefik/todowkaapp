@@ -215,8 +215,8 @@ export function AppLayout() {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-xl z-50 p-4">
-            <div className="flex items-center justify-between mb-4">
+          <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col">
+            <div className="flex items-center justify-between p-4 pb-0">
               <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center" onClick={() => setSidebarOpen(false)}>
                 Todowka <StatusLight />
               </Link>
@@ -229,7 +229,9 @@ export function AppLayout() {
                 </svg>
               </button>
             </div>
-            <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+            <div className="flex-1 overflow-y-auto p-4">
+              <SidebarContent onNavigate={() => setSidebarOpen(false)} />
+            </div>
           </div>
         </div>
       )}

@@ -111,6 +111,17 @@
   - Файлы: `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
   - API: PATCH /api/users/me (с полем timezone в UserUpdate)
 
+#### Закреплённая шапка и поиск по задачам ✅ (Реализовано 22.04.2026)
+- Sticky header на мобильных устройствах — шапка всегда видна при прокрутке
+- Десктопная верхняя панель с логотипом, полем поиска, уведомлениями и профилем
+- Десктопный sidebar сдвигается ниже шапки (top-16)
+- Полноэкранный SearchOverlay с live-поиском по задачам (debounce 300ms)
+- Поиск использует существующий API: `GET /api/tasks?search=...&limit=20`
+- Клик по результату поиска → переход на проект задачи
+- Закрытие поиска: Escape или клик по backdrop
+- Поддержка тёмной темы
+- Файлы: `frontend/src/components/AppLayout.tsx`, `frontend/src/components/SearchOverlay.tsx`
+
 #### Сохранение состояния UI между сессиями ✅ (Реализовано 13.04.2026)
 - Автоматическое сохранение всех состояний UI в localStorage
 - Сохранение сворачивания списка выполненных задач (Tasks.tsx)
