@@ -202,7 +202,7 @@ export function SyncProvider({ children }: SyncProviderProps) {
       }
     })
 
-    const unsubscribe = db.mutations.hook('creating', () => {
+    db.mutations.hook('creating', () => {
       schedulePush(onSyncChange)
     })
 
@@ -216,7 +216,6 @@ export function SyncProvider({ children }: SyncProviderProps) {
         clearInterval(intervalRef.current)
         intervalRef.current = null
       }
-      unsubscribe()
       syncSSE.disconnect()
     }
   }, [user?.id, onSyncChange])
