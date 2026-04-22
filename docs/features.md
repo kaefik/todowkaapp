@@ -83,12 +83,12 @@
 - **Организация:** автоматическое разделение на активные и завершённые задачи
 - **Визуальная индикация:** чекбоксы и зачёркивание выполненных задач
 
-#### Индикатор состояния соединения ✅ (Реализовано 16.04.2026, обновлено 18.04.2026)
+#### Индикатор состояния соединения ✅ (Реализовано 16.04.2026, обновлено 22.04.2026)
 - Светофор-индикатор (StatusLight) рядом с названием «Todowka» в хедере и сайдбаре
-- 5 состояний: онлайн (зелёный), офлайн (жёлтый), синхронизация (синий, пульсирует), ошибка (красный, пульсирует), очередь (оранжевый, пульсирует)
+- 6 состояний: загрузка (серый), онлайн (зелёный), офлайн (жёлтый), синхронизация (синий, пульсирует), ошибка (красный, пульсирует), очередь (оранжевый, пульсирует)
 - Tooltip при наведении с текстовым описанием состояния
-- Анимация пульсации для активных состояний (синхронизация, ошибка, очередь)
-- Комбинирует данные из useSyncStatus (isOnline/pendingCount/isSyncing из SyncProvider) и useNotificationStore (SSE error)
+- Анимация пульсации для активных состояний (загрузка, синхронизация, ошибка, очередь)
+- Комбинирует данные из useSyncStatus (isOnline/pendingCount/isSyncing из SyncProvider), useNotificationStore (SSE error) и BackendHealthChecker (/health ping)
 - Компонент: `frontend/src/components/StatusLight.tsx`
 - Интегрировано в AppLayout (мобильный хедер, мобильный сайдбар, десктопный сайдбар)
 
@@ -142,10 +142,12 @@
 - Компонент: `frontend/src/components/ColorPickerField.tsx`
 - Библиотека: `react-colorful`
 
-#### Local-first офлайн-режим на Dexie.js ✅ (Реализовано 18.04.2026)
+#### Local-first офлайн-режим на Dexie.js ✅ (Реализовано 18.04.2026, обновлено 22.04.2026)
 - Dexie.js (IndexedDB) — единственный источник истины на клиенте, React Query удалён
 - Full offline CRUD: задачи, проекты, области, контексты, теги — все операции работают без сети
-- SyncEngine: initialSync при логине, фоновый push/pull каждые 15 мин, push при восстановлении сети
+- SyncEngine: initialSync при логине, фоновый pull каждые 15 мин, push при восстановлении сети
+- **Реактивная отправка (push):** Dexie-хук на таблицу `mutations` автоматически запускает `push()` через 2 сек debounce после любого локального изменения — данные уходят на сервер без обновления страницы
+- **Реактивное получение (pull):** SyncSSEListener подписывается на `/api/sse/sync` и запускает `pull()` через 1.5 сек debounce при получении SSE-событий об изменениях на сервере (task_updated, task_created и др.)
 - LWW (Last-Writer-Wins) conflict resolution: серверная версия приоритетнее при равных updatedAt
 - Soft-delete: записи помечаются `_syncStatus='deleted'`, исключаются из запросов
 - Мутации записываются в таблицу `mutations` для offline-очереди, отправляются при reconnect
@@ -154,7 +156,7 @@
 - Автоматическая очистка Dexie при logout (по userId)
 - `httpClient.ts` упрощён: убраны offline queue, GET cache, toasts — только JWT auth + 401 refresh
 - Файлы: `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/db/conflictResolution.ts`, `frontend/src/db/mappers.ts`, `frontend/src/db/hooks.ts`, `frontend/src/db/init.ts`, `frontend/src/db/migration.ts`
-- Компоненты: `frontend/src/components/SyncProvider.tsx` (оркестратор синхронизации с контекстом)
+- Компоненты: `frontend/src/components/SyncProvider.tsx` (оркестратор синхронизации: Dexie-хук push + SSE-подписка pull + контекст)
 - Хуки: `useDexieQuery`, `useOnlineStatus` (из `frontend/src/db/hooks.ts`), `useSyncStatus` (из SyncProvider)
 - Удалены: React Query (`@tanstack/react-query` и сопутствующие пакеты), `idb`, `queryClient.ts`, `useOfflineQueue.ts`, `useLocalTaskChanges.ts`, `localTaskChanges.ts`, `indexedDB.ts`, `sseSyncManager.ts`, `syncStore.ts`, `useSyncSSE.ts`, `SyncIndicator.tsx`
 - Тесты: `frontend/src/db/__tests__/conflictResolution.test.ts` (7 тестов), `frontend/src/db/__tests__/mappers.test.ts` (11 тестов)
@@ -166,11 +168,11 @@
 - Баннер приглашения к установке при поддержке браузером
 - Запуск в отдельном окне (standalone режим)
 
-#### Офлайн-режим с локальным сохранением изменений ✅ (Реализовано 16.04.2026, обновлено 18.04.2026)
+#### Офлайн-режим с локальным сохранением изменений ✅ (Реализовано 16.04.2026, обновлено 22.04.2026)
 - Переписано на local-first архитектуру с Dexie.js (см. секцию "Local-first офлайн-режим на Dexie.js")
 - Dexie (IndexedDB) — единственный источник данных на клиенте
 - Full offline CRUD через Dexie таблицы с автоматической синхронизацией
-- SyncEngine: push мутаций при reconnect, фоновый pull каждые 15 мин
+- SyncEngine: Dexie-хук → debounce push 2 сек, SSE sync → debounce pull 1.5 сек, фоновый pull каждые 15 мин
 - LWW conflict resolution при конфликтах
 - Удалены: React Query, старая offline-очередь, localTaskChanges, idb
 - Файлы: `frontend/src/db/` (database.ts, syncEngine.ts, conflictResolution.ts, mappers.ts, hooks.ts, init.ts, migration.ts)
@@ -299,7 +301,7 @@
 - `PATCH /api/notifications/read-all` — отметить все как прочитанные
 - `DELETE /api/notifications/{id}` — удалить уведомление
 - `GET /api/sse/notifications` — SSE поток уведомлений
-- `GET /api/sse/sync` — SSE поток синхронизации задач
+- `GET /api/sse/sync` — SSE поток синхронизации задач (фронтенд подключён через SyncSSEListener в SyncProvider)
 
 **Файлы:**
 - Бэкенд: `backend/app/services/reminder_service.py`, `backend/app/api/notifications.py`, `backend/app/api/sse.py`, `backend/app/event_bus.py`, `backend/app/models/notification.py`, `backend/app/schemas/notification.py`, `backend/app/scheduler.py`
@@ -371,7 +373,7 @@
 - React Router v7 для навигации и защищённых маршрутов
 - Zustand для глобального состояния (аутентификация, тосты)
 - Dexie.js (IndexedDB) для локальных данных с реактивными запросами через useLiveQuery
-- SyncEngine для фоновой синхронизации с бэкендом (push/pull, LWW conflict resolution)
+- SyncEngine для синхронизации с бэкендом: Dexie-хук → debounce push, SSE sync → debounce pull, LWW conflict resolution
 - React Hook Form для обработки форм
 - Zod для валидации схем на клиенте
 - Tailwind CSS для utility-first стилизации
