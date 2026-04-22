@@ -17,13 +17,7 @@ const taskCreateSchema = z.object({
 
 type TaskCreateFormData = z.infer<typeof taskCreateSchema>
 
-const DEFAULT_MOVE_TARGETS: { status: GtdStatus; label: string }[] = [
-  { status: 'inbox', label: '→ Inbox' },
-  { status: 'next', label: '→ Next' },
-  { status: 'waiting', label: '→ Waiting' },
-  { status: 'someday', label: '→ Someday' },
-  { status: 'trash', label: '→ Trash' },
-]
+const DEFAULT_MOVE_TARGETS: { status: GtdStatus; label: string }[] = []
 
 export interface TaskListViewProps {
   tasks: Task[]

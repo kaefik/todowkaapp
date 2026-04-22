@@ -319,7 +319,89 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
               )}
             </div>
+            <div>
+              <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                GTD-статус
+              </label>
+              <select
+                {...register('gtd_status')}
+                id="gtd_status"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                {GTD_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Проект
+              </label>
+              <select
+                {...register('project_id')}
+                id="project_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">Без проекта</option>
+                {projects.filter((p) => p.is_active).map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          <Accordion
+            title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${(reminderData.reminder_time || reminderData.reminder_offsets?.length) && !task?.reminder_fired ? ' \u{1F514}' : ''}`}
+            isOpen={accordionStates.recurrence}
+            onToggle={() => toggleAccordion('recurrence')}
+          >
+            <div>
+              <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Дедлайн
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={isTodayDue}
+                  onChange={(e) => handleTodayToggle(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Сегодня</span>
+              </label>
+              <input
+                {...register('due_date', {
+                  onChange: handleDueDateChange
+                })}
+                type="date"
+                id="due_date"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <ReminderEditor
+                reminderTime={reminderData.reminder_time}
+                reminderOffsets={reminderData.reminder_offsets}
+                reminderFired={task?.reminder_fired ?? false}
+                dueDate={watch('due_date') ?? null}
+                onChange={handleReminderChange}
+              />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <RecurrenceEditor
+                recurrenceType={recurrenceData.recurrence_type}
+                recurrenceConfig={recurrenceData.recurrence_config}
+                recurrenceEndDate={recurrenceData.recurrence_end_date}
+                dueDate={watch('due_date') ?? null}
+                onChange={setRecurrenceData}
+              />
+            </div>
+          </Accordion>
 
           <Accordion
             title="Теги"
@@ -374,89 +456,6 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               </select>
             </div>
 
-            <div>
-              <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Проект
-              </label>
-              <select
-                {...register('project_id')}
-                id="project_id"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-              >
-                <option value="">Без проекта</option>
-                {projects.filter((p) => p.is_active).map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                GTD-статус
-              </label>
-              <select
-                {...register('gtd_status')}
-                id="gtd_status"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-              >
-                {GTD_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </Accordion>
-
-          <Accordion
-            title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${(reminderData.reminder_time || reminderData.reminder_offsets?.length) && !task?.reminder_fired ? ' \u{1F514}' : ''}`}
-            isOpen={accordionStates.recurrence}
-            onToggle={() => toggleAccordion('recurrence')}
-          >
-            <div>
-              <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Дедлайн
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer mb-2">
-                <input
-                  type="checkbox"
-                  checked={isTodayDue}
-                  onChange={(e) => handleTodayToggle(e.target.checked)}
-                  className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Сегодня</span>
-              </label>
-              <input
-                {...register('due_date', {
-                  onChange: handleDueDateChange
-                })}
-                type="date"
-                id="due_date"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-              />
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-              <ReminderEditor
-                reminderTime={reminderData.reminder_time}
-                reminderOffsets={reminderData.reminder_offsets}
-                reminderFired={task?.reminder_fired ?? false}
-                dueDate={watch('due_date') ?? null}
-                onChange={handleReminderChange}
-              />
-            </div>
-
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-              <RecurrenceEditor
-                recurrenceType={recurrenceData.recurrence_type}
-                recurrenceConfig={recurrenceData.recurrence_config}
-                recurrenceEndDate={recurrenceData.recurrence_end_date}
-                dueDate={watch('due_date') ?? null}
-                onChange={setRecurrenceData}
-              />
-            </div>
           </Accordion>
 
           <Accordion
