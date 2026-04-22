@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useTasks, type Task, type UpdateTask } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { TaskEditModal } from '../components/TaskEditModal'
+import { TaskDetailModal } from '../components/TaskDetailModal'
 import { TaskFilterPanel, HighlightText } from '../components/TaskFilterPanel'
 import { useTaskFilter } from '../hooks/useTaskFilter'
 import { useLocalStorage } from '../hooks/useLocalStorage'
@@ -102,6 +103,7 @@ function TasksContent() {
     false
   )
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
   const [historyTaskId, setHistoryTaskId] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -308,13 +310,15 @@ function TasksContent() {
             {activeTasks.map((task) => (
               <div
                 key={task.id}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => setViewingTaskId(task.id)}
               >
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={task.completed}
                     onChange={() => handleToggleTask(task.id)}
+                    onClick={(e) => e.stopPropagation()}
                     className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                   />
                   <div className="flex-1 min-w-0">
@@ -349,7 +353,7 @@ function TasksContent() {
                       {formatDate(task.created_at)}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleEditTask(task)}
                       className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
@@ -398,13 +402,15 @@ function TasksContent() {
               {completedTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 opacity-75"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 opacity-75 cursor-pointer"
+                  onClick={() => setViewingTaskId(task.id)}
                 >
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={task.completed}
                       onChange={() => handleToggleTask(task.id)}
+                      onClick={(e) => e.stopPropagation()}
                       className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                     />
                     <div className="flex-1 min-w-0">
@@ -439,7 +445,7 @@ function TasksContent() {
                         {formatDate(task.created_at)}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleEditTask(task)}
                         className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
@@ -466,6 +472,16 @@ function TasksContent() {
         isOpen={!!editingTask}
         onClose={() => setEditingTask(null)}
         onSave={handleSaveTask}
+      />
+
+      <TaskDetailModal
+        taskId={viewingTaskId}
+        isOpen={!!viewingTaskId}
+        onClose={() => setViewingTaskId(null)}
+        onEdit={(task) => {
+          setViewingTaskId(null)
+          setEditingTask(task)
+        }}
       />
     </div>
   )

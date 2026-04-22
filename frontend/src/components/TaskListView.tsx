@@ -5,6 +5,7 @@ import { useSubtasks } from '../hooks/useSubtasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { TaskEditModal } from './TaskEditModal'
+import { TaskDetailModal } from './TaskDetailModal'
 import { HighlightText } from './TaskFilterPanel'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -231,6 +232,7 @@ export function TaskListView({
   )
   const [isAdding, setIsAdding] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
   const [historyTaskId, setHistoryTaskId] = useState<string | null>(null)
 
   const {
@@ -366,13 +368,15 @@ export function TaskListView({
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => setViewingTaskId(task.id)}
             >
               <div className="flex items-start gap-3">
                 <input
                   type="checkbox"
                   checked={task.completed}
                   onChange={() => onToggleTask(task.id)}
+                  onClick={(e) => e.stopPropagation()}
                   className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                 />
                 <div className="flex-1 min-w-0">
@@ -404,7 +408,7 @@ export function TaskListView({
                     </div>
                   )}
                   {task.project && (
-                    <div className="mt-1">
+                    <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                       <Link
                         to={`/projects/${task.project.id}`}
                         className="inline-flex items-center gap-1 text-[10px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline"
@@ -436,9 +440,11 @@ export function TaskListView({
                       </span>
                     )}
                   </div>
-                  <SubtaskSection taskId={task.id} onSubtaskChange={() => onRefetch()} />
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <SubtaskSection taskId={task.id} onSubtaskChange={() => onRefetch()} />
+                  </div>
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                   {!hideMoveButtons &&
                     effectiveMoveTargets
                       .filter((t) => t.status !== task.gtd_status)
@@ -476,6 +482,16 @@ export function TaskListView({
         isOpen={!!editingTask}
         onClose={() => setEditingTask(null)}
         onSave={handleSaveTask}
+      />
+
+      <TaskDetailModal
+        taskId={viewingTaskId}
+        isOpen={!!viewingTaskId}
+        onClose={() => setViewingTaskId(null)}
+        onEdit={(task) => {
+          setViewingTaskId(null)
+          setEditingTask(task)
+        }}
       />
     </>
   )
