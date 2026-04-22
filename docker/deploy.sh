@@ -149,13 +149,12 @@ if [ "$CLEAN_IMAGES" = true ]; then
     docker image prune -f
 fi
 
-# Сборка новых образов
+# Сборка Docker образов (backend)
 log_info "Сборка Docker образов..."
 docker-compose build --no-cache
 
 # Запуск миграций БД
 log_info "Запуск миграций БД..."
-cd "$PROJECT_ROOT/backend"
 if docker-compose -f "$SCRIPT_DIR/docker-compose.yml" run --rm backend alembic upgrade head; then
     log_info "Миграции успешно применены"
 else
@@ -165,60 +164,54 @@ fi
 
 # Запуск контейнеров
 log_info "Запуск контейнеров..."
-cd "$SCRIPT_DIR"
 docker-compose up -d
 
 # Проверка health status
-log_info "Проверка health status сервисов..."
+log_info "Проверка health status backend..."
 sleep 5
 
 MAX_RETRIES=30
 RETRY_COUNT=0
-ALL_HEALTHY=false
+BACKEND_HEALTHY=false
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
     
-    # Проверка бекенда
     if docker-compose ps | grep backend | grep -q "Up (healthy)"; then
         log_info "Backend здоров"
         BACKEND_HEALTHY=true
+        break
     else
         log_warn "Backend еще не здоров (попытка $RETRY_COUNT/$MAX_RETRIES)"
-        BACKEND_HEALTHY=false
-    fi
-    
-    # Проверка фронтенда
-    if docker-compose ps | grep frontend | grep -q "Up"; then
-        log_info "Frontend запущен"
-        FRONTEND_HEALTHY=true
-    else
-        log_warn "Frontend еще не запущен (попытка $RETRY_COUNT/$MAX_RETRIES)"
-        FRONTEND_HEALTHY=false
-    fi
-    
-    if [ "$BACKEND_HEALTHY" = true ] && [ "$FRONTEND_HEALTHY" = true ]; then
-        ALL_HEALTHY=true
-        break
     fi
     
     sleep 2
 done
 
-if [ "$ALL_HEALTHY" = true ]; then
-    log_info "Все сервисы успешно запущены и здоровы"
+if [ "$BACKEND_HEALTHY" = true ]; then
+    log_info "Backend успешно запущен"
 else
-    log_error "Не все сервисы запустились корректно"
+    log_error "Backend не запустился корректно"
     log_info "Логи:"
     docker-compose logs --tail=50
     exit 1
 fi
 
+# Сборка фронтенда
+log_info "Сборка фронтенда..."
+cd "$PROJECT_ROOT/frontend"
+if [ ! -d node_modules ]; then
+    npm install --legacy-peer-deps
+fi
+npm run build
+log_info "Фронтенд собран в frontend/dist/"
+
 # Показать логи последнего запуска
 log_info "Логи запуска:"
+cd "$SCRIPT_DIR"
 docker-compose logs --tail=20
 
 log_info "Деплой успешно завершен!"
-log_info "Frontend доступен на порту 80"
-log_info "Backend доступен на порту 8000"
-log_info "API документация: http://localhost/api/docs"
+log_info "Frontend: http://todowka.nn-88-nn.ru (через хостовый nginx)"
+log_info "Backend: http://localhost:8000 (в Docker)"
+log_info "API документация: http://todowka.nn-88-nn.ru/api/docs"

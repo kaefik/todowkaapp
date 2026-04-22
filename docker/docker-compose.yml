@@ -17,29 +17,7 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
-    networks:
-      - todowka-network
-
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    container_name: todowka-frontend
-    ports:
-      - "80:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    environment:
-      - VITE_API_BASE_URL=/api
-      - VITE_APP_NAME=${VITE_APP_NAME:-Todowka}
-    networks:
-      - todowka-network
 
 volumes:
   backend-data:
     driver: local
-
-networks:
-  todowka-network:
-    driver: bridge
