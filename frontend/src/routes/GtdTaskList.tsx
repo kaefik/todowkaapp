@@ -44,7 +44,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     await addTask({ ...data, gtd_status: gtdStatus })
   }
 
-  const handleDeleteTask = (id: string) => {
+  const handleDeleteTask = async (id: string) => {
     setPendingDeleteId(id)
   }
 

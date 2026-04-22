@@ -19,7 +19,7 @@ export function SearchOverlay({ open, onClose }: Props) {
   const [results, setResults] = useState<TaskHit[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     if (open) {
