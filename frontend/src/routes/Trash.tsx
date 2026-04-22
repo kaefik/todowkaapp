@@ -4,17 +4,23 @@ import { useGtdCounts } from '../hooks/useGtdCounts'
 import { useAuthStore } from '../stores/authStore'
 import { v4 as uuidv4 } from 'uuid'
 import { GtdTaskList } from './GtdTaskList'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 export function Trash() {
   const [isClearing, setIsClearing] = useState(false)
   const [clearError, setClearError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
   const { counts } = useGtdCounts()
   const user = useAuthStore(s => s.user)
   const isEmpty = counts.trash === 0
 
-  const handleClearTrash = async () => {
-    if (!confirm('Удалить все задачи из корзины навсегда? Это действие нельзя отменить.')) return
+  const handleClearTrash = () => {
+    setShowClearConfirm(true)
+  }
+
+  const confirmClearTrash = async () => {
+    setShowClearConfirm(false)
     if (!user) return
 
     setIsClearing(true)
@@ -81,6 +87,16 @@ export function Trash() {
       )}
 
       <GtdTaskList gtdStatus="trash" title="" key={refreshKey} />
+
+      <ConfirmDialog
+        open={showClearConfirm}
+        title="Очистить корзину?"
+        message="Все задачи будут удалены навсегда. Это действие нельзя отменить."
+        confirmText="Очистить"
+        variant="danger"
+        onConfirm={confirmClearTrash}
+        onCancel={() => setShowClearConfirm(false)}
+      />
     </div>
   )
 }

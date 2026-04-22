@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
 import { useTaskFilter } from '../hooks/useTaskFilter'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 interface GtdTaskListProps {
   gtdStatus: GtdStatus
@@ -37,17 +38,24 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     refetchOnMount: gtdStatus === 'trash' ? 'always' : undefined,
   })
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
   const handleAddTask = async (data: { title: string; description?: string }) => {
     await addTask({ ...data, gtd_status: gtdStatus })
   }
 
-  const handleDeleteTask = async (id: string) => {
+  const handleDeleteTask = (id: string) => {
+    setPendingDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
     if (gtdStatus === 'trash') {
-      if (!confirm('Удалить задачу навсегда?')) return
-      await deleteTask(id)
+      await deleteTask(pendingDeleteId)
     } else {
-      await moveTask(id, 'trash')
+      await moveTask(pendingDeleteId, 'trash')
     }
+    setPendingDeleteId(null)
     refetch()
   }
 
@@ -89,6 +97,16 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         onSaveTask={handleSaveTask}
         onRefetch={refetch}
         emptyMessage="Нет задач."
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={gtdStatus === 'trash' ? 'Удалить навсегда?' : 'Переместить в корзину?'}
+        message={gtdStatus === 'trash' ? 'Это действие нельзя отменить.' : 'Задача будет перемещена в корзину.'}
+        confirmText={gtdStatus === 'trash' ? 'Удалить навсегда' : 'Удалить'}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
       />
     </div>
   )
