@@ -5,6 +5,7 @@ import { useGtdCounts } from '../hooks/useGtdCounts'
 import { InstallPrompt } from './InstallPrompt'
 import { NotificationBell } from './NotificationBell'
 import { StatusLight } from './StatusLight'
+import { SearchOverlay } from './SearchOverlay'
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
@@ -146,8 +147,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function AppLayout() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   if (!isAuthenticated) {
     return (
@@ -160,7 +162,28 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/50 lg:hidden">
+      {/* Десктопная шапка */}
+      <header className="hidden lg:flex sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/50 items-center h-16 px-6">
+        <Link to="/" className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center">
+          Todowka <StatusLight />
+        </Link>
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          className="ml-8 flex-1 max-w-md text-left px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+        >
+          Поиск задач...
+        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <NotificationBell />
+          <Link to="/profile" className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
+            {user?.username}
+          </Link>
+        </div>
+      </header>
+
+      {/* Мобильная шапка */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-gray-900/50 lg:hidden sticky top-0 z-30">
         <div className="flex items-center h-16 px-4">
           <button
             type="button"
@@ -174,7 +197,16 @@ export function AppLayout() {
           <Link to="/" className="ml-3 text-xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center">
             Todowka <StatusLight />
           </Link>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
             <NotificationBell />
           </div>
         </div>
@@ -202,13 +234,7 @@ export function AppLayout() {
         </div>
       )}
 
-      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <Link to="/" className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center">
-            Todowka <StatusLight />
-          </Link>
-          <NotificationBell />
-        </div>
+      <aside className="hidden lg:block fixed top-16 bottom-0 left-0 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 overflow-y-auto">
         <SidebarContent />
       </aside>
 
@@ -217,6 +243,8 @@ export function AppLayout() {
       </main>
 
       <InstallPrompt />
+
+      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   )
 }
