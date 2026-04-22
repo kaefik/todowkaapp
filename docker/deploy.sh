@@ -48,19 +48,66 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
-# Проверка .env файла
-if [ ! -f "$SCRIPT_DIR/.env" ]; then
-    log_warn "Файл .env не найден, создаем из .env.example"
-    if [ -f "$SCRIPT_DIR/.env.example" ]; then
-        cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
-        log_info ".env создан. Пожалуйста, настройте его для продакшн"
-        log_info "Особенно SECRET_KEY и ALLOWED_ORIGINS"
-        read -p "Нажмите Enter после настройки .env..."
+# Создание .env из backend + frontend + docker-specific переменных
+merge_env_files() {
+    local env_file="$SCRIPT_DIR/.env"
+    local tmp_file=$(mktemp)
+
+    {
+        echo "# ==========================================="
+        echo "# Автоматически сгенерированный .env файл"
+        echo "# Объединяет: backend/.env + frontend/.env + docker vars"
+        echo "# ==========================================="
+        echo ""
+
+        echo "# === Backend variables ==="
+        if [ -f "$PROJECT_ROOT/backend/.env" ]; then
+            grep -v '^\s*#' "$PROJECT_ROOT/backend/.env" | grep -v '^\s*$' || true
+        elif [ -f "$PROJECT_ROOT/backend/.env.example" ]; then
+            grep -v '^\s*#' "$PROJECT_ROOT/backend/.env.example" | grep -v '^\s*$' || true
+        fi
+        echo ""
+
+        echo "# === Frontend variables ==="
+        if [ -f "$PROJECT_ROOT/frontend/.env" ]; then
+            grep -v '^\s*#' "$PROJECT_ROOT/frontend/.env" | grep -v '^\s*$' || true
+        elif [ -f "$PROJECT_ROOT/frontend/.env.example" ]; then
+            grep -v '^\s*#' "$PROJECT_ROOT/frontend/.env.example" | grep -v '^\s*$' || true
+        fi
+        echo ""
+
+        echo "# === Docker-specific variables ==="
+        echo "DOMAIN=${DOMAIN:-todowka.nn-88-nn.ru}"
+        echo "EMAIL=${EMAIL:-admin@todowka.nn-88-nn.ru}"
+        echo ""
+        echo "# Deploy Options"
+        echo "UPDATE_CODE=${UPDATE_CODE:-true}"
+        echo "BACKUP_DB=${BACKUP_DB:-true}"
+        echo "CLEAN_IMAGES=${CLEAN_IMAGES:-false}"
+
+    } > "$tmp_file"
+
+    if [ ! -f "$env_file" ]; then
+        mv "$tmp_file" "$env_file"
+        log_info "Создан новый .env из backend + frontend + docker vars"
+        log_warn "Проверьте настройки в $env_file"
+        log_warn "Особенно SECRET_KEY и ALLOWED_ORIGINS"
+        read -p "Нажмите Enter после проверки .env..."
     else
-        log_error "Файл .env.example не найден"
-        exit 1
+        local old_hash=$(md5sum "$env_file" | cut -d' ' -f1)
+        local new_hash=$(md5sum "$tmp_file" | cut -d' ' -f1)
+        if [ "$old_hash" != "$new_hash" ]; then
+            cp "$env_file" "${env_file}.bak.$(date +%Y%m%d%H%M%S)"
+            mv "$tmp_file" "$env_file"
+            log_info ".env обновлен из исходных .env файлов (старый сохранен как .bak)"
+        else
+            rm "$tmp_file"
+            log_info ".env актуален"
+        fi
     fi
-fi
+}
+
+merge_env_files
 
 # Параметры
 UPDATE_CODE=${UPDATE_CODE:-true}
