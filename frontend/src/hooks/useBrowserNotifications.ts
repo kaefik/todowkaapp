@@ -16,6 +16,19 @@ export function useBrowserNotifications() {
     return () => window.removeEventListener('storage', handler)
   }, [])
 
+  useEffect(() => {
+    const syncPermission = () => {
+      setPermission(bnApi.getPermission())
+    }
+    window.addEventListener('focus', syncPermission)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) syncPermission()
+    })
+    return () => {
+      window.removeEventListener('focus', syncPermission)
+    }
+  }, [])
+
   const enable = useCallback(async () => {
     if (!supported) return false
 

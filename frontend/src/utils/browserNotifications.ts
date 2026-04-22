@@ -49,7 +49,7 @@ export async function show(options: ShowOptions): Promise<boolean> {
       const registration = await navigator.serviceWorker.ready
       await registration.showNotification(options.title, {
         body: options.body,
-        icon: '/icon-192x192.png',
+        icon: '/pwa-192x192.png',
         tag: options.tag,
         data: { url: window.location.href },
       })
@@ -58,7 +58,7 @@ export async function show(options: ShowOptions): Promise<boolean> {
 
     const notification = new Notification(options.title, {
       body: options.body,
-      icon: '/icon-192x192.png',
+      icon: '/pwa-192x192.png',
       tag: options.tag,
     })
 

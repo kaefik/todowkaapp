@@ -175,19 +175,21 @@ function SettingsContent() {
                   Ваш браузер не поддерживает уведомления. Попробуйте использовать Chrome, Firefox, Edge или Safari.
                 </p>
               </div>
-            ) : browserNotifications.permission === 'denied' && browserNotifications.enabled ? (
+            ) : browserNotifications.permission === 'denied' ? (
               <div className="space-y-3">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <p className="text-sm text-red-700 dark:text-red-400">
                     Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта и обновите страницу.
                   </p>
                 </div>
-                <button
-                  onClick={browserNotifications.disable}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  Отключить уведомления
-                </button>
+                {browserNotifications.enabled && (
+                  <button
+                    onClick={browserNotifications.disable}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    Отключить уведомления
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -207,11 +209,20 @@ function SettingsContent() {
                     </p>
                   </div>
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (browserNotifications.enabled) {
                         browserNotifications.disable()
                       } else {
-                        browserNotifications.enable()
+                        const ok = await browserNotifications.enable()
+                        if (!ok) {
+                          addToast({
+                            title: 'Не удалось включить уведомления',
+                            body: browserNotifications.permission === 'denied'
+                              ? 'Уведомления заблокированы браузером. Разрешите их в настройках сайта.'
+                              : 'Не удалось получить разрешение на уведомления.',
+                            type: 'error',
+                          })
+                        }
                       }
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
