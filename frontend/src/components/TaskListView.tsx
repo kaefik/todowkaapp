@@ -142,17 +142,29 @@ function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtask
   )
 }
 
-function formatDate(dateString: string) {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffTime = Math.abs(now.getTime() - date.getTime())
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) return 'Сегодня'
-  if (diffDays === 1) return 'Вчера'
-  if (diffDays < 7) return `${diffDays} дн. назад`
+function formatShortDate(date: Date) {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 }
+
+function formatDueDate(dueDate: string | null): { text: string; overdue: boolean } {
+  if (!dueDate) return { text: 'Без срока', overdue: false }
+
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const due = new Date(dueDate)
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+  const diffMs = dueDay.getTime() - today.getTime()
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+  const shortDate = formatShortDate(due)
+
+  if (diffDays === 0) return { text: `Сегодня (${shortDate})`, overdue: false }
+  if (diffDays === 1) return { text: `Завтра (${shortDate})`, overdue: false }
+  if (diffDays === -1) return { text: `Вчера (${shortDate})`, overdue: true }
+  if (diffDays < -1) return { text: `Просрочен на ${Math.abs(diffDays)} дн. (${shortDate})`, overdue: true }
+  if (diffDays <= 7) return { text: `Через ${diffDays} дн. (${shortDate})`, overdue: false }
+  return { text: shortDate, overdue: false }
+}
+
 
 function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () => void }) {
   return (
@@ -431,9 +443,14 @@ export function TaskListView({
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {formatDate(task.created_at)}
-                    </p>
+                    {(() => {
+                      const { text, overdue } = formatDueDate(task.due_date)
+                      return (
+                        <p className={`text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {text}
+                        </p>
+                      )
+                    })()}
                     {task.subtasks_count > 0 && (
                       <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
                         {task.subtasks_completed}/{task.subtasks_count}

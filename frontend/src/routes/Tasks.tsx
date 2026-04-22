@@ -144,21 +144,23 @@ function TasksContent() {
     }
   }, [searchParams, isLoading, tasks, editingTask, setSearchParams])
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - date.getTime())
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  const formatDueDate = (dueDate: string | null): { text: string; overdue: boolean } => {
+    if (!dueDate) return { text: 'Без срока', overdue: false }
 
-    if (diffDays === 0) {
-      return 'Сегодня'
-    } else if (diffDays === 1) {
-      return 'Вчера'
-    } else if (diffDays < 7) {
-      return `${diffDays} дн. назад`
-    } else {
-      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-    }
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const due = new Date(dueDate)
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
+    const diffMs = dueDay.getTime() - today.getTime()
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
+    const shortDate = due.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+
+    if (diffDays === 0) return { text: `Сегодня (${shortDate})`, overdue: false }
+    if (diffDays === 1) return { text: `Завтра (${shortDate})`, overdue: false }
+    if (diffDays === -1) return { text: `Вчера (${shortDate})`, overdue: true }
+    if (diffDays < -1) return { text: `Просрочен на ${Math.abs(diffDays)} дн. (${shortDate})`, overdue: true }
+    if (diffDays <= 7) return { text: `Через ${diffDays} дн. (${shortDate})`, overdue: false }
+    return { text: shortDate, overdue: false }
   }
 
   const handleAddTask = async (data: TaskCreateFormData) => {
@@ -349,9 +351,14 @@ function TasksContent() {
                         ))}
                       </div>
                     )}
-                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                      {formatDate(task.created_at)}
-                    </p>
+                    {(() => {
+                      const { text, overdue } = formatDueDate(task.due_date)
+                      return (
+                        <p className={`mt-1 text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {text}
+                        </p>
+                      )
+                    })()}
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <button
@@ -441,9 +448,14 @@ function TasksContent() {
                           ))}
                         </div>
                       )}
-                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 line-through">
-                        {formatDate(task.created_at)}
-                      </p>
+                      {(() => {
+                        const { text, overdue } = formatDueDate(task.due_date)
+                        return (
+                          <p className={`mt-1 text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'} line-through`}>
+                            {text}
+                          </p>
+                        )
+                      })()}
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
