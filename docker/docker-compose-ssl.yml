@@ -32,6 +32,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     container_name: todowka-frontend
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
@@ -62,6 +63,7 @@ services:
   certbot:
     image: certbot/certbot
     container_name: todowka-certbot
+    restart: unless-stopped
     volumes:
       - ./certbot/conf:/etc/letsencrypt:z
       - ./certbot/www:/var/www/certbot:z
