@@ -25,6 +25,8 @@ function renderWithRouter(initialPath = '/inbox') {
       <Routes>
         <Route path="/" element={<AppLayout />}>
           <Route path="inbox" element={<div>Inbox Page</div>} />
+          <Route path="today" element={<div>Today Page</div>} />
+          <Route path="tomorrow" element={<div>Tomorrow Page</div>} />
           <Route path="next" element={<div>Next Page</div>} />
           <Route path="waiting" element={<div>Waiting Page</div>} />
           <Route path="someday" element={<div>Someday Page</div>} />
@@ -46,7 +48,7 @@ describe('AppLayout / Sidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useGtdCounts).mockReturnValue({
-      counts: { inbox: 3, next: 1, waiting: 0, someday: 2, completed: 5, trash: 0 },
+      counts: { inbox: 3, next: 1, waiting: 0, someday: 2, completed: 5, trash: 0, today: 7, tomorrow: 4 },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -67,6 +69,8 @@ describe('AppLayout / Sidebar', () => {
     it('renders all GTD navigation items', () => {
       renderWithRouter()
       expect(screen.getByText('Inbox')).toBeInTheDocument()
+      expect(screen.getByText('Сегодня')).toBeInTheDocument()
+      expect(screen.getByText('Завтра')).toBeInTheDocument()
       expect(screen.getByText('Next Actions')).toBeInTheDocument()
       expect(screen.getByText('Waiting For')).toBeInTheDocument()
       expect(screen.getByText('Someday / Maybe')).toBeInTheDocument()
@@ -125,7 +129,7 @@ describe('AppLayout / Sidebar', () => {
   describe('navigation', () => {
     it('renders user section', () => {
       renderWithRouter()
-      expect(screen.getByText('testuser')).toBeInTheDocument()
+      expect(screen.getAllByText('testuser').length).toBeGreaterThan(0)
     })
 
     it('renders Settings link', () => {

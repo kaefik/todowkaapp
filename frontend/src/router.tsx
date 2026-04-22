@@ -3,6 +3,8 @@ import { Login } from './routes/Login'
 import { Register } from './routes/Register'
 import { Tasks } from './routes/Tasks'
 import { Inbox } from './routes/Inbox'
+import { Today } from './routes/Today'
+import { Tomorrow } from './routes/Tomorrow'
 import { NextActions } from './routes/NextActions'
 import { WaitingFor } from './routes/WaitingFor'
 import { Someday } from './routes/Someday'
@@ -47,6 +49,14 @@ const routes: RouteObject[] = [
       {
         path: 'inbox',
         element: <Inbox />,
+      },
+      {
+        path: 'today',
+        element: <Today />,
+      },
+      {
+        path: 'tomorrow',
+        element: <Tomorrow />,
       },
       {
         path: 'next',
