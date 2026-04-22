@@ -10,6 +10,7 @@ from app.database import Base as Base
 
 class GtdStatus(enum.StrEnum):
     INBOX = 'inbox'
+    ACTIVE = 'active'
     NEXT = 'next'
     WAITING = 'waiting'
     SOMEDAY = 'someday'

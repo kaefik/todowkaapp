@@ -14,6 +14,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const gtdItems = [
     { path: '/inbox', label: 'Inbox', count: counts.inbox },
+    { path: '/active', label: 'Active', count: counts.active },
     { path: '/today', label: 'Сегодня', count: counts.today },
     { path: '/tomorrow', label: 'Завтра', count: counts.tomorrow },
     { path: '/next', label: 'Next Actions', count: counts.next },

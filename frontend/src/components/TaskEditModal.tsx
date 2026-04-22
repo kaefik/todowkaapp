@@ -44,6 +44,7 @@ function Accordion({ title, isOpen, onToggle, children }: {
 
 const GTD_STATUS_OPTIONS: { value: GtdStatus; label: string }[] = [
   { value: 'inbox', label: 'Inbox' },
+  { value: 'active', label: 'Active' },
   { value: 'next', label: 'Next Action' },
   { value: 'waiting', label: 'Waiting For' },
   { value: 'someday', label: 'Someday / Maybe' },
@@ -249,9 +250,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   const onSubmit = async (data: EditTaskFormData) => {
     if (!task) return
+    let gtdStatus = data.gtd_status as GtdStatus | undefined
+    if (data.due_date && task.gtd_status === 'inbox' && (!gtdStatus || gtdStatus === 'inbox')) {
+      gtdStatus = 'active'
+    }
     await onSave(task.id, {
       ...data,
-      gtd_status: data.gtd_status as GtdStatus | undefined,
+      gtd_status: gtdStatus,
       tag_ids: selectedTagIds,
       recurrence_type: recurrenceData.recurrence_type,
       recurrence_config: recurrenceData.recurrence_config,

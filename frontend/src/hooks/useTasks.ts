@@ -7,7 +7,7 @@ import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 import type { Tag } from './useTags'
 
-export type GtdStatus = 'inbox' | 'next' | 'waiting' | 'someday' | 'completed' | 'trash'
+export type GtdStatus = 'inbox' | 'active' | 'next' | 'waiting' | 'someday' | 'completed' | 'trash'
 
 export interface RecurrenceConfig {
   type: 'daily' | 'weekly' | 'monthly'
@@ -255,6 +255,9 @@ export function useTasks(filters?: TaskFilters, _options?: UseTasksOptions): Use
     if (data.area_id !== undefined) updates.areaId = data.area_id
     if (data.project_id !== undefined) updates.projectId = data.project_id
     if (data.due_date !== undefined) updates.dueDate = data.due_date
+    if (data.due_date !== undefined && data.due_date !== null && existing.gtdStatus === 'inbox') {
+      updates.gtdStatus = 'active'
+    }
     if (data.notes !== undefined) updates.notes = data.notes
     if (data.tag_ids !== undefined) updates.tagIds = data.tag_ids
     if (data.recurrence_type !== undefined) updates.recurrenceType = data.recurrence_type

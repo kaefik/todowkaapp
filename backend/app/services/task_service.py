@@ -126,12 +126,17 @@ class TaskService:
         import uuid as uuid_mod
 
         task_id = data.id if data.id else str(uuid_mod.uuid4())
+
+        gtd_status = data.gtd_status.value if isinstance(data.gtd_status, GtdStatus) else data.gtd_status
+        if data.due_date is not None and gtd_status == GtdStatus.INBOX.value:
+            gtd_status = GtdStatus.ACTIVE.value
+
         task = Task(
             id=task_id,
             user_id=str(user_id),
             title=data.title,
             description=data.description,
-            gtd_status=data.gtd_status.value if isinstance(data.gtd_status, GtdStatus) else data.gtd_status,
+            gtd_status=gtd_status,
             context_id=data.context_id,
             area_id=data.area_id,
             project_id=data.project_id,
@@ -177,6 +182,11 @@ class TaskService:
         if 'gtd_status' in update_data:
             val = update_data.pop('gtd_status')
             update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val
+
+        if 'due_date' in update_data and update_data['due_date'] is not None:
+            current_status = update_data.get('gtd_status', task.gtd_status)
+            if current_status == GtdStatus.INBOX.value or current_status == GtdStatus.INBOX:
+                update_data['gtd_status'] = GtdStatus.ACTIVE.value
 
         for field, value in update_data.items():
             setattr(task, field, value)

@@ -101,6 +101,17 @@
 - **Организация:** автоматическое разделение на активные и завершённые задачи
 - **Визуальная индикация:** чекбоксы и зачёркивание выполненных задач
 
+#### GTD-статус Active ✅ (Реализовано 22.04.2026)
+- Новый GTD-статус `active` — задачи с дедлайном, которые «в работе»
+- Автоматический переход: при установке `due_date` задаче в `inbox` → статус меняется на `active`
+- Снятие дедлайна не возвращает задачу из `active` обратно в `inbox`
+- Из `active` доступны все стандартные переходы (inbox, next, waiting, someday, completed, trash)
+- Отдельный пункт «Active» в сайдбаре (секция GTD, после Inbox) с badge-счётчиком
+- Роут: `/active` → `GtdTaskList` с `gtdStatus="active"`
+- Реализация на бэкенде: `TaskService.create_task()` и `TaskService.update_task()` автоматически переводят `inbox` → `active`
+- Реализация на фронтенде: `useTasks.updateTask()` и `TaskEditModal.onSubmit()` автоматически переводят `inbox` → `active`
+- Файлы: `backend/app/models/task.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useGtdCounts.ts`, `frontend/src/components/AppLayout.tsx`, `frontend/src/components/TaskEditModal.tsx`, `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/router.tsx`, `frontend/src/routes/Active.tsx`
+
 #### Индикатор состояния соединения ✅ (Реализовано 16.04.2026, обновлено 22.04.2026)
 - Светофор-индикатор (StatusLight) рядом с названием «Todowka» в хедере и сайдбаре
 - 6 состояний: загрузка (серый), онлайн (зелёный), офлайн (жёлтый), синхронизация (синий, пульсирует), ошибка (красный, пульсирует), очередь (оранжевый, пульсирует)

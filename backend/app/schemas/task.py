@@ -129,6 +129,7 @@ class TaskListResponse(BaseModel):
 
 class GtdCountsResponse(BaseModel):
     inbox: int = 0
+    active: int = 0
     next: int = 0
     waiting: int = 0
     someday: int = 0

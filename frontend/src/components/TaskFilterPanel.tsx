@@ -8,6 +8,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 
 const GTD_OPTIONS: { value: GtdStatus; label: string }[] = [
   { value: 'inbox', label: 'Inbox' },
+  { value: 'active', label: 'Active' },
   { value: 'next', label: 'Next' },
   { value: 'waiting', label: 'Waiting' },
   { value: 'someday', label: 'Someday' },

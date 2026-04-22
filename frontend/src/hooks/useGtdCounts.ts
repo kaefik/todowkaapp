@@ -43,6 +43,7 @@ export function notifyTasksChanged() {}
 
 export interface GtdCounts {
   inbox: number
+  active: number
   next: number
   waiting: number
   someday: number
@@ -61,6 +62,7 @@ interface UseGtdCountsReturn {
 
 const defaultCounts: GtdCounts = {
   inbox: 0,
+  active: 0,
   next: 0,
   waiting: 0,
   someday: 0,
@@ -70,7 +72,7 @@ const defaultCounts: GtdCounts = {
   tomorrow: 0,
 }
 
-const GTD_STATUSES: GtdStatus[] = ['inbox', 'next', 'waiting', 'someday', 'completed', 'trash']
+const GTD_STATUSES: GtdStatus[] = ['inbox', 'active', 'next', 'waiting', 'someday', 'completed', 'trash']
 
 export function useGtdCounts(): UseGtdCountsReturn {
   const user = useAuthStore(s => s.user)
@@ -123,6 +125,7 @@ export function useGtdCounts(): UseGtdCountsReturn {
 
 export const GTD_STATUS_LABELS: Record<GtdStatus, string> = {
   inbox: 'Inbox',
+  active: 'Active',
   next: 'Next Actions',
   waiting: 'Waiting For',
   someday: 'Someday / Maybe',
