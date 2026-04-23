@@ -7,7 +7,7 @@ import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 
 type Theme = 'light' | 'dark'
-type Tab = 'general' | 'profile' | 'users'
+type Tab = 'general' | 'profile' | 'security' | 'users'
 
 const POPULAR_TIMEZONES = [
   { name: 'Москва (UTC+3)', value: 'Europe/Moscow' },
@@ -93,6 +93,7 @@ function SettingsContent() {
   const tabs: { key: Tab; label: string; adminOnly: boolean }[] = [
     { key: 'general', label: 'Общие', adminOnly: false },
     { key: 'profile', label: 'Профиль', adminOnly: false },
+    { key: 'security', label: 'Безопасность', adminOnly: false },
     { key: 'users', label: 'Пользователи', adminOnly: true },
   ]
 
@@ -411,7 +412,131 @@ function SettingsContent() {
         </div>
       )}
 
+      {activeTab === 'security' && <SecurityTab />}
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
+    </div>
+  )
+}
+
+function SecurityTab() {
+  const addToast = useToastStore((s) => s.addToast)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const validate = (): string | null => {
+    if (!currentPassword) return 'Введите текущий пароль'
+    if (!newPassword) return 'Введите новый пароль'
+    if (newPassword.length < 8) return 'Пароль должен содержать минимум 8 символов'
+    if (!/\d/.test(newPassword)) return 'Пароль должен содержать хотя бы одну цифру'
+    if (!/\p{Lu}/u.test(newPassword)) return 'Пароль должен содержать хотя бы одну заглавную букву'
+    if (!/[^\p{L}\p{N}]/u.test(newPassword)) return 'Пароль должен содержать хотя бы один спецсимвол'
+    if (newPassword !== confirmPassword) return 'Пароли не совпадают'
+    if (currentPassword === newPassword) return 'Новый пароль совпадает с текущим'
+    return null
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      await usersApi.changePassword(currentPassword, newPassword)
+      addToast({ title: 'Пароль изменён', body: 'Ваш пароль успешно обновлён', type: 'success' })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      if (err instanceof Error && 'status' in err) {
+        const apiErr = err as { status: number; message: string }
+        if (apiErr.status === 400) {
+          setError(apiErr.message || 'Неверный текущий пароль')
+        } else if (apiErr.status === 422) {
+          setError('Новый пароль не соответствует требованиям')
+        } else {
+          setError(apiErr.message || 'Ошибка при смене пароля')
+        }
+      } else {
+        setError('Ошибка при смене пароля')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Смена пароля</h2>
+
+      {error && (
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Текущий пароль
+          </label>
+          <input
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Новый пароль
+          </label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            required
+            minLength={8}
+          />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Минимум 8 символов, хотя бы одна цифра, одна заглавная буква и один спецсимвол
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Подтвердите новый пароль
+          </label>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            required
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Сохранение...' : 'Изменить пароль'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
