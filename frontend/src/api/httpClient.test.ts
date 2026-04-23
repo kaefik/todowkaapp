@@ -42,7 +42,7 @@ describe('httpClient', () => {
   })
 
   describe('Authorization header', () => {
-    it('adds Authorization header when accessToken exists', async () => {
+    it('adds X-Requested-With header when authenticated', async () => {
       const mockResponse = { ok: true, status: 200, statusText: 'OK', json: async () => ({ data: 'test' }) }
       vi.mocked(global.fetch).mockResolvedValueOnce(mockResponse as any)
 
@@ -52,9 +52,10 @@ describe('httpClient', () => {
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: `Bearer ${mockAccessToken}`,
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
           }),
+          credentials: 'include',
         })
       )
     })
@@ -223,14 +224,11 @@ describe('httpClient', () => {
       expect(authStore.refreshToken).toHaveBeenCalled()
     })
 
-    it('retries original request with new token after refresh', async () => {
-      const newToken = 'new-access-token'
+    it('retries original request after refresh', async () => {
       const authStore = {
         user: { id: '1', username: 'test', email: 'test@test.com', is_active: true, is_admin: false, created_at: '2024-01-01' },
         accessToken: mockAccessToken,
-        refreshToken: vi.fn().mockImplementation(() => {
-          authStore.accessToken = newToken
-        }),
+        refreshToken: vi.fn().mockResolvedValue(undefined),
         isAuthenticated: true,
         isLoading: false,
         error: null,
@@ -251,8 +249,9 @@ describe('httpClient', () => {
       expect(global.fetch).toHaveBeenNthCalledWith(2,
         expect.any(String),
         expect.objectContaining({
+          credentials: 'include',
           headers: expect.objectContaining({
-            Authorization: `Bearer ${newToken}`,
+            'X-Requested-With': 'XMLHttpRequest',
           }),
         })
       )
@@ -451,9 +450,10 @@ describe('httpClient', () => {
         expect.objectContaining({
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mockAccessToken}`,
+            'X-Requested-With': 'XMLHttpRequest',
             'X-Custom-Header': 'custom-value',
           }),
+          credentials: 'include',
         })
       )
     })
