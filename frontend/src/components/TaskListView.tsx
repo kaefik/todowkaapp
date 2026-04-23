@@ -290,6 +290,10 @@ export function TaskListView({
 
   const effectiveMoveTargets = moveTargets ?? DEFAULT_MOVE_TARGETS
 
+  const activeTasks = tasks.filter((t) => !t.completed)
+  const completedTasks = tasks.filter((t) => t.completed)
+  const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(true)
+
   if (isLoading && tasks.length === 0) {
     return (
       <>
@@ -369,18 +373,18 @@ export function TaskListView({
         </form>
       )}
 
-      {tasks.length === 0 && !isLoading && (
+      {activeTasks.length === 0 && completedTasks.length === 0 && !isLoading && (
         <div className="text-center py-12">
           <p className="text-gray-500 dark:text-gray-400 text-lg">{emptyMessage}</p>
         </div>
       )}
 
-      {tasks.length > 0 && (
+      {activeTasks.length > 0 && (
         <div className="space-y-2">
-          {tasks.map((task) => (
+          {activeTasks.map((task) => (
             <div
               key={task.id}
-              className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer${task.completed ? ' opacity-80' : ''}`}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => setViewingTaskId(task.id)}
             >
               <div className="flex items-start gap-3">
@@ -392,7 +396,7 @@ export function TaskListView({
                   className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className={`text-sm font-medium relative ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
+                  <h3 className="text-sm font-medium relative text-gray-900 dark:text-gray-100">
                     <span className="inline-flex items-center">
                       <HighlightText text={task.title} query={searchQuery} />
                       <TaskIcons task={task} onHistoryClick={() => setHistoryTaskId(task.id)} />
@@ -402,7 +406,7 @@ export function TaskListView({
                     )}
                   </h3>
                   {task.description && (
-                    <p className={`mt-1 text-sm ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       <HighlightText text={task.description} query={searchQuery} />
                     </p>
                   )}
@@ -411,7 +415,7 @@ export function TaskListView({
                       {task.tags.map((tag) => (
                         <span
                           key={tag.id}
-                          className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white ${task.completed ? 'opacity-60' : ''}`}
+                          className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
                           style={{ backgroundColor: tag.color || '#6366f1' }}
                         >
                           {tag.name}
@@ -428,7 +432,7 @@ export function TaskListView({
                         {task.project.color && (
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.project.color }} />
                         )}
-                        <span className={task.completed ? 'opacity-60' : ''}>{task.project.name}</span>
+                        <span>{task.project.name}</span>
                       </Link>
                     </div>
                   )}
@@ -438,7 +442,7 @@ export function TaskListView({
                         {task.context.color && (
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.context.color }} />
                         )}
-                        <span className={task.completed ? 'opacity-60' : ''}>{task.context.name}</span>
+                        <span>{task.context.name}</span>
                       </span>
                     </div>
                   )}
@@ -491,6 +495,148 @@ export function TaskListView({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {completedTasks.length > 0 && (
+        <div className="mt-4">
+          <button
+            onClick={() => setIsCompletedCollapsed(!isCompletedCollapsed)}
+            className="w-full flex items-center justify-between text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors"
+          >
+            <span>Выполненные ({completedTasks.length})</span>
+            <svg
+              className={`h-4 w-4 transition-transform duration-200 ${isCompletedCollapsed ? '' : 'rotate-180'}`}
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+
+          {!isCompletedCollapsed && (
+            <div className="space-y-2">
+              {completedTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 opacity-75 cursor-pointer"
+                  onClick={() => setViewingTaskId(task.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => onToggleTask(task.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium relative text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500">
+                        <span className="inline-flex items-center">
+                          <HighlightText text={task.title} query={searchQuery} />
+                          <TaskIcons task={task} onHistoryClick={() => setHistoryTaskId(task.id)} />
+                        </span>
+                        {historyTaskId === task.id && (
+                          <RecurrenceHistoryPopup taskId={task.id} onClose={() => setHistoryTaskId(null)} />
+                        )}
+                      </h3>
+                      {task.description && (
+                        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500">
+                          <HighlightText text={task.description} query={searchQuery} />
+                        </p>
+                      )}
+                      {task.tags && task.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {task.tags.map((tag) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white opacity-60"
+                              style={{ backgroundColor: tag.color || '#6366f1' }}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {task.project && (
+                        <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                          <Link
+                            to={`/projects/${task.project.id}`}
+                            className="inline-flex items-center gap-1 text-[10px] text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline"
+                          >
+                            {task.project.color && (
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.project.color }} />
+                            )}
+                            <span className="opacity-60">{task.project.name}</span>
+                          </Link>
+                        </div>
+                      )}
+                      {task.context && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-400">
+                            {task.context.color && (
+                              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.context.color }} />
+                            )}
+                            <span className="opacity-60">{task.context.name}</span>
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {(() => {
+                          const { text, overdue } = formatDueDate(task.due_date)
+                          return (
+                            <p className={`text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                              {text}
+                            </p>
+                          )
+                        })()}
+                        {task.subtasks_count > 0 && (
+                          <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
+                            {task.subtasks_completed}/{task.subtasks_count}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                        <SubtaskSection taskId={task.id} onSubtaskChange={() => onRefetch()} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
+                      {!hideMoveButtons &&
+                        effectiveMoveTargets
+                          .filter((t) => t.status !== task.gtd_status)
+                          .map((t) => (
+                            <button
+                              key={t.status}
+                              onClick={() => onMoveTask(task.id, t.status)}
+                              className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none"
+                              title={`Move to ${t.label}`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                      <button
+                        onClick={() => setEditingTask(task)}
+                        className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDeleteTask(task.id)}
+                        className="text-sm text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-300 focus:outline-none"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
