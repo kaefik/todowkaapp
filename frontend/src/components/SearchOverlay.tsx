@@ -6,6 +6,7 @@ interface TaskHit {
   id: string
   title: string
   gtd_status: string
+  completed: boolean
   project: { id: string; name: string } | null
 }
 
@@ -122,7 +123,7 @@ export function SearchOverlay({ open, onClose }: Props) {
                 onClick={onClose}
                 className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-0"
               >
-                <span className="text-sm text-gray-900 dark:text-gray-100 truncate">
+                <span className={`text-sm truncate${task.completed ? ' text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500' : ' text-gray-900 dark:text-gray-100'}`}>
                   {task.title}
                 </span>
                 <span className="ml-2 flex-shrink-0 text-xs text-gray-400 dark:text-gray-500">

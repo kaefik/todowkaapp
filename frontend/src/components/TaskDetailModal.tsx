@@ -129,7 +129,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
           ) : task ? (
             <div className="space-y-6">
               <div>
-                <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{task.title}</h3>
+                <h3 className={`text-2xl font-semibold mb-2${task.completed ? ' text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500' : ' text-gray-900 dark:text-gray-100'}`}>{task.title}</h3>
                 <div className="flex items-center gap-2 text-sm">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     task.gtd_status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :

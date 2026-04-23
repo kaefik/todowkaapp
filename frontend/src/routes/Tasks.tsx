@@ -421,7 +421,7 @@ function TasksContent() {
                       className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                     />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 line-through flex items-center">
+                      <h3 className="text-sm font-medium text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500 flex items-center">
                         <HighlightText text={task.title} query={filters.search} />
                         <TaskIcons task={task} onHistoryClick={() => setHistoryTaskId(task.id)} />
                         {historyTaskId === task.id && (
@@ -431,7 +431,7 @@ function TasksContent() {
                         )}
                       </h3>
                       {task.description && (
-                        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through">
+                        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500">
                           <HighlightText text={task.description} query={filters.search} />
                         </p>
                       )}
@@ -451,7 +451,7 @@ function TasksContent() {
                       {(() => {
                         const { text, overdue } = formatDueDate(task.due_date)
                         return (
-                          <p className={`mt-1 text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'} line-through`}>
+                          <p className={`mt-1 text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'} line-through decoration-2 decoration-gray-400 dark:decoration-gray-500`}>
                             {text}
                           </p>
                         )

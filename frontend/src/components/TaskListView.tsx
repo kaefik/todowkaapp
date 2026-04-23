@@ -380,7 +380,7 @@ export function TaskListView({
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+              className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer${task.completed ? ' opacity-80' : ''}`}
               onClick={() => setViewingTaskId(task.id)}
             >
               <div className="flex items-start gap-3">
@@ -392,7 +392,7 @@ export function TaskListView({
                   className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className={`text-sm font-medium relative ${task.completed ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
+                  <h3 className={`text-sm font-medium relative ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500' : 'text-gray-900 dark:text-gray-100'}`}>
                     <span className="inline-flex items-center">
                       <HighlightText text={task.title} query={searchQuery} />
                       <TaskIcons task={task} onHistoryClick={() => setHistoryTaskId(task.id)} />
@@ -402,7 +402,7 @@ export function TaskListView({
                     )}
                   </h3>
                   {task.description && (
-                    <p className={`mt-1 text-sm ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <p className={`mt-1 text-sm ${task.completed ? 'text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
                       <HighlightText text={task.description} query={searchQuery} />
                     </p>
                   )}

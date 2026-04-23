@@ -99,7 +99,9 @@
 - **Capture (Сбор задач):** быстрое создание задач в один клик
 - **Engage (Выполнение):** отметка задач как выполненных
 - **Организация:** автоматическое разделение на активные и завершённые задачи
-- **Визуальная индикация:** чекбоксы и зачёркивание выполненных задач
+- **Визуальная индикация:** чекбоксы и усиленное зачёркивание выполненных задач (line-through, decoration-2, приглушённый цвет текста, opacity карточки)
+  - Работает во всех местах: списки задач (TaskListView), страница Tasks, модалка детали (TaskDetailModal), поиск (SearchOverlay)
+  - Файлы: `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/components/TaskDetailModal.tsx`, `frontend/src/components/SearchOverlay.tsx`
 
 #### GTD-статус Active ✅ (Реализовано 22.04.2026)
 - Новый GTD-статус `active` — задачи с дедлайном, которые «в работе»
