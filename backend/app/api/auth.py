@@ -13,6 +13,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.revoked_token import RevokedToken
 from app.models.user import User
+from app.schemas.auth import ChangePasswordRequest
 from app.schemas.user import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
     clear_access_cookie,
@@ -235,6 +236,46 @@ async def logout(
     clear_refresh_cookie(response)
     clear_access_cookie(response)
     return {"message": "Logged out successfully"}
+
+
+@auth_router.post("/change-password")
+async def change_password(
+    response: Response,
+    data: ChangePasswordRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    refresh_token: Annotated[str | None, Cookie()] = None,
+) -> dict[str, str]:
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Неверный текущий пароль",
+        )
+
+    if data.current_password == data.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Новый пароль совпадает с текущим",
+        )
+
+    current_user.password_hash = hash_password(data.new_password)
+    current_user.password_changed_at = datetime.now(UTC)
+    await db.commit()
+
+    if refresh_token:
+        token_jti = get_token_jti(refresh_token)
+        if token_jti:
+            revoked = RevokedToken(token_jti=token_jti)
+            db.add(revoked)
+            await db.commit()
+
+    new_access = create_access_token(data={"sub": str(current_user.id)})
+    new_refresh = create_refresh_token(data={"sub": str(current_user.id)})
+
+    set_access_cookie(response, new_access)
+    set_refresh_cookie(response, new_refresh)
+
+    return {"message": "Пароль успешно изменён"}
 
 
 @auth_router.get("/me", response_model=UserResponse)
