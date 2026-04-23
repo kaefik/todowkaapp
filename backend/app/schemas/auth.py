@@ -53,3 +53,19 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     user: UserResponse
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=100)
+
+    @field_validator('new_password')
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one digit')
+        if not _has_uppercase(v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not _has_special(v):
+            raise ValueError('Password must contain at least one special character')
+        return v
