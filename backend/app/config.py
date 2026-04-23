@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     login_max_failed_attempts: int = 5
     login_lockout_minutes: int = 15
     cookie_secure: bool = False
+    bcrypt_rounds: int = 12
+    hibp_enabled: bool = False
 
     @field_validator("secret_key")
     @classmethod

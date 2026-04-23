@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.data.password_blacklist import PASSWORD_BLACKLIST
+
 
 def _has_uppercase(s: str) -> bool:
     return any(c.isupper() for c in s)
@@ -12,6 +14,10 @@ def _has_uppercase(s: str) -> bool:
 
 def _has_special(s: str) -> bool:
     return any(unicodedata.category(c).startswith(('P', 'S')) for c in s)
+
+
+def _is_common_password(password: str) -> bool:
+    return password.lower() in PASSWORD_BLACKLIST
 
 
 class UserResponse(BaseModel):
@@ -43,6 +49,8 @@ class RegisterRequest(BaseModel):
             raise ValueError('Password must contain at least one uppercase letter')
         if not _has_special(v):
             raise ValueError('Password must contain at least one special character')
+        if _is_common_password(v):
+            raise ValueError('This password is too common, please choose a different one')
         return v
 
 
@@ -68,4 +76,6 @@ class ChangePasswordRequest(BaseModel):
             raise ValueError('Password must contain at least one uppercase letter')
         if not _has_special(v):
             raise ValueError('Password must contain at least one special character')
+        if _is_common_password(v):
+            raise ValueError('This password is too common, please choose a different one')
         return v

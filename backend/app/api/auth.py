@@ -23,10 +23,12 @@ from app.security import (
     decode_token,
     get_token_jti,
     hash_password,
+    needs_rehash,
     set_access_cookie,
     set_refresh_cookie,
     verify_password,
 )
+from app.services.hibp import check_password_breach
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +90,14 @@ async def register(
 
     is_first_user = user_count == 0
 
+    if settings.hibp_enabled:
+        breach_count = await check_password_breach(data.password)
+        if breach_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This password has been found in {breach_count} data breaches. Please choose a different one.",
+            )
+
     user = User(
         username=data.username,
         email=data.email,
@@ -134,6 +144,9 @@ async def login(
 
     if not user.is_active:
         raise _unauthorized
+
+    if needs_rehash(user.password_hash):
+        user.password_hash = hash_password(data.password)
 
     user.failed_login_attempts = 0
     user.locked_until = None
@@ -276,6 +289,14 @@ async def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Новый пароль совпадает с текущим",
         )
+
+    if settings.hibp_enabled:
+        breach_count = await check_password_breach(data.new_password)
+        if breach_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"This password has been found in {breach_count} data breaches. Please choose a different one.",
+            )
 
     current_user.password_hash = hash_password(data.new_password)
     current_user.password_changed_at = datetime.now(UTC)

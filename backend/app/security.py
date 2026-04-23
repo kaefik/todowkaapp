@@ -1,3 +1,5 @@
+import logging
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -8,11 +10,13 @@ from jose import JWTError, jwt
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 ALGORITHM = "HS256"
 
 
 def hash_password(password: str) -> str:
-    salt = bcrypt.gensalt()
+    salt = bcrypt.gensalt(rounds=settings.bcrypt_rounds)
     hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed.decode('utf-8')
 
@@ -21,7 +25,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
     except Exception:
+        logger.warning("Password verification failed", exc_info=True)
         return False
+
+
+def needs_rehash(hashed_password: str) -> bool:
+    match = re.match(r'\$2[aby]\$(\d+)\$', hashed_password)
+    if not match:
+        return True
+    current_rounds = int(match.group(1))
+    return current_rounds != settings.bcrypt_rounds
 
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta | None = None) -> str:

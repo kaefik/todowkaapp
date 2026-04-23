@@ -469,6 +469,20 @@
 
 #### Безопасность
 - Хеширование паролей с bcrypt и salt
+  - Cost factor (rounds) зафиксирован в конфигурации: BCRYPT_ROUNDS (по умолчанию 12)
+  - Автоматический апгрейд хеша: при логине проверяется cost factor, если устарел — пароль перехешируется с текущим BCRYPT_ROUNDS
+  - Функция `needs_rehash()` в `backend/app/security.py` определяет необходимость перехеширования
+  - Файлы: `backend/app/security.py`, `backend/app/config.py`
+- Логирование ошибок верификации пароля: исключения в `verify_password()` логируются с `exc_info=True`
+- Blacklist популярных паролей (~1000): при регистрации и смене пароля отклоняются известные слабые пароли
+  - Файл: `backend/app/data/password_blacklist.py`
+- Проверка паролей через HaveIBeenPwned (HIBP): опциональная проверка утечек паролей через k-anonymity API
+  - Включается через HIBP_ENABLED (по умолчанию false)
+  - SHA-1 хеш пароля, к API отправляются только первые 5 символов хеша
+  - In-memory кэш ответов API с TTL 1 час
+  - Fail-open: если API недоступно, регистрация не блокируется
+  - Сервис: `backend/app/services/hibp.py`
+  - Интегрировано в POST /api/auth/register и POST /api/auth/change-password
 - JWT-токены, подписанные алгоритмом HS256
 - Cookie-only аутентификация: access и refresh токены хранятся только в httpOnly cookies
   - Токены НЕ выдаются в JSON-ответе (предотвращение утечки через XSS)
