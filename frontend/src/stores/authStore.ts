@@ -9,6 +9,7 @@ export interface User {
   is_active: boolean
   is_admin: boolean
   timezone: string | null
+  default_section: string
   created_at: string
 }
 
@@ -54,6 +55,9 @@ export const useAuthStore = create<AuthState>()(
       }
 
       const data = await response.json()
+      if (data.user?.default_section) {
+        localStorage.setItem('default-section', data.user.default_section)
+      }
       set({
         user: data.user,
         isAuthenticated: true,
@@ -249,6 +253,9 @@ export const useAuthStore = create<AuthState>()(
       }
 
       const data = await response.json()
+      if (data.default_section) {
+        localStorage.setItem('default-section', data.default_section)
+      }
       set({
         user: data,
         isAuthenticated: true,
@@ -271,6 +278,9 @@ export const useAuthStore = create<AuthState>()(
   },
 
   setCurrentUser: (user) => {
+    if (user.default_section) {
+      localStorage.setItem('default-section', user.default_section)
+    }
     set({ user })
   },
 }),

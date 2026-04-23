@@ -9,6 +9,37 @@ import type { User } from '../api/users'
 type Theme = 'light' | 'dark'
 type Tab = 'general' | 'profile' | 'security' | 'users'
 
+const DEFAULT_SECTIONS = [
+  {
+    group: 'GTD',
+    items: [
+      { value: 'inbox', label: 'Входящие' },
+      { value: 'active', label: 'Активные' },
+      { value: 'today', label: 'Сегодня' },
+      { value: 'tomorrow', label: 'Завтра' },
+      { value: 'next', label: 'Next Actions' },
+      { value: 'waiting', label: 'Ожидание' },
+      { value: 'someday', label: 'Когда-нибудь' },
+    ],
+  },
+  {
+    group: 'Просмотр',
+    items: [
+      { value: 'completed', label: 'Завершённые' },
+      { value: 'trash', label: 'Корзина' },
+    ],
+  },
+  {
+    group: 'Управление',
+    items: [
+      { value: 'projects', label: 'Проекты' },
+      { value: 'contexts', label: 'Контексты' },
+      { value: 'areas', label: 'Области' },
+      { value: 'tags', label: 'Теги' },
+    ],
+  },
+]
+
 const POPULAR_TIMEZONES = [
   { name: 'Москва (UTC+3)', value: 'Europe/Moscow' },
   { name: 'Лондон (UTC+0)', value: 'Europe/London' },
@@ -27,7 +58,7 @@ const POPULAR_TIMEZONES = [
 ]
 
 function SettingsContent() {
-  const { user } = useAuthStore()
+  const { user, setCurrentUser } = useAuthStore()
   const browserNotifications = useBrowserNotifications()
   const addToast = useToastStore((s) => s.addToast)
   const [activeTab, setActiveTab] = useLocalStorage<Tab>(
@@ -56,14 +87,31 @@ function SettingsContent() {
   const [email, setEmail] = useState(user?.email || '')
   const [timezone, setTimezone] = useState(user?.timezone || 'Europe/Moscow')
   const [customTimezone, setCustomTimezone] = useState('')
+  const [defaultSection, setDefaultSection] = useState(user?.default_section || 'inbox')
+  const [sectionSaving, setSectionSaving] = useState(false)
 
   useEffect(() => {
     if (user) {
       setUsername(user.username)
       setEmail(user.email)
       setTimezone(user.timezone || 'Europe/Moscow')
+      setDefaultSection(user.default_section || 'inbox')
     }
   }, [user])
+
+  const handleDefaultSectionChange = async (value: string) => {
+    setDefaultSection(value)
+    localStorage.setItem('default-section', value)
+    setSectionSaving(true)
+    try {
+      const updatedUser = await usersApi.updateCurrentUser({ default_section: value })
+      setCurrentUser(updatedUser)
+    } catch {
+      addToast({ title: 'Ошибка', body: 'Не удалось сохранить настройку', type: 'error' })
+    } finally {
+      setSectionSaving(false)
+    }
+  }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,6 +174,34 @@ function SettingsContent() {
 
       {activeTab === 'general' && (
         <>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Начальная страница</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Раздел по умолчанию
+              </label>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                Этот раздел будет открываться при входе в приложение
+              </p>
+              <select
+                value={defaultSection}
+                onChange={(e) => handleDefaultSectionChange(e.target.value)}
+                disabled={sectionSaving}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 disabled:opacity-50"
+              >
+                {DEFAULT_SECTIONS.map((group) => (
+                  <optgroup key={group.group} label={group.group}>
+                    {group.items.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Внешний вид</h2>
 

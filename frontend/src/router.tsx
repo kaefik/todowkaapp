@@ -22,6 +22,17 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 import { Notifications } from './routes/Notifications'
 
+const VALID_SECTIONS = new Set([
+  'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
+  'completed', 'trash', 'projects', 'contexts', 'areas', 'tags',
+])
+
+function DefaultSectionRedirect() {
+  const saved = localStorage.getItem('default-section')
+  const section = saved && VALID_SECTIONS.has(saved) ? saved : 'inbox'
+  return <Navigate to={`/${section}`} replace />
+}
+
 const routes: RouteObject[] = [
   {
     path: '/login',
@@ -41,7 +52,7 @@ const routes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: <Navigate to="/inbox" replace />,
+        element: <DefaultSectionRedirect />,
       },
       {
         path: 'tasks',

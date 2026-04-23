@@ -7,6 +7,7 @@ export interface User {
   is_active: boolean
   is_admin: boolean
   timezone: string | null
+  default_section: string
   created_at: string
 }
 
@@ -16,7 +17,7 @@ export const usersApi = {
     return response.data
   },
 
-  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone'>>): Promise<User> => {
+  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section'>>): Promise<User> => {
     const response = await httpClient.patch<User>('/users/me', data)
     return response.data
   },

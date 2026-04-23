@@ -14,6 +14,12 @@ def _has_special(s: str) -> bool:
     return any(unicodedata.category(c).startswith(('P', 'S')) for c in s)
 
 
+VALID_DEFAULT_SECTIONS = {
+    'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
+    'completed', 'trash', 'projects', 'contexts', 'areas', 'tags',
+}
+
+
 class UserResponse(BaseModel):
     id: UUID
     username: str
@@ -21,6 +27,7 @@ class UserResponse(BaseModel):
     is_active: bool
     is_admin: bool
     timezone: str | None = None
+    default_section: str = 'inbox'
     created_at: datetime
 
     model_config = {
@@ -32,7 +39,15 @@ class UserUpdate(BaseModel):
     username: str | None = None
     email: EmailStr | None = None
     timezone: str | None = Field(default=None, max_length=50)
+    default_section: str | None = Field(default=None, max_length=30)
     password: str | None = None
+
+    @field_validator('default_section')
+    @classmethod
+    def validate_default_section(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_DEFAULT_SECTIONS:
+            raise ValueError(f'Invalid default section. Allowed: {", ".join(sorted(VALID_DEFAULT_SECTIONS))}')
+        return v
 
     @field_validator('timezone')
     @classmethod
