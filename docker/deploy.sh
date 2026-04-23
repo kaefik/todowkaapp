@@ -200,9 +200,7 @@ fi
 # Сборка фронтенда
 log_info "Сборка фронтенда..."
 cd "$PROJECT_ROOT/frontend"
-if [ ! -d node_modules ]; then
-    npm install --legacy-peer-deps
-fi
+npm install --legacy-peer-deps
 npm run build
 log_info "Фронтенд собран в frontend/dist/"
 
