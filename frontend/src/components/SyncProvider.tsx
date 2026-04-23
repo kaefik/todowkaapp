@@ -11,14 +11,10 @@ const PULL_DEBOUNCE_MS = 1500
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pullTimer: ReturnType<typeof setTimeout> | null = null
-let isPushRunning = false
-let isPullRunning = false
 
 function schedulePush(onSyncChange: (syncing: boolean, lastSyncAt: Date | null) => void) {
   if (pushTimer) clearTimeout(pushTimer)
   pushTimer = setTimeout(async () => {
-    if (isPushRunning) return
-    isPushRunning = true
     onSyncChange(true, null)
     try {
       await push()
@@ -26,8 +22,6 @@ function schedulePush(onSyncChange: (syncing: boolean, lastSyncAt: Date | null) 
     } catch (err) {
       console.warn('[SyncProvider] Debounced push failed:', err)
       onSyncChange(false, null)
-    } finally {
-      isPushRunning = false
     }
   }, PUSH_DEBOUNCE_MS)
 }
@@ -35,8 +29,6 @@ function schedulePush(onSyncChange: (syncing: boolean, lastSyncAt: Date | null) 
 function schedulePull(userId: string, onSyncChange: (syncing: boolean, lastSyncAt: Date | null) => void) {
   if (pullTimer) clearTimeout(pullTimer)
   pullTimer = setTimeout(async () => {
-    if (isPullRunning) return
-    isPullRunning = true
     onSyncChange(true, null)
     try {
       await pull(userId)
@@ -44,8 +36,6 @@ function schedulePull(userId: string, onSyncChange: (syncing: boolean, lastSyncA
     } catch (err) {
       console.warn('[SyncProvider] Debounced pull failed:', err)
       onSyncChange(false, null)
-    } finally {
-      isPullRunning = false
     }
   }, PULL_DEBOUNCE_MS)
 }
@@ -125,9 +115,11 @@ export function SyncProvider({ children }: SyncProviderProps) {
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isMountedRef = useRef(true)
+  const syncingRef = useRef(false)
 
   const onSyncChange = useCallback((syncing: boolean, last: Date | null) => {
     if (!isMountedRef.current) return
+    syncingRef.current = syncing
     setIsSyncing(syncing)
     if (last) setLastSyncAt(last)
   }, [])
@@ -136,7 +128,8 @@ export function SyncProvider({ children }: SyncProviderProps) {
   userRef.current = user
 
   const doPush = useCallback(async () => {
-    if (!userRef.current || isSyncing) return
+    if (!userRef.current || syncingRef.current) return
+    syncingRef.current = true
     setIsSyncing(true)
     try {
       await push()
@@ -144,12 +137,16 @@ export function SyncProvider({ children }: SyncProviderProps) {
     } catch (err) {
       console.warn('[SyncProvider] Push failed:', err)
     } finally {
-      if (isMountedRef.current) setIsSyncing(false)
+      if (isMountedRef.current) {
+        syncingRef.current = false
+        setIsSyncing(false)
+      }
     }
-  }, [isSyncing])
+  }, [])
 
   const doPull = useCallback(async () => {
-    if (!userRef.current || isSyncing) return
+    if (!userRef.current || syncingRef.current) return
+    syncingRef.current = true
     setIsSyncing(true)
     try {
       await pull(userRef.current.id)
@@ -157,9 +154,12 @@ export function SyncProvider({ children }: SyncProviderProps) {
     } catch (err) {
       console.warn('[SyncProvider] Pull failed:', err)
     } finally {
-      if (isMountedRef.current) setIsSyncing(false)
+      if (isMountedRef.current) {
+        syncingRef.current = false
+        setIsSyncing(false)
+      }
     }
-  }, [isSyncing])
+  }, [])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -206,10 +206,18 @@ export function SyncProvider({ children }: SyncProviderProps) {
     }
   }, [user?.id, onSyncChange, doPush, doPull])
 
+  const isOnlineRef = useRef(isOnline)
+  const prevOnlineRef = useRef(isOnline)
+
   useEffect(() => {
-    if (isOnline && userRef.current) {
+    isOnlineRef.current = isOnline
+  }, [isOnline])
+
+  useEffect(() => {
+    if (prevOnlineRef.current === false && isOnline && userRef.current) {
       doPush().then(() => doPull())
     }
+    prevOnlineRef.current = isOnline
   }, [isOnline, doPush, doPull])
 
   return (
