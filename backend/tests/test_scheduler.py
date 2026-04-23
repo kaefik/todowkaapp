@@ -1,10 +1,9 @@
 from datetime import UTC, datetime, time, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
 
-from app.models.notification import Notification
 from app.models.task import Task
 from app.models.user import User
 from app.services.reminder_service import ReminderService

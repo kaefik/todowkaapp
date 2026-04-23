@@ -5,8 +5,8 @@ import pytest_asyncio
 
 from app.models.task import Task
 from app.models.user import User
-from app.services.task_service import TaskService
 from app.schemas.task import TaskUpdate
+from app.services.task_service import TaskService
 
 
 @pytest_asyncio.fixture
@@ -49,7 +49,7 @@ async def test_update_task_resets_dedup_fields(db_session, user_for_dedup, task_
     assert task_with_dedup.last_reminder_sent_at is not None
     assert task_with_dedup.reminder_fired is True
 
-    updated = await task_service.update_task(
+    await task_service.update_task(
         user_for_dedup.id,
         task_with_dedup.id,
         TaskUpdate(reminder_time=time(10, 0)),
