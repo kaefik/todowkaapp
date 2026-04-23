@@ -970,3 +970,14 @@
 - Миграция: alembic/versions/20260410_1515_aa554e189f47_add_completed_at_to_tasks.py
 
 Все перечисленные выше возможности реализованы на текущую дату.
+
+**23 апреля 2026:**
+- Полное обновление npm-зависимостей фронтенда до актуальных версий
+- eslint 9.x → 10.x, @eslint/js 9.x → 10.x
+- vite-plugin-pwa 0.19.x → 1.2.0 (устранены deprecated-предупреждения sourcemap-codec, source-map)
+- uuid 13.x → 14.x
+- react/react-dom 19.2.4 → 19.2.5, vite 8.0.5 → 8.0.10, vitest 4.1.4 → 4.1.5
+- tailwindcss/@tailwindcss/vite 4.2.2 → 4.2.4, typescript 6.0.2 → 6.0.3
+- react-router-dom 7.14.0 → 7.14.2, react-hook-form 7.72.1 → 7.73.1
+- typescript-eslint 8.58.0 → 8.59.0, globals 17.4.0 → 17.5.0, @types/node 24.x → 25.x
+- Добавлены overrides в package.json: sourcemap-codec → @jridgewell/sourcemap-codec, source-map → 0.7.4
