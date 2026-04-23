@@ -33,10 +33,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     moveTask,
     deleteTask,
     refetch,
-  } = useTasks(activeFilters, {
-    staleTime: gtdStatus === 'trash' ? 0 : undefined,
-    refetchOnMount: gtdStatus === 'trash' ? 'always' : undefined,
-  })
+  } = useTasks(activeFilters)
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 

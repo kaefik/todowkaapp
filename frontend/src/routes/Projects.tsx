@@ -284,6 +284,7 @@ function ProjectsContent() {
 
     const reordered = [...projects]
     const [moved] = reordered.splice(oldIndex, 1)
+    if (!moved) return
     reordered.splice(newIndex, 0, moved)
 
     const items = reordered.map((p, i) => ({ id: p.id, sort_order: i }))

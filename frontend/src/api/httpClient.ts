@@ -40,8 +40,8 @@ async function fetchWithAuth<T>(
     ...(config.headers as Record<string, string>),
   }
 
-  if (!config.skipAuth && authStore.accessToken) {
-    headers['Authorization'] = `Bearer ${authStore.accessToken}`
+  if (!config.skipAuth && authStore.isAuthenticated) {
+    headers['X-Requested-With'] = 'XMLHttpRequest'
   }
 
   const { skipAuth: _skipAuth, ...fetchConfig } = config
