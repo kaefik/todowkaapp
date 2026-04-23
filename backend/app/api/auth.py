@@ -206,6 +206,25 @@ async def refresh(
             detail="User not found or inactive",
         )
 
+    if user.password_changed_at is not None:
+        token_iat = payload.get("iat")
+        if token_iat is not None:
+            from datetime import datetime as _dt
+
+            iat_dt = _dt.fromtimestamp(token_iat, tz=UTC)
+            changed_at = user.password_changed_at
+            if changed_at.tzinfo is None:
+                changed_at = changed_at.replace(tzinfo=UTC)
+            changed_at = changed_at.replace(microsecond=0)
+            if iat_dt < changed_at:
+                revoked_token = RevokedToken(token_jti=token_jti)
+                db.add(revoked_token)
+                await db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Refresh token has been revoked",
+                )
+
     access_token = create_access_token(data={"sub": str(user.id)})
     new_refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
