@@ -1,26 +1,9 @@
-import { createContext, useContext, useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
+import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
 import { pull, push } from '../db/syncEngine'
 import { useAuthStore } from '../stores/authStore'
 import { db } from '../db/database'
 import { useOnlineStatus } from '../db/hooks'
-
-interface SyncContextValue {
-  isSyncing: boolean
-  pendingCount: number
-  lastSyncAt: Date | null
-  isOnline: boolean
-}
-
-const SyncContext = createContext<SyncContextValue>({
-  isSyncing: false,
-  pendingCount: 0,
-  lastSyncAt: null,
-  isOnline: true,
-})
-
-export function useSyncStatus(): SyncContextValue {
-  return useContext(SyncContext)
-}
+import { SyncContext } from './SyncContext'
 
 const PULL_INTERVAL = 15 * 60 * 1000
 const PUSH_DEBOUNCE_MS = 2000
@@ -149,8 +132,11 @@ export function SyncProvider({ children }: SyncProviderProps) {
     if (last) setLastSyncAt(last)
   }, [])
 
-  const doPush = async () => {
-    if (!user || isSyncing) return
+  const userRef = useRef(user)
+  userRef.current = user
+
+  const doPush = useCallback(async () => {
+    if (!userRef.current || isSyncing) return
     setIsSyncing(true)
     try {
       await push()
@@ -160,20 +146,20 @@ export function SyncProvider({ children }: SyncProviderProps) {
     } finally {
       if (isMountedRef.current) setIsSyncing(false)
     }
-  }
+  }, [isSyncing])
 
-  const doPull = async () => {
-    if (!user || isSyncing) return
+  const doPull = useCallback(async () => {
+    if (!userRef.current || isSyncing) return
     setIsSyncing(true)
     try {
-      await pull(user.id)
+      await pull(userRef.current.id)
       setLastSyncAt(new Date())
     } catch (err) {
       console.warn('[SyncProvider] Pull failed:', err)
     } finally {
       if (isMountedRef.current) setIsSyncing(false)
     }
-  }
+  }, [isSyncing])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -183,7 +169,7 @@ export function SyncProvider({ children }: SyncProviderProps) {
   }, [])
 
   useEffect(() => {
-    if (!user) return
+    if (!userRef.current) return
 
     const countPending = async () => {
       const count = await db.mutations.count()
@@ -207,7 +193,7 @@ export function SyncProvider({ children }: SyncProviderProps) {
     })
 
     syncSSE.connect(() => {
-      if (user) schedulePull(user.id, onSyncChange)
+      if (userRef.current) schedulePull(userRef.current.id, onSyncChange)
     })
 
     return () => {
@@ -218,13 +204,13 @@ export function SyncProvider({ children }: SyncProviderProps) {
       }
       syncSSE.disconnect()
     }
-  }, [user?.id, onSyncChange])
+  }, [user?.id, onSyncChange, doPush, doPull])
 
   useEffect(() => {
-    if (isOnline && user) {
+    if (isOnline && userRef.current) {
       doPush().then(() => doPull())
     }
-  }, [isOnline])
+  }, [isOnline, doPush, doPull])
 
   return (
     <SyncContext.Provider value={{ isSyncing, pendingCount, lastSyncAt, isOnline }}>

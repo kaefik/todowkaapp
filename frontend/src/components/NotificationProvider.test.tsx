@@ -6,10 +6,24 @@ import * as notificationStore from '../stores/notificationStore'
 import * as toastStore from '../stores/toastStore'
 import * as useBrowserNotificationsHook from '../hooks/useBrowserNotifications'
 
-vi.mock('../stores/authStore')
-vi.mock('../stores/notificationStore')
-vi.mock('../stores/toastStore')
-vi.mock('../hooks/useBrowserNotifications')
+vi.mock('../stores/authStore', () => ({
+  useAuthStore: Object.assign(
+    vi.fn(),
+    { getState: vi.fn().mockReturnValue({ isAuthenticated: false, user: null }) }
+  ),
+}))
+vi.mock('../stores/notificationStore', () => ({
+  useNotificationStore: Object.assign(
+    vi.fn(),
+    { getState: vi.fn().mockReturnValue({ notifications: [] }) }
+  ),
+}))
+vi.mock('../stores/toastStore', () => ({
+  useToastStore: vi.fn(),
+}))
+vi.mock('../hooks/useBrowserNotifications', () => ({
+  useBrowserNotifications: vi.fn(),
+}))
 
 const mockAuthStore = authStore as any
 const mockNotificationStore = notificationStore as any
@@ -30,20 +44,26 @@ describe('NotificationProvider', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    mockAuthStore.useAuthStore.mockReturnValue({
-      isAuthenticated: false,
-      user: null,
+    mockAuthStore.useAuthStore.mockImplementation((selector?: any) => {
+      const state = { isAuthenticated: false, user: null }
+      return selector ? selector(state) : state
     })
+    mockAuthStore.useAuthStore.getState.mockReturnValue({ isAuthenticated: false, user: null })
 
-    mockNotificationStore.useNotificationStore.mockReturnValue({
-      startSSE: vi.fn(),
-      stopSSE: vi.fn(),
-      refetch: vi.fn(),
-      notifications: [],
+    mockNotificationStore.useNotificationStore.mockImplementation((selector?: any) => {
+      const state = {
+        startSSE: vi.fn(),
+        stopSSE: vi.fn(),
+        refetch: vi.fn(),
+        notifications: [],
+      }
+      return selector ? selector(state) : state
     })
+    mockNotificationStore.useNotificationStore.getState.mockReturnValue({ notifications: [] })
 
-    mockToastStore.useToastStore.mockReturnValue({
-      addToast: vi.fn(),
+    mockToastStore.useToastStore.mockImplementation((selector?: any) => {
+      const state = { addToast: vi.fn() }
+      return selector ? selector(state) : state
     })
 
     mockUseBrowserNotifications.useBrowserNotifications.mockReturnValue({
@@ -68,6 +88,7 @@ describe('NotificationProvider', () => {
         isAuthenticated: true,
         user: mockUser,
       })
+      mockAuthStore.useAuthStore.getState.mockReturnValue({ isAuthenticated: true, user: mockUser })
 
       mockNotificationStore.useNotificationStore.mockReturnValue({
         startSSE,
@@ -108,6 +129,7 @@ describe('NotificationProvider', () => {
         isAuthenticated: true,
         user: mockUser,
       })
+      mockAuthStore.useAuthStore.getState.mockReturnValue({ isAuthenticated: true, user: mockUser })
 
       mockNotificationStore.useNotificationStore.mockReturnValue({
         startSSE: vi.fn(),
@@ -123,7 +145,7 @@ describe('NotificationProvider', () => {
   })
 
   describe('reminder handler', () => {
-    it('always registers handler regardless of enabled state', () => {
+    it('always registers handler regardless of enabled state', async () => {
       const showReminder = vi.fn().mockResolvedValue(true)
       const addToast = vi.fn()
 
@@ -132,8 +154,9 @@ describe('NotificationProvider', () => {
         enabled: false,
       })
 
-      mockToastStore.useToastStore.mockReturnValue({
-        addToast,
+      mockToastStore.useToastStore.mockImplementation((selector?: any) => {
+        const state = { addToast }
+        return selector ? selector(state) : state
       })
 
       render(<NotificationProvider><div>Test</div></NotificationProvider>)
@@ -149,7 +172,9 @@ describe('NotificationProvider', () => {
 
       window.dispatchEvent(event)
 
-      expect(addToast).toHaveBeenCalled()
+      await waitFor(() => {
+        expect(addToast).toHaveBeenCalled()
+      })
     })
 
     it('shows browser notification when enabled and supported', async () => {
@@ -187,8 +212,9 @@ describe('NotificationProvider', () => {
         enabled: true,
       })
 
-      mockToastStore.useToastStore.mockReturnValue({
-        addToast,
+      mockToastStore.useToastStore.mockImplementation((selector?: any) => {
+        const state = { addToast }
+        return selector ? selector(state) : state
       })
 
       render(<NotificationProvider><div>Test</div></NotificationProvider>)
@@ -253,12 +279,16 @@ describe('NotificationProvider', () => {
         enabled: true,
       })
 
-      mockNotificationStore.useNotificationStore.mockReturnValue({
-        startSSE: vi.fn(),
-        stopSSE: vi.fn(),
-        refetch: vi.fn(),
-        notifications,
+      mockNotificationStore.useNotificationStore.mockImplementation((selector?: any) => {
+        const state = {
+          startSSE: vi.fn(),
+          stopSSE: vi.fn(),
+          refetch: vi.fn(),
+          notifications,
+        }
+        return selector ? selector(state) : state
       })
+      mockNotificationStore.useNotificationStore.getState.mockReturnValue({ notifications })
 
       render(<NotificationProvider><div>Test</div></NotificationProvider>)
 
@@ -287,8 +317,9 @@ describe('NotificationProvider', () => {
         enabled: true,
       })
 
-      mockToastStore.useToastStore.mockReturnValue({
-        addToast,
+      mockToastStore.useToastStore.mockImplementation((selector?: any) => {
+        const state = { addToast }
+        return selector ? selector(state) : state
       })
 
       render(<NotificationProvider><div>Test</div></NotificationProvider>)
@@ -318,15 +349,17 @@ describe('NotificationProvider', () => {
   describe('online/offline handling', () => {
     it('restarts SSE when browser goes online', () => {
       const startSSE = vi.fn()
+      const stopSSE = vi.fn()
 
       mockAuthStore.useAuthStore.mockReturnValue({
         isAuthenticated: true,
         user: mockUser,
       })
+      mockAuthStore.useAuthStore.getState.mockReturnValue({ isAuthenticated: true, user: mockUser })
 
       mockNotificationStore.useNotificationStore.mockReturnValue({
         startSSE,
-        stopSSE: vi.fn(),
+        stopSSE,
         refetch: vi.fn(),
         notifications: [],
       })
@@ -335,6 +368,8 @@ describe('NotificationProvider', () => {
 
       const startSSECalls = startSSE.mock.calls.length
 
+      window.dispatchEvent(new Event('offline'))
+      mockAuthStore.useAuthStore.getState.mockReturnValue({ isAuthenticated: true, user: mockUser })
       window.dispatchEvent(new Event('online'))
 
       expect(startSSE.mock.calls.length).toBeGreaterThan(startSSECalls)
@@ -347,6 +382,7 @@ describe('NotificationProvider', () => {
         isAuthenticated: true,
         user: mockUser,
       })
+      mockAuthStore.useAuthStore.getState.mockReturnValue({ isAuthenticated: true, user: mockUser })
 
       mockNotificationStore.useNotificationStore.mockReturnValue({
         startSSE: vi.fn(),

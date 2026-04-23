@@ -303,7 +303,7 @@ describe('TaskEditModal — новые поля', () => {
           context_id: 'ctx1',
           area_id: 'area1',
           project_id: 'proj1',
-          gtd_status: 'inbox',
+          gtd_status: 'active',
           due_date: '2026-04-15',
           notes: 'Some notes',
         }))

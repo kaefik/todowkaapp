@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { TaskListView } from '../TaskListView'
 import type { Task } from '../../hooks/useTasks'
 
@@ -46,11 +47,13 @@ describe('TaskListView', () => {
     }
 
     const { container } = render(
-      <TaskListView
-        {...defaultProps}
-        tasks={[taskWithContext]}
-        showAddForm={false}
-      />
+      <MemoryRouter>
+        <TaskListView
+          {...defaultProps}
+          tasks={[taskWithContext]}
+          showAddForm={false}
+        />
+      </MemoryRouter>
     )
 
     const contextName = screen.getByText('Дом')
@@ -62,11 +65,13 @@ describe('TaskListView', () => {
 
   it('does not display context when task has no context', () => {
     render(
-      <TaskListView
-        {...defaultProps}
-        tasks={[mockTask]}
-        showAddForm={false}
-      />
+      <MemoryRouter>
+        <TaskListView
+          {...defaultProps}
+          tasks={[mockTask]}
+          showAddForm={false}
+        />
+      </MemoryRouter>
     )
 
     expect(screen.queryByText('Дом')).not.toBeInTheDocument()
@@ -79,11 +84,13 @@ describe('TaskListView', () => {
     }
 
     render(
-      <TaskListView
-        {...defaultProps}
-        tasks={[taskWithContext]}
-        showAddForm={false}
-      />
+      <MemoryRouter>
+        <TaskListView
+          {...defaultProps}
+          tasks={[taskWithContext]}
+          showAddForm={false}
+        />
+      </MemoryRouter>
     )
 
     const contextName = screen.getByText('Работа')
@@ -104,11 +111,13 @@ describe('TaskListView', () => {
     }
 
     render(
-      <TaskListView
-        {...defaultProps}
-        tasks={[taskWithContext]}
-        showAddForm={false}
-      />
+      <MemoryRouter>
+        <TaskListView
+          {...defaultProps}
+          tasks={[taskWithContext]}
+          showAddForm={false}
+        />
+      </MemoryRouter>
     )
 
     const contextText = screen.getByText('Без цвета')

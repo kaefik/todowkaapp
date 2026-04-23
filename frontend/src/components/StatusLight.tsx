@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useSyncStatus } from './SyncProvider'
+import { useSyncStatus } from './SyncContext'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useAuthStore } from '../stores/authStore'
 

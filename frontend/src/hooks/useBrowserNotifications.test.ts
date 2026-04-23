@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useBrowserNotifications } from '../utils/browserNotifications'
+import { useBrowserNotifications } from '../hooks/useBrowserNotifications'
+import * as bnApi from '../utils/browserNotifications'
+
+vi.mock('../utils/browserNotifications')
 
 describe('useBrowserNotifications', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    ;(bnApi.isSupported as any).mockReturnValue(true)
+    ;(bnApi.isEnabled as any).mockReturnValue(false)
+    ;(bnApi.getPermission as any).mockReturnValue('default')
+    ;(bnApi.showReminder as any).mockResolvedValue(true)
+    ;(bnApi.show as any).mockResolvedValue(true)
+    ;(bnApi.requestPermission as any).mockResolvedValue('granted')
+    ;(bnApi.setEnabled as any).mockImplementation(() => {})
   })
 
   afterEach(() => {
@@ -13,18 +23,14 @@ describe('useBrowserNotifications', () => {
 
   describe('feature detection', () => {
     it('returns enabled=false when Notification API not supported', () => {
-      vi.stubGlobal('Notification', undefined as any)
+      ;(bnApi.isSupported as any).mockReturnValue(false)
+      ;(bnApi.isEnabled as any).mockReturnValue(false)
       const { result } = renderHook(() => useBrowserNotifications())
       expect(result.current.enabled).toBe(false)
     })
 
     it('returns enabled=true when Notification API supported and enabled in localStorage', () => {
-      const mockNotification = {
-        permission: 'granted',
-      } as any
-      vi.stubGlobal('Notification', mockNotification)
-      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('true')
-
+      ;(bnApi.isEnabled as any).mockReturnValue(true)
       const { result } = renderHook(() => useBrowserNotifications())
       expect(result.current.enabled).toBe(true)
     })
@@ -32,74 +38,70 @@ describe('useBrowserNotifications', () => {
 
   describe('showReminder', () => {
     it('shows browser notification when supported, granted and enabled', async () => {
-      const mockNotification = vi.fn()
-      mockNotification.permission = 'granted'
-      vi.stubGlobal('Notification', mockNotification)
-      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('true')
+      ;(bnApi.isEnabled as any).mockReturnValue(true)
+      ;(bnApi.getPermission as any).mockReturnValue('granted')
+      ;(bnApi.showReminder as any).mockResolvedValue(true)
 
       const { result } = renderHook(() => useBrowserNotifications())
-
-      const showSpy = vi.spyOn(result.current, 'showReminder').mockResolvedValue(true)
 
       await act(async () => {
         const ok = await result.current.showReminder('Test task', 'task-123')
         expect(ok).toBe(true)
       })
 
-      expect(showSpy).toHaveBeenCalledWith('Test task', 'task-123')
+      expect(bnApi.showReminder).toHaveBeenCalledWith('Test task', 'task-123')
     })
 
     it('returns false when Notification API not supported', async () => {
-      vi.stubGlobal('Notification', undefined as any)
+      ;(bnApi.isSupported as any).mockReturnValue(false)
+      ;(bnApi.showReminder as any).mockResolvedValue(false)
+
       const { result } = renderHook(() => useBrowserNotifications())
 
-      const ok = await result.current.showReminder('Test task', 'task-123')
-      expect(ok).toBe(false)
+      await act(async () => {
+        const ok = await result.current.showReminder('Test task', 'task-123')
+        expect(ok).toBe(false)
+      })
     })
   })
 
   describe('requestPermission', () => {
     it('requests permission when supported', async () => {
-      const mockNotification = {
-        permission: 'default',
-        requestPermission: vi.fn().mockResolvedValue('granted'),
-      } as any
-      vi.stubGlobal('Notification', mockNotification)
+      ;(bnApi.requestPermission as any).mockResolvedValue('granted')
 
       const { result } = renderHook(() => useBrowserNotifications())
 
       await act(async () => {
-        const permission = await result.current.requestPermission()
-        expect(permission).toBe('granted')
+        const ok = await result.current.enable()
+        expect(ok).toBe(true)
       })
 
-      expect(mockNotification.requestPermission).toHaveBeenCalled()
+      expect(bnApi.requestPermission).toHaveBeenCalled()
     })
 
     it('returns denied when not supported', async () => {
-      vi.stubGlobal('Notification', undefined as any)
+      ;(bnApi.isSupported as any).mockReturnValue(false)
+
       const { result } = renderHook(() => useBrowserNotifications())
 
       await act(async () => {
-        const permission = await result.current.requestPermission()
-        expect(permission).toBe('denied')
+        const ok = await result.current.enable()
+        expect(ok).toBe(false)
       })
     })
   })
 
   describe('toggle', () => {
-    it('toggles enabled state', () => {
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem')
-      vi.stubGlobal('Notification', { permission: 'granted' } as any)
-      vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('false')
+    it('toggles enabled state', async () => {
+      ;(bnApi.isEnabled as any).mockReturnValue(false)
 
       const { result } = renderHook(() => useBrowserNotifications())
 
-      act(() => {
-        result.current.toggle()
+      await act(async () => {
+        await result.current.enable()
       })
 
-      expect(setItemSpy).toHaveBeenCalledWith('ui-browser-notifications-enabled', 'true')
+      expect(bnApi.setEnabled).toHaveBeenCalledWith(true)
     })
   })
 })

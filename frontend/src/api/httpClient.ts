@@ -2,7 +2,11 @@ import { useAuthStore } from '../stores/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
-type RequestConfig = RequestInit
+interface HttpClientConfig extends RequestInit {
+  skipAuth?: boolean
+}
+
+type RequestConfig = HttpClientConfig
 
 interface ApiResponse<T = unknown> {
   data: T
@@ -36,11 +40,18 @@ async function fetchWithAuth<T>(
     ...(config.headers as Record<string, string>),
   }
 
+  if (!config.skipAuth && authStore.accessToken) {
+    headers['Authorization'] = `Bearer ${authStore.accessToken}`
+  }
+
+  const { skipAuth: _skipAuth, ...fetchConfig } = config
+  void _skipAuth
+
   const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
 
   try {
     const response = await fetch(fullUrl, {
-      ...config,
+      ...fetchConfig,
       headers,
       credentials: 'include',
     })

@@ -2,12 +2,33 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { Projects } from './routes/Projects'
+
+vi.mock('@dnd-kit/core', () => ({
+  DndContext: ({ children }: any) => children,
+  closestCenter: () => null,
+  KeyboardSensor: class {},
+  PointerSensor: class {},
+  useSensor: () => null,
+  useSensors: () => [],
+}))
+
+vi.mock('@dnd-kit/sortable', () => ({
+  SortableContext: ({ children }: any) => children,
+  useSortable: () => ({ attributes: {}, listeners: {}, setNodeRef: () => {}, transform: null, transition: null }),
+  verticalListSortingStrategy: {},
+  arrayMove: (arr: any[]) => arr,
+  sortableKeyboardCoordinates: {},
+}))
+
+vi.mock('@dnd-kit/utilities', () => ({
+  CSS: { Transform: { toString: () => '' } },
+}))
 
 vi.mock('./hooks/useProjects', () => ({
   useProjects: vi.fn(),
 }))
 
+import { Projects } from './routes/Projects'
 import { useProjects } from './hooks/useProjects'
 import type { Project } from './hooks/useProjects'
 

@@ -312,7 +312,7 @@ export async function push(): Promise<void> {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        await executeMutation(mutation, userId)
+        await executeMutation(mutation)
         success = true
         break
       } catch (err) {
@@ -405,8 +405,7 @@ async function executeMutation(
     entityId: string
     entityType: EntityType
     payload: string | null
-  },
-  _userId: string
+  }
 ): Promise<void> {
   const endpoint = getEndpointForType(mutation.entityType)
   const payload = mutation.payload ? JSON.parse(mutation.payload) : null

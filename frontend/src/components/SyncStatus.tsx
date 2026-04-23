@@ -1,4 +1,4 @@
-import { useSyncStatus } from './SyncProvider'
+import { useSyncStatus } from './SyncContext'
 
 type SyncState = 'offline' | 'syncing' | 'pending' | 'online'
 

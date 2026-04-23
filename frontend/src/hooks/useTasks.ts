@@ -174,12 +174,7 @@ function applyFilters(records: UiTask[], filters?: TaskFilters): UiTask[] {
   return result
 }
 
-interface UseTasksOptions {
-  staleTime?: number
-  refetchOnMount?: boolean | 'always'
-}
-
-export function useTasks(filters?: TaskFilters, _options?: UseTasksOptions): UseTasksReturn {
+export function useTasks(filters?: TaskFilters): UseTasksReturn {
   const user = useAuthStore(s => s.user)
 
   const { data: rawTasks = [], isLoading } = useDexieQuery(

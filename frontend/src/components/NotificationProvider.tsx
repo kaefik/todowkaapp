@@ -13,6 +13,8 @@ let activeSSEUserId: string | null = null
 export function NotificationProvider({ children }: NotificationProviderProps) {
   const { isAuthenticated, user } = useAuthStore()
   const store = useNotificationStore()
+  const storeRef = useRef(store)
+  storeRef.current = store
   const { showReminder, enabled } = useBrowserNotifications()
   const addToast = useToastStore((s) => s.addToast)
   const mountedRef = useRef(false)
@@ -21,13 +23,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     if (isAuthenticated && user && user.id !== activeSSEUserId) {
       if (navigator.onLine) {
         activeSSEUserId = user.id
-        store.startSSE(user.id)
-        store.refetch()
+        storeRef.current.startSSE(user.id)
+        storeRef.current.refetch()
       }
     }
     if (!isAuthenticated && activeSSEUserId) {
       activeSSEUserId = null
-      store.stopSSE()
+      storeRef.current.stopSSE()
     }
   }, [isAuthenticated, user])
 
@@ -44,13 +46,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       const { isAuthenticated: authed, user: u } = useAuthStore.getState()
       if (authed && u && !activeSSEUserId) {
         activeSSEUserId = u.id
-        store.startSSE(u.id)
-        store.refetch()
+        storeRef.current.startSSE(u.id)
+        storeRef.current.refetch()
       }
     }
     const handleOffline = () => {
       if (activeSSEUserId) {
-        store.stopSSE()
+        storeRef.current.stopSSE()
         activeSSEUserId = null
       }
     }

@@ -13,11 +13,11 @@ describe('SSE Manager - infinite reconnect', () => {
 })
 
 describe('Polling fallback - store interface', () => {
-  it('should have _startPolling and _stopPolling methods', async () => {
+  it('should have startPolling and stopPolling methods', async () => {
     const { useNotificationStore } = await import('../../stores/notificationStore')
     const store = useNotificationStore.getState()
-    expect(typeof store._startPolling).toBe('function')
-    expect(typeof store._stopPolling).toBe('function')
+    expect(typeof store.startPolling).toBe('function')
+    expect(typeof store.stopPolling).toBe('function')
   })
 
   it('should have pollingDelay default 30000', async () => {
@@ -26,18 +26,18 @@ describe('Polling fallback - store interface', () => {
     expect(store.pollingDelay).toBe(30000)
   })
 
-  it('should have pollingTimerId default null', async () => {
+  it('should have pollingInterval default null', async () => {
     const { useNotificationStore } = await import('../../stores/notificationStore')
     const store = useNotificationStore.getState()
-    expect(store.pollingTimerId).toBeNull()
+    expect(store.pollingInterval).toBeNull()
   })
 
-  it('_stopPolling resets state', async () => {
+  it('stopPolling resets state', async () => {
     const { useNotificationStore } = await import('../../stores/notificationStore')
     const store = useNotificationStore.getState()
-    store._stopPolling()
+    store.stopPolling()
     const after = useNotificationStore.getState()
-    expect(after.pollingTimerId).toBeNull()
+    expect(after.pollingInterval).toBeNull()
     expect(after.pollingDelay).toBe(30000)
     expect(after.sseDownSince).toBeNull()
   })

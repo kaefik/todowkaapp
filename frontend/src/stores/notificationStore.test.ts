@@ -1,14 +1,30 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useNotificationStore } from './notificationStore'
-import * as notificationsApi from '../api/notifications'
-import { useAuthStore } from './authStore'
 
-vi.mock('../api/notifications')
+const mockGetAll = vi.fn().mockResolvedValue({ items: [], total: 0, unread_count: 0 })
+const mockMarkAsRead = vi.fn().mockResolvedValue({})
+const mockMarkAllAsRead = vi.fn().mockResolvedValue({})
+const mockDeleteNotification = vi.fn().mockResolvedValue({})
+
+vi.mock('../api/notifications', () => ({
+  notificationsApi: {
+    getAll: (...args: any[]) => mockGetAll(...args),
+    markAsRead: (...args: any[]) => mockMarkAsRead(...args),
+    markAllAsRead: (...args: any[]) => mockMarkAllAsRead(...args),
+    deleteNotification: (...args: any[]) => mockDeleteNotification(...args),
+  },
+}))
+
 vi.mock('../services/sseManager')
-vi.mock('./authStore')
 
-const mockNotificationsApi = notificationsApi as any
+const mockAuthState = { isAuthenticated: true }
+vi.mock('./authStore', () => ({
+  useAuthStore: Object.assign(
+    vi.fn(),
+    { getState: () => mockAuthState }
+  ),
+}))
 
 describe('useNotificationStore', () => {
   beforeEach(() => {
@@ -17,18 +33,10 @@ describe('useNotificationStore', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    vi.mocked(useAuthStore).mockReturnValue({
-      accessToken: 'test-token',
-    } as any)
-
-    mockNotificationsApi.getAll = vi.fn().mockResolvedValue({
-      items: [],
-      total: 0,
-      unread_count: 0,
-    })
-    mockNotificationsApi.markAsRead = vi.fn().mockResolvedValue({})
-    mockNotificationsApi.markAllAsRead = vi.fn().mockResolvedValue({})
-    mockNotificationsApi.deleteNotification = vi.fn().mockResolvedValue({})
+    mockGetAll.mockResolvedValue({ items: [], total: 0, unread_count: 0 })
+    mockMarkAsRead.mockResolvedValue({})
+    mockMarkAllAsRead.mockResolvedValue({})
+    mockDeleteNotification.mockResolvedValue({})
   })
 
   afterEach(() => {
@@ -37,7 +45,7 @@ describe('useNotificationStore', () => {
 
   describe('refetch', () => {
     it('fetches notifications successfully', async () => {
-      mockNotificationsApi.getAll.mockResolvedValueOnce({
+      mockGetAll.mockResolvedValueOnce({
         items: [{ id: '1', message: 'Test notification', is_read: false }],
         total: 1,
         unread_count: 1,
@@ -49,7 +57,7 @@ describe('useNotificationStore', () => {
         await result.current.refetch()
       })
 
-      expect(mockNotificationsApi.getAll).toHaveBeenCalled()
+      expect(mockGetAll).toHaveBeenCalled()
       expect(result.current.total).toBe(1)
       expect(result.current.unreadCount).toBe(1)
       expect(result.current.isLoading).toBe(false)
@@ -58,7 +66,7 @@ describe('useNotificationStore', () => {
 
     it('handles fetch error', async () => {
       const error = new Error('Failed to fetch')
-      mockNotificationsApi.getAll.mockRejectedValueOnce(error)
+      mockGetAll.mockRejectedValueOnce(error)
 
       const { result } = renderHook(() => useNotificationStore())
 
@@ -73,7 +81,7 @@ describe('useNotificationStore', () => {
 
   describe('markAsRead', () => {
     it('marks notification as read', async () => {
-      mockNotificationsApi.markAsRead.mockResolvedValueOnce({
+      mockMarkAsRead.mockResolvedValueOnce({
         id: '1',
         message: 'Test',
         is_read: true,
@@ -85,11 +93,11 @@ describe('useNotificationStore', () => {
         await result.current.markAsRead('1')
       })
 
-      expect(mockNotificationsApi.markAsRead).toHaveBeenCalledWith('1')
+      expect(mockMarkAsRead).toHaveBeenCalledWith('1')
     })
 
     it('throws error on failure', async () => {
-      mockNotificationsApi.markAsRead.mockRejectedValueOnce(new Error('Failed'))
+      mockMarkAsRead.mockRejectedValueOnce(new Error('Failed'))
 
       const { result } = renderHook(() => useNotificationStore())
 
@@ -100,7 +108,7 @@ describe('useNotificationStore', () => {
 
   describe('markAllAsRead', () => {
     it('marks all notifications as read', async () => {
-      mockNotificationsApi.markAllAsRead.mockResolvedValueOnce(2)
+      mockMarkAllAsRead.mockResolvedValueOnce(2)
 
       const { result } = renderHook(() => useNotificationStore())
 
@@ -108,14 +116,14 @@ describe('useNotificationStore', () => {
         await result.current.markAllAsRead()
       })
 
-      expect(mockNotificationsApi.markAllAsRead).toHaveBeenCalled()
+      expect(mockMarkAllAsRead).toHaveBeenCalled()
       expect(result.current.unreadCount).toBe(0)
     })
   })
 
   describe('deleteNotification', () => {
     it('deletes notification', async () => {
-      mockNotificationsApi.deleteNotification.mockResolvedValueOnce({})
+      mockDeleteNotification.mockResolvedValueOnce({})
 
       const { result } = renderHook(() => useNotificationStore())
 
@@ -123,7 +131,7 @@ describe('useNotificationStore', () => {
         await result.current.deleteNotification('1')
       })
 
-      expect(mockNotificationsApi.deleteNotification).toHaveBeenCalledWith('1')
+      expect(mockDeleteNotification).toHaveBeenCalledWith('1')
     })
   })
 
@@ -141,7 +149,7 @@ describe('useNotificationStore', () => {
 
       vi.advanceTimersByTime(30000)
 
-      expect(mockNotificationsApi.getAll).toHaveBeenCalled()
+      expect(mockGetAll).toHaveBeenCalled()
 
       vi.useRealTimers()
     })
