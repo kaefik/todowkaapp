@@ -20,7 +20,11 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
   } = useTasks()
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
-    await addTask({ ...data })
+    const now = new Date()
+    const target = new Date(now)
+    target.setDate(target.getDate() + dayOffset)
+    const dueDate = target.toISOString()
+    await addTask({ ...data, due_date: dueDate, gtd_status: 'active' })
   }
 
   const handleDeleteTask = async (id: string) => {
@@ -47,7 +51,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
         error={null}
         onAddTask={handleAddTask}
         showAddForm={true}
-        defaultGtdStatus="inbox"
+        defaultGtdStatus="active"
         onToggleTask={toggleTask}
         onDeleteTask={handleDeleteTask}
         onMoveTask={handleMoveTask}

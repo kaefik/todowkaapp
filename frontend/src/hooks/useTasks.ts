@@ -66,6 +66,7 @@ export interface CreateTask {
   title: string
   description?: string
   gtd_status?: GtdStatus
+  due_date?: string | null
   context_id?: string | null
   area_id?: string | null
   project_id?: string | null
@@ -204,13 +205,13 @@ export function useTasks(filters?: TaskFilters, _options?: UseTasksOptions): Use
       description: data.description ?? null,
       isCompleted: false,
       completedAt: null,
-      gtdStatus: data.gtd_status ?? 'inbox',
+      gtdStatus: data.gtd_status ?? (data.due_date ? 'active' : 'inbox'),
       contextId: data.context_id ?? null,
       areaId: data.area_id ?? null,
       projectId: data.project_id ?? null,
       parentTaskId: null,
       position: 0,
-      dueDate: null,
+      dueDate: data.due_date ?? null,
       notes: null,
       recurrenceType: null,
       recurrenceConfig: null,
