@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Скрипт деплоя Todowka на продакшн сервер с SSL
-# Остановка, обновление, миграции БД, настройка SSL, запуск с проверками
+# Скрипт деплоя Todowka на продакшн сервер с SSL через хостовый nginx + certbot
+# Только backend в Docker, фронтенд — статика, nginx/certbot — на хосте
 
 set -e
 
@@ -47,6 +47,18 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
+# Проверка наличия nginx и certbot
+if ! command -v nginx &> /dev/null; then
+    log_error "nginx не установлен на хосте"
+    exit 1
+fi
+
+if ! command -v certbot &> /dev/null; then
+    log_error "certbot не установлен на хосте"
+    log_info "Установите: sudo apt install certbot python3-certbot-nginx"
+    exit 1
+fi
+
 # Создание .env из backend + frontend + docker-specific переменных
 merge_env_files() {
     local env_file="$SCRIPT_DIR/.env"
@@ -83,7 +95,6 @@ merge_env_files() {
         echo "UPDATE_CODE=${UPDATE_CODE:-true}"
         echo "BACKUP_DB=${BACKUP_DB:-true}"
         echo "CLEAN_IMAGES=${CLEAN_IMAGES:-false}"
-        echo "DEPLOY_MODE=${DEPLOY_MODE:-ssl}"
 
     } > "$tmp_file"
 
@@ -113,28 +124,17 @@ merge_env_files
 UPDATE_CODE=${UPDATE_CODE:-true}
 BACKUP_DB=${BACKUP_DB:-true}
 CLEAN_IMAGES=${CLEAN_IMAGES:-false}
-DEPLOY_MODE=${DEPLOY_MODE:-ssl}
 
 # Загрузка переменных из .env
 if [ -f "$SCRIPT_DIR/.env" ]; then
     source "$SCRIPT_DIR/.env"
 fi
 
-DOMAIN=${DOMAIN:-localhost}
-EMAIL=${EMAIL:-admin@localhost}
+DOMAIN=${DOMAIN:-todowka.nn-88-nn.ru}
+EMAIL=${EMAIL:-admin@todowka.nn-88-nn.ru}
 
-log_info "Режим деплоя: $DEPLOY_MODE"
 log_info "Домен: $DOMAIN"
 log_info "Email: $EMAIL"
-
-# Выбор docker-compose файла
-if [ "$DEPLOY_MODE" = "ssl" ]; then
-    COMPOSE_FILE="$SCRIPT_DIR/docker-compose-ssl.yml"
-else
-    COMPOSE_FILE="$SCRIPT_DIR/docker-compose-http.yml"
-fi
-
-log_info "Используется: $COMPOSE_FILE"
 
 # Обновление кода из git
 if [ "$UPDATE_CODE" = true ]; then
@@ -146,15 +146,6 @@ if [ "$UPDATE_CODE" = true ]; then
     fi
 fi
 
-# Создание директорий для сертификатов
-mkdir -p "$SCRIPT_DIR/certbot/conf"
-mkdir -p "$SCRIPT_DIR/certbot/www"
-
-# Остановка текущих контейнеров
-log_info "Остановка текущих контейнеров..."
-cd "$SCRIPT_DIR"
-docker-compose -f "$COMPOSE_FILE" down
-
 # Бэкап БД
 if [ "$BACKUP_DB" = true ]; then
     log_info "Создание бэкапа БД..."
@@ -162,16 +153,18 @@ if [ "$BACKUP_DB" = true ]; then
     mkdir -p "$BACKUP_DIR"
     BACKUP_FILE="$BACKUP_DIR/todowka_$(date +%Y%m%d_%H%M%S).db"
 
-    if docker-compose -f "$COMPOSE_FILE" exec -T backend cp /app/data/todowka.db /tmp/todowka_backup.db 2>/dev/null; then
-        docker-compose -f "$COMPOSE_FILE" exec -T backend cat /tmp/todowka_backup.db > "$BACKUP_FILE"
-        log_info "Бэкап сохранен: $BACKUP_FILE"
-    elif [ -d "$PROJECT_ROOT/backend/data" ] && [ -f "$PROJECT_ROOT/backend/data/todowka.db" ]; then
-        cp "$PROJECT_ROOT/backend/data/todowka.db" "$BACKUP_FILE"
+    if docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T backend cp /app/data/todowka.db /tmp/todowka_backup.db 2>/dev/null; then
+        docker-compose -f "$SCRIPT_DIR/docker-compose.yml" exec -T backend cat /tmp/todowka_backup.db > "$BACKUP_FILE"
         log_info "Бэкап сохранен: $BACKUP_FILE"
     else
-        log_warn "База данных не найдена, пропускаем бэкап"
+        log_warn "Не удалось создать бэкап, продолжаем"
     fi
 fi
+
+# Остановка контейнеров
+log_info "Остановка текущих контейнеров..."
+cd "$SCRIPT_DIR"
+docker-compose down
 
 # Очистка старых образов (опционально)
 if [ "$CLEAN_IMAGES" = true ]; then
@@ -179,144 +172,51 @@ if [ "$CLEAN_IMAGES" = true ]; then
     docker image prune -f
 fi
 
-# Сборка Docker образов
-log_info "Сборка Docker образов..."
-docker-compose -f "$COMPOSE_FILE" build --no-cache
+# Сборка Docker образа (только backend)
+log_info "Сборка Docker образа backend..."
+docker-compose build --no-cache
 
 # Запуск миграций БД
 log_info "Запуск миграций БД..."
-if docker-compose -f "$COMPOSE_FILE" run --rm backend alembic upgrade head; then
+if docker-compose -f "$SCRIPT_DIR/docker-compose.yml" run --rm backend alembic upgrade head; then
     log_info "Миграции успешно применены"
 else
     log_error "Ошибка при миграции БД"
     exit 1
 fi
 
-# Запуск контейнеров
-log_info "Запуск контейнеров..."
-docker-compose -f "$COMPOSE_FILE" up -d
+# Запуск контейнера backend
+log_info "Запуск backend..."
+docker-compose up -d
 
-# Ожидание запуска сервисов
-log_info "Ожидание запуска сервисов..."
-sleep 10
-
-# Проверка и получение SSL сертификатов
-if [ "$DEPLOY_MODE" = "ssl" ]; then
-    log_info "Проверка SSL сертификатов..."
-
-    # Проверка существующих сертификатов
-    if [ -f "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
-        log_info "SSL сертификаты уже существуют"
-
-        # Проверка срока действия сертификатов
-        if openssl x509 -checkend 86400 -noout -in "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem"; then
-            log_info "Сертификаты действительны более 24 часов"
-        else
-            log_warn "Сертификаты скоро истекут, обновляем..."
-            docker-compose -f "$COMPOSE_FILE" exec certbot certbot renew
-            docker-compose -f "$COMPOSE_FILE" restart nginx
-        fi
-    else
-        log_info "SSL сертификаты не найдены, получаем новые..."
-
-        # Проверка на локальный домен
-        if [[ "$DOMAIN" == "localhost" || "$DOMAIN" == *"localhost"* ]]; then
-            log_warn "Локальный домен '$DOMAIN' - используем самоподписанные сертификаты"
-
-            mkdir -p "$SCRIPT_DIR/certbot/conf/live/$DOMAIN"
-
-            log_info "Генерация самоподписанных сертификатов..."
-            openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-                -keyout "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/privkey.pem" \
-                -out "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" \
-                -subj "/CN=$DOMAIN/O=$DOMAIN/C=US"
-
-            if [ $? -eq 0 ]; then
-                log_info "Самоподписанные сертификаты успешно созданы"
-                log_warn "Браузеры будут показывать предупреждения - это нормально для локальной разработки"
-                log_info "Для доступа: https://$DOMAIN"
-                log_info "В браузере нажмите 'Advanced' → 'Proceed to $DOMAIN (unsafe)'"
-                docker-compose -f "$COMPOSE_FILE" restart nginx
-            else
-                log_error "Не удалось создать самоподписанные сертификаты"
-                log_info "Продолжаем в HTTP режиме"
-            fi
-        else
-            log_warn "Убедитесь что домен $DOMAIN указывает на этот сервер"
-
-            log_info "Тестовый запуск получения сертификата..."
-            docker-compose -f "$COMPOSE_FILE" exec certbot certbot certonly --webroot --webroot-path /var/www/certbot --email $EMAIL --agree-tos --no-eff-email --staging -d $DOMAIN --dry-run
-
-            if [ $? -eq 0 ]; then
-                log_info "Тестовый запуск успешен, получаем реальные сертификаты..."
-                docker-compose -f "$COMPOSE_FILE" exec certbot certbot certonly --webroot --webroot-path /var/www/certbot --email $EMAIL --agree-tos --no-eff-email -d $DOMAIN
-
-                if [ $? -eq 0 ]; then
-                    log_info "Сертификаты успешно получены"
-                    docker-compose -f "$COMPOSE_FILE" restart nginx
-                else
-                    log_error "Не удалось получить сертификаты"
-                    log_info "Продолжаем в HTTP режиме"
-                fi
-            else
-                log_error "Тестовый запуск не удался"
-                log_info "Проверьте DNS настройки и попробуйте снова"
-                log_info "Продолжаем в HTTP режиме"
-            fi
-        fi
-    fi
-fi
-
-# Проверка health status
-log_info "Проверка health status сервисов..."
-sleep 15
+# Проверка health status backend
+log_info "Проверка health status backend..."
+sleep 5
 
 MAX_RETRIES=30
 RETRY_COUNT=0
-ALL_HEALTHY=false
+BACKEND_HEALTHY=false
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     RETRY_COUNT=$((RETRY_COUNT + 1))
 
-    BACKEND_HEALTHY=false
-    FRONTEND_HEALTHY=false
-    NGINX_HEALTHY=false
-
-    if docker-compose -f "$COMPOSE_FILE" ps | grep backend | grep -q "Up (healthy)"; then
+    if docker-compose ps | grep backend | grep -q "Up (healthy)"; then
+        log_info "Backend здоров"
         BACKEND_HEALTHY=true
+        break
     else
         log_warn "Backend еще не здоров (попытка $RETRY_COUNT/$MAX_RETRIES)"
-    fi
-
-    if docker-compose -f "$COMPOSE_FILE" ps | grep frontend | grep -q "Up"; then
-        FRONTEND_HEALTHY=true
-    else
-        log_warn "Frontend еще не запущен (попытка $RETRY_COUNT/$MAX_RETRIES)"
-    fi
-
-    if docker-compose -f "$COMPOSE_FILE" ps | grep nginx | grep -q "Up"; then
-        NGINX_HEALTHY=true
-    else
-        log_warn "Nginx еще не запущен (попытка $RETRY_COUNT/$MAX_RETRIES)"
-    fi
-
-    if [ "$BACKEND_HEALTHY" = true ] && [ "$FRONTEND_HEALTHY" = true ] && [ "$NGINX_HEALTHY" = true ]; then
-        ALL_HEALTHY=true
-        log_info "Backend здоров"
-        log_info "Frontend запущен"
-        log_info "Nginx запущен"
-        break
     fi
 
     sleep 2
 done
 
-if [ "$ALL_HEALTHY" = true ]; then
-    log_info "Все сервисы успешно запущены и здоровы"
+if [ "$BACKEND_HEALTHY" = true ]; then
+    log_info "Backend успешно запущен"
 else
-    log_error "Не все сервисы запустились корректно"
+    log_error "Backend не запустился корректно"
     log_info "Логи:"
-    docker-compose -f "$COMPOSE_FILE" logs --tail=50
+    docker-compose logs --tail=50
     exit 1
 fi
 
@@ -329,32 +229,157 @@ fi
 npm run build
 log_info "Фронтенд собран в frontend/dist/"
 
-# Настройка автообновления сертификатов через cron
-if [ "$DEPLOY_MODE" = "ssl" ] && [ -f "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
-    log_info "Настройка автообновления сертификатов..."
+# SSL сертификаты через хостовый certbot
+log_info "Проверка SSL сертификатов..."
 
-    CRON_JOB="0 3 * * * root cd $SCRIPT_DIR && docker-compose -f $COMPOSE_FILE exec certbot certbot renew --quiet && docker-compose -f $COMPOSE_FILE restart nginx >> /var/log/todowka-ssl-renew.log 2>&1"
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    log_info "SSL сертификаты уже существуют"
 
-    if ! grep -q "todowka-ssl-renew" /etc/cron.d/todowka-ssl 2>/dev/null; then
-        echo "$CRON_JOB" | sudo tee /etc/cron.d/todowka-ssl > /dev/null
-        sudo chmod 644 /etc/cron.d/todowka-ssl
-        log_info "Cron задача настроена"
+    if openssl x509 -checkend 86400 -noout -in "/etc/letsencrypt/live/$DOMAIN/fullchain.pem"; then
+        log_info "Сертификаты действительны более 24 часов"
     else
-        log_info "Cron задача уже существует"
+        log_warn "Сертификаты скоро истекут, обновляем..."
+        certbot renew --quiet
+        systemctl reload nginx
+        log_info "Сертификаты обновлены"
+    fi
+else
+    log_info "SSL сертификаты не найдены, получаем через certbot..."
+    log_warn "Убедитесь что домен $DOMAIN указывает на этот сервер"
+    log_warn "Убедитесь что nginx настроен и слушает порт 80 для $DOMAIN"
+
+    certbot certonly --nginx --non-interactive --agree-tos --email "$EMAIL" -d "$DOMAIN"
+
+    if [ $? -eq 0 ]; then
+        log_info "Сертификаты успешно получены"
+    else
+        log_error "Не удалось получить сертификаты"
+        log_info "Продолжаем без SSL"
+    fi
+fi
+
+# Проверка/установка конфигурации nginx для домена
+NGINX_CONF_NAME="todowka"
+NGINX_SITES_AVAILABLE="/etc/nginx/sites-available/$NGINX_CONF_NAME"
+NGINX_SITES_ENABLED="/etc/nginx/sites-enabled/$NGINX_CONF_NAME"
+
+if [ ! -f "$NGINX_SITES_AVAILABLE" ]; then
+    log_info "Создание конфигурации nginx для $DOMAIN..."
+
+    CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
+    FRONTEND_DIST="$PROJECT_ROOT/frontend/dist"
+
+    cat > "$NGINX_SITES_AVAILABLE" << NGINXEOF
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name $DOMAIN;
+
+    ssl_certificate $CERT_PATH/fullchain.pem;
+    ssl_certificate_key $CERT_PATH/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    client_max_body_size 10M;
+
+    root $FRONTEND_DIST;
+    index index.html;
+
+    location /health {
+        proxy_pass http://127.0.0.1:8000/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+    }
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+NGINXEOF
+
+    ln -sf "$NGINX_SITES_AVAILABLE" "$NGINX_SITES_ENABLED"
+    log_info "Конфигурация nginx создана: $NGINX_SITES_AVAILABLE"
+else
+    log_info "Конфигурация nginx уже существует: $NGINX_SITES_AVAILABLE"
+fi
+
+# Проверка и перезагрузка nginx
+log_info "Проверка конфигурации nginx..."
+if nginx -t; then
+    log_info "Конфигурация nginx корректна"
+    systemctl reload nginx
+    log_info "nginx перезагружен"
+else
+    log_error "Ошибка в конфигурации nginx"
+    exit 1
+fi
+
+# Настройка автообновления сертификатов через cron
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    log_info "Проверка cron для автообновления сертификатов..."
+
+    if ! crontab -l 2>/dev/null | grep -q "certbot renew"; then
+        (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet --deploy-hook \"systemctl reload nginx\" >> /var/log/todowka-ssl-renew.log 2>&1") | crontab -
+        log_info "Cron задача для обновления сертификатов добавлена"
+    else
+        log_info "Cron задача для обновления сертификатов уже существует"
     fi
 fi
 
 # Показать логи последнего запуска
-log_info "Логи запуска:"
+log_info "Логи backend:"
 cd "$SCRIPT_DIR"
-docker-compose -f "$COMPOSE_FILE" logs --tail=20
+docker-compose logs --tail=20
 
 log_info "Деплой успешно завершен!"
-
-if [ "$DEPLOY_MODE" = "ssl" ] && [ -f "$SCRIPT_DIR/certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
-    log_info "Frontend доступен по HTTPS: https://$DOMAIN"
-else
-    log_info "Frontend доступен по HTTP: http://$DOMAIN"
-fi
-log_info "Backend доступен: http://$DOMAIN/api"
-log_info "API документация: http://$DOMAIN/api/docs"
+log_info "Frontend: https://$DOMAIN (через хостовый nginx + SSL)"
+log_info "Backend: http://127.0.0.1:8000 (в Docker)"
+log_info "API документация: https://$DOMAIN/api/docs"
