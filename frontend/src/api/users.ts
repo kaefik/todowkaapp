@@ -34,4 +34,12 @@ export const usersApi = {
   deleteUser: async (userId: string): Promise<void> => {
     await httpClient.delete(`/users/${userId}`)
   },
+
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const response = await httpClient.post<{ message: string }>('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+    return response.data
+  },
 }
