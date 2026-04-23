@@ -55,7 +55,7 @@ class ProjectService:
         result = await self.db.execute(
             select(Project)
             .where(Project.user_id == user_id)
-            .order_by(Project.created_at.desc())
+            .order_by(Project.sort_order.asc(), Project.created_at.desc())
             .limit(limit)
             .offset(offset)
         )
@@ -95,6 +95,13 @@ class ProjectService:
             color=data.color,
             area_id=data.area_id,
         )
+        if data.sort_order is not None:
+            project.sort_order = data.sort_order
+        else:
+            max_result = await self.db.execute(
+                select(func.coalesce(func.max(Project.sort_order), -1)).where(Project.user_id == user_id)
+            )
+            project.sort_order = (max_result.scalar() or -1) + 1
         self.db.add(project)
         await self.db.flush()
         await self.db.refresh(project)
@@ -150,3 +157,18 @@ class ProjectService:
         tasks = list(result.scalars().all())
 
         return tasks, total
+
+    async def reorder_projects(self, user_id: UUID, items: list[dict]) -> None:
+        project_ids = [item['id'] for item in items]
+        result = await self.db.execute(
+            select(Project).where(
+                Project.id.in_(project_ids),
+                Project.user_id == user_id,
+            )
+        )
+        projects = {p.id: p for p in result.scalars().all()}
+        for item in items:
+            project = projects.get(item['id'])
+            if project:
+                project.sort_order = item['sort_order']
+        await self.db.flush()

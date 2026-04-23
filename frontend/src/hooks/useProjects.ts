@@ -21,6 +21,7 @@ export interface Project {
   progress: ProjectProgress
   created_at: string
   updated_at: string
+  sort_order: number
 }
 
 export interface CreateProject {
@@ -28,6 +29,7 @@ export interface CreateProject {
   description?: string | null
   color?: string | null
   area_id?: string | null
+  sort_order?: number
 }
 
 export interface UpdateProject {
@@ -36,6 +38,7 @@ export interface UpdateProject {
   color?: string | null
   area_id?: string | null
   is_active?: boolean
+  sort_order?: number
 }
 
 interface UseProjectsReturn {
@@ -61,6 +64,7 @@ export function useProjects(): UseProjectsReturn {
     async () => {
       if (!user) return []
       const records = await activeTable(db.projects, user.id).toArray()
+      records.sort((a, b) => a.sortOrder - b.sortOrder)
       const results: Project[] = []
       for (const p of records) {
         const tasks = await activeTasksByProject(user.id, p.id).toArray()
@@ -78,6 +82,7 @@ export function useProjects(): UseProjectsReturn {
           progress: { tasks_total, tasks_completed, progress_percent },
           created_at: p.createdAt,
           updated_at: p.updatedAt,
+          sort_order: p.sortOrder,
         })
       }
       return results
@@ -89,6 +94,8 @@ export function useProjects(): UseProjectsReturn {
     if (!user) return
     const id = uuidv4()
     const now = new Date().toISOString()
+    const existingProjects = await activeTable(db.projects, user.id).toArray()
+    const maxSortOrder = existingProjects.reduce((max, p) => Math.max(max, p.sortOrder), -1)
     await db.projects.add({
       id,
       userId: user.id,
@@ -97,6 +104,7 @@ export function useProjects(): UseProjectsReturn {
       color: data.color ?? null,
       areaId: data.area_id ?? null,
       isActive: true,
+      sortOrder: data.sort_order ?? (maxSortOrder + 1),
       createdAt: now,
       updatedAt: now,
       _syncStatus: 'local',
@@ -125,6 +133,7 @@ export function useProjects(): UseProjectsReturn {
     if (data.color !== undefined) updates.color = data.color
     if (data.area_id !== undefined) updates.areaId = data.area_id
     if (data.is_active !== undefined) updates.isActive = data.is_active
+    if (data.sort_order !== undefined) updates.sortOrder = data.sort_order
     await db.projects.update(id, updates)
     await db.mutations.add({
       id: uuidv4(),
@@ -165,4 +174,53 @@ export function useProjects(): UseProjectsReturn {
     deleteProject,
     refetch: async () => {},
   }
+}
+
+export type SortMode = 'name' | 'date' | 'tasks'
+
+export async function reorderProjects(items: { id: string; sort_order: number }[]): Promise<void> {
+  const user = useAuthStore.getState().user
+  if (!user) return
+
+  for (const item of items) {
+    await db.projects.update(item.id, {
+      sortOrder: item.sort_order,
+      updatedAt: new Date().toISOString(),
+      _syncStatus: 'modified',
+    })
+  }
+
+  try {
+    const { httpClient } = await import('../api/httpClient')
+    await httpClient.put('/projects/reorder', {
+      items: items.map(i => ({ id: i.id, sort_order: i.sort_order })),
+    })
+    for (const item of items) {
+      await db.projects.update(item.id, {
+        _syncStatus: 'synced',
+        _lastSyncedAt: new Date().toISOString(),
+      })
+    }
+  } catch {
+    // will be synced later via SyncEngine push
+  }
+}
+
+export function autoSortProjects(
+  projects: Project[],
+  mode: SortMode
+): { id: string; sort_order: number }[] {
+  const sorted = [...projects]
+  switch (mode) {
+    case 'name':
+      sorted.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+      break
+    case 'date':
+      sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      break
+    case 'tasks':
+      sorted.sort((a, b) => b.progress.tasks_total - a.progress.tasks_total)
+      break
+  }
+  return sorted.map((p, i) => ({ id: p.id, sort_order: i }))
 }

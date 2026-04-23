@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useProjects, type Project } from '../hooks/useProjects'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { useProjects, reorderProjects, autoSortProjects, type Project, type SortMode } from '../hooks/useProjects'
 import { ColorPickerField } from '../components/ColorPickerField'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
@@ -18,6 +21,19 @@ const projectSchema = z.object({
 })
 
 type ProjectFormData = z.infer<typeof projectSchema>
+
+function getStoredSortMode(): SortMode | null {
+  try {
+    return localStorage.getItem('projects_sort_mode') as SortMode | null
+  } catch { return null }
+}
+
+function storeSortMode(mode: SortMode | null) {
+  try {
+    if (mode) localStorage.setItem('projects_sort_mode', mode)
+    else localStorage.removeItem('projects_sort_mode')
+  } catch {}
+}
 
 function ProgressBar({ percent, color }: { percent: number; color: string | null }) {
   const bgColor = color || '#6366f1'
@@ -92,6 +108,75 @@ function ProjectCard({
           <span>{project.progress.progress_percent}%</span>
         </div>
       </div>
+    </div>
+  )
+}
+
+function SortableProjectCard({
+  project,
+  onEdit,
+  onDelete,
+  onClick,
+}: {
+  project: Project
+  onEdit: (project: Project) => void
+  onDelete: (id: string) => void
+  onClick: (id: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-1 flex-shrink-0 focus:outline-none"
+        aria-label="Перетащить"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="3" r="1.5" />
+          <circle cx="11" cy="3" r="1.5" />
+          <circle cx="5" cy="8" r="1.5" />
+          <circle cx="11" cy="8" r="1.5" />
+          <circle cx="5" cy="13" r="1.5" />
+          <circle cx="11" cy="13" r="1.5" />
+        </svg>
+      </button>
+      <div className="flex-1 min-w-0">
+        <ProjectCard project={project} onEdit={onEdit} onDelete={onDelete} onClick={onClick} />
+      </div>
+    </div>
+  )
+}
+
+const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
+  { mode: 'name', label: 'По имени' },
+  { mode: 'date', label: 'По дате' },
+  { mode: 'tasks', label: 'По задачам' },
+]
+
+function SortPanel({ activeMode, onSort }: { activeMode: SortMode | null; onSort: (mode: SortMode) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Сортировка:</span>
+      {SORT_OPTIONS.map(opt => (
+        <button
+          key={opt.mode}
+          onClick={() => onSort(opt.mode)}
+          className={`px-2 py-1 text-xs rounded-md transition-colors ${
+            activeMode === opt.mode
+              ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -182,6 +267,37 @@ function ProjectsContent() {
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sortMode, setSortMode] = useState<SortMode | null>(getStoredSortMode)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = projects.findIndex(p => p.id === active.id)
+    const newIndex = projects.findIndex(p => p.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = [...projects]
+    const [moved] = reordered.splice(oldIndex, 1)
+    reordered.splice(newIndex, 0, moved)
+
+    const items = reordered.map((p, i) => ({ id: p.id, sort_order: i }))
+    await reorderProjects(items)
+    setSortMode(null)
+    storeSortMode(null)
+  }
+
+  const handleAutoSort = async (mode: SortMode) => {
+    const items = autoSortProjects(projects, mode)
+    await reorderProjects(items)
+    setSortMode(mode)
+    storeSortMode(mode)
+  }
 
   const handleCreate = async (data: ProjectFormData) => {
     setIsSubmitting(true)
@@ -285,17 +401,25 @@ function ProjectsContent() {
         </div>
       )}
 
-      <div className="space-y-3">
-        {projects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            onEdit={setEditingProject}
-            onDelete={handleDelete}
-            onClick={handleClickProject}
-          />
-        ))}
-      </div>
+      {projects.length > 1 && (
+        <SortPanel activeMode={sortMode} onSort={handleAutoSort} />
+      )}
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={projects.map(p => p.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {projects.map((project) => (
+              <SortableProjectCard
+                key={project.id}
+                project={project}
+                onEdit={setEditingProject}
+                onDelete={handleDelete}
+                onClick={handleClickProject}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   )
 }

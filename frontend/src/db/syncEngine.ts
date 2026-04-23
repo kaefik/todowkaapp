@@ -39,6 +39,7 @@ const RESOURCES: SyncResourceConfig[] = [
       color: (item.color as string | null) ?? null,
       areaId: (item.area_id as string | null) ?? null,
       isActive: (item.is_active as boolean) ?? true,
+      sortOrder: (item.sort_order as number) ?? 0,
       createdAt: (item.created_at as string) ?? new Date().toISOString(),
       updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
       _syncStatus: 'synced' as SyncStatus,

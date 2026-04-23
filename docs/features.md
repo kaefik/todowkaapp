@@ -76,6 +76,16 @@
 - Сворачивание/разворачивание списка выполненных задач
 - Мгновенное обновление интерфейса без перезагрузки страницы
 
+#### Управление проектами — Сортировка ✅ (Реализовано 23.04.2026)
+- Drag-and-drop перетаскивание проектов для ручной сортировки (иконка-ручка ≡)
+- Быстрая авто-сортировка по кнопкам: по имени (А→Я), по дате (новые→старые), по задачам (больше→меньше)
+- Выбранный режим сортировки сохраняется в localStorage между сессиями
+- Порядок проектов (sort_order) хранится в модели данных и синхронизируется между устройствами
+- API: PUT /api/projects/reorder — пакетное обновление порядка
+- Поле sort_order в модели Project (Integer, default=0)
+- Библиотека: @dnd-kit/core + @dnd-kit/sortable
+- Файлы: `backend/app/models/project.py`, `backend/app/schemas/project.py`, `backend/app/services/project_service.py`, `backend/app/api/projects.py`, `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/hooks/useProjects.ts`, `frontend/src/routes/Projects.tsx`
+
 #### Управление пользователями (для администраторов)
 - Панель управления пользователями доступна только администраторам
 - Просмотр списка всех зарегистрированных пользователей

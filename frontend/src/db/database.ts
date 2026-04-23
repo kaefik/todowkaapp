@@ -40,6 +40,7 @@ export interface DbProject {
   description: string | null
   color: string | null
   isActive: boolean
+  sortOrder: number
   createdAt: string
   updatedAt: string
   _syncStatus: SyncStatus
@@ -122,6 +123,14 @@ export class TodowkaDB extends Dexie {
       tags: 'id, userId, _syncStatus, updatedAt',
       mutations: 'id, [entityType+entityId], timestamp, retryCount',
       syncMeta: 'key',
+    })
+
+    this.version(2).stores({
+      projects: 'id, userId, areaId, _syncStatus, updatedAt, sortOrder',
+    }).upgrade(tx => {
+      return tx.table('projects').toCollection().modify(project => {
+        project.sortOrder = 0
+      })
     })
   }
 }

@@ -10,6 +10,7 @@ from app.schemas.project import (
     ProjectCreate,
     ProjectDetailResponse,
     ProjectListResponse,
+    ProjectReorderRequest,
     ProjectResponse,
     ProjectUpdate,
 )
@@ -42,12 +43,25 @@ async def list_projects(
                 description=project.description,
                 color=project.color,
                 is_active=project.is_active,
+                sort_order=project.sort_order,
                 created_at=project.created_at,
                 updated_at=project.updated_at,
                 progress=progress,
             )
         )
     return ProjectListResponse(items=items, total=total)
+
+
+@projects_router.put("/reorder", response_model=dict)
+async def reorder_projects(
+    data: ProjectReorderRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict:
+    service = ProjectService(db)
+    items = [{"id": item.id, "sort_order": item.sort_order} for item in data.items]
+    await service.reorder_projects(user_id=current_user.id, items=items)
+    return {"ok": True}
 
 
 @projects_router.post("", status_code=status.HTTP_201_CREATED, response_model=ProjectResponse)
@@ -85,6 +99,7 @@ async def get_project(
         description=project.description,
         color=project.color,
         is_active=project.is_active,
+        sort_order=project.sort_order,
         created_at=project.created_at,
         updated_at=project.updated_at,
         progress=progress,
