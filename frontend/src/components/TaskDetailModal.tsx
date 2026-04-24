@@ -123,8 +123,12 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 dark:border-indigo-400" />
             </div>
           ) : error ? (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-              {error}
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-1">Задача не найдена</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm">{error}</p>
             </div>
           ) : task ? (
             <div className="space-y-6">
@@ -292,7 +296,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
           >
             Закрыть
           </button>
-          {task && (
+          {task && !error && (
             <button
               type="button"
               onClick={handleEdit}

@@ -341,7 +341,8 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
 
   const fetchTask = useCallback(async (id: string): Promise<Task> => {
     const record = await db.tasks.get(id)
-    if (!record) throw new Error('Task not found')
+    if (!record) throw new Error('Задача не найдена. Возможно, она была удалена.')
+    if (record._syncStatus === 'deleted') throw new Error('Данная задача была удалена')
     return dbTaskToUi(record) as Promise<Task>
   }, [])
 
