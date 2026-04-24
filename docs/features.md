@@ -198,7 +198,7 @@
 - Автоматическое сохранение всех состояний UI в localStorage
 - Сохранение сворачивания списка выполненных задач (Tasks.tsx)
 - Сохранение состояния поля описания задачи (TaskListView.tsx)
-- Сохранение раскрытия подзадач для каждой задачи отдельно (TaskListView.tsx)
+- Сохранение раскрытия подзадач для каждой задачи отдельно (TaskListView.tsx) — убрано, подзадачи перенесены в TaskEditModal
 - Сохранение активной вкладки в настройках (Settings.tsx)
 - Сохранение состояния панели фильтров и поиска (TaskFilterPanel.tsx)
 - Сохранение фильтров и поискового запроса между сессиями (useTaskFilter.ts)
@@ -775,9 +775,10 @@
 - GET /api/tasks — по умолчанию только корневые, ?include_subtasks=true для всех
 - Каскадное удаление подзадач при удалении родительской задачи
 - Хук useSubtasks(parentTaskId) — CRUD подзадач
-- Раскрываемый список подзадач в карточке задачи: индикатор (3/5), toggle, добавление
+- Раскрываемый список подзадач в модальном окне редактирования задачи (TaskEditModal): индикатор (3/5), toggle, добавление, удаление
+- Индикатор прогресса подзадач (X/Y) в карточке задачи в списке
 - API: GET/POST /api/tasks/{id}/subtasks, GET /api/tasks?include_subtasks=true
-- Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/hooks/useSubtasks.ts`, `frontend/src/routes/GtdTaskList.tsx`
+- Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/hooks/useSubtasks.ts`, `frontend/src/components/TaskEditModal.tsx`
 - Тесты: `backend/tests/test_tasks.py` (9 тестов подзадач)
 
 #### Поиск и фильтрация ✅ (Реализовано 12.04.2026)
@@ -984,7 +985,7 @@
 
 **11 апреля 2026:**
 - Реализованы подзадачи: иерархия задач, создание/получение через API, подсчёт (subtasks_count/subtasks_completed)
-- Хук useSubtasks(parentTaskId), раскрываемый UI подзадач в карточке с toggle и добавлением
+- Хук useSubtasks(parentTaskId), раскрываемый Accordion подзадач в модальном окне редактирования (TaskEditModal) с toggle, добавлением и удалением
 - 9 тестов подзадач (создание, список, counts, toggle, include_subtasks, cascade delete)
 - GET /api/tasks по умолчанию возвращает только корневые задачи, ?include_subtasks=true для всех
 - Параметр include_subtasks и поля subtasks_count/subtasks_completed в TaskResponse
@@ -1023,3 +1024,12 @@
 - react-router-dom 7.14.0 → 7.14.2, react-hook-form 7.72.1 → 7.73.1
 - typescript-eslint 8.58.0 → 8.59.0, globals 17.4.0 → 17.5.0, @types/node 24.x → 25.x
 - Добавлены overrides в package.json: sourcemap-codec → @jridgewell/sourcemap-codec, source-map → 0.7.4
+
+**24 апреля 2026:**
+- Управление подзадачами перенесено из списка задач в модальное окно редактирования (TaskEditModal)
+- В карточке задачи остался только индикатор прогресса (X/Y)
+- Accordion «Подзадачи» в TaskEditModal: список с чекбоксами, добавление, удаление
+- Обновлены тесты: Subtasks.test.tsx (12 тестов — 2 для списка, 10 для модального окна)
+- Подзадачи скрыты из общего списка задач (фильтр parentTaskId в activeTasks)
+- Каскадное перемещение в корзину: при trash дочерние подзадачи тоже перемещаются (frontend + backend)
+- Предупреждение в ConfirmDialog: если у задачи есть подзадачи, показывается их количество и предупреждение об удалении

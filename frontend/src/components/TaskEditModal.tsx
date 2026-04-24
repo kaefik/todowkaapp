@@ -9,6 +9,7 @@ import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
 import { useOnlineStatus } from '../db/hooks'
+import { useSubtasks } from '../hooks/useSubtasks'
 import { RecurrenceEditor } from './RecurrenceEditor'
 import { ReminderEditor } from './ReminderEditor'
 
@@ -118,6 +119,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     categorization: false,
     datesAndNotes: false,
     recurrence: false,
+    subtasks: false,
   })
 
   const [recurrenceData, setRecurrenceData] = useState<{
@@ -138,7 +140,9 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   })
   const [isTodayDue, setIsTodayDue] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false)
+  const { subtasks, isLoading: isLoadingSubtasks, addSubtask, toggleSubtask, deleteSubtask, refetch: refetchSubtasks } = useSubtasks(task?.id ?? null)
   const defaultValues = useMemo(() => {
     if (!task) return undefined
     const dueDateStr = task.due_date ? task.due_date.slice(0, 10) : null
@@ -191,6 +195,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         reminder_offsets: task.reminder_offsets,
       })
       setIsTodayDue(dueDateStr === today)
+      setNewSubtaskTitle('')
     }
   }, [task, isOpen, reset])
 
@@ -245,6 +250,24 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       const today = new Date().toISOString().slice(0, 10)
       reset(prev => ({ ...prev, due_date: today }))
       setIsTodayDue(true)
+    }
+  }
+
+  const handleAddSubtask = async () => {
+    const trimmed = newSubtaskTitle.trim()
+    if (!trimmed || !task) return
+    setIsAddingSubtask(true)
+    try {
+      await addSubtask(trimmed)
+      setNewSubtaskTitle('')
+    } catch {}
+    setIsAddingSubtask(false)
+  }
+
+  const handleSubtaskKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddSubtask()
     }
   }
 
@@ -324,6 +347,68 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
               )}
             </div>
+
+            <Accordion
+              title={`Подзадачи${subtasks.length > 0 ? ` (${subtasks.filter(s => s.completed).length}/${subtasks.length})` : ''}`}
+              isOpen={accordionStates.subtasks}
+              onToggle={() => toggleAccordion('subtasks')}
+            >
+              {isLoadingSubtasks && subtasks.length === 0 && (
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
+              )}
+              {subtasks.length > 0 && (
+                <div className="space-y-1 mb-3">
+                  {subtasks.map((st) => (
+                    <div key={st.id} className="flex items-center gap-2 group">
+                      <input
+                        type="checkbox"
+                        checked={st.completed}
+                        onChange={() => {
+                          toggleSubtask(st.id)
+                          setTimeout(refetchSubtasks, 300)
+                        }}
+                        className="h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                      />
+                      <span
+                        className={`text-sm flex-1 ${st.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300'}`}
+                      >
+                        {st.title}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          deleteSubtask(st.id)
+                          setTimeout(refetchSubtasks, 300)
+                        }}
+                        className="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newSubtaskTitle}
+                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                  onKeyDown={handleSubtaskKeyDown}
+                  placeholder="Новая подзадача..."
+                  disabled={isAddingSubtask}
+                  className="flex-1 text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSubtask}
+                  disabled={isAddingSubtask || !newSubtaskTitle.trim()}
+                  className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  +
+                </button>
+              </div>
+            </Accordion>
+
             <div>
               <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 GTD-статус

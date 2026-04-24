@@ -85,7 +85,7 @@ export function useGtdCounts(): UseGtdCountsReturn {
       result[status] = await db.tasks
         .where('[userId+gtdStatus]')
         .equals([user.id, status])
-        .filter(t => t._syncStatus !== 'deleted')
+        .filter(t => t._syncStatus !== 'deleted' && !t.parentTaskId)
         .count()
     }
 

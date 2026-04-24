@@ -144,7 +144,7 @@ export function activeTasks(userId: string) {
       [userId, Dexie.minKey],
       [userId, Dexie.maxKey]
     )
-    .filter(t => t._syncStatus !== 'deleted')
+    .filter(t => t._syncStatus !== 'deleted' && !t.parentTaskId)
 }
 
 export function activeTasksByStatus(userId: string, status: string) {

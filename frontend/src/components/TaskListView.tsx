@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
-import { useSubtasks } from '../hooks/useSubtasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { TaskEditModal } from './TaskEditModal'
@@ -50,109 +49,6 @@ export interface TaskListViewProps {
   emptyMessage?: string
   autoFocus?: boolean
   showGtdStatus?: boolean
-}
-
-function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtaskChange: () => void }) {
-  const storageKey = `ui-subtask-expanded-${taskId}`
-  const [expanded, setExpanded] = useLocalStorage(storageKey, false)
-  const [newTitle, setNewTitle] = useState('')
-  const [isAdding, setIsAdding] = useState(false)
-  const { subtasks, isLoading, addSubtask, toggleSubtask, deleteSubtask, refetch } = useSubtasks(expanded ? taskId : null)
-
-  useEffect(() => {
-    if (expanded) {
-      refetch()
-    }
-  }, [expanded, refetch])
-
-  const handleAdd = async () => {
-    const trimmed = newTitle.trim()
-    if (!trimmed) return
-    setIsAdding(true)
-    try {
-      await addSubtask(trimmed)
-      setNewTitle('')
-      onSubtaskChange()
-    } catch {}
-    setIsAdding(false)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAdd()
-    }
-  }
-
-  const total = subtasks.length
-  const completed = subtasks.filter((s) => s.completed).length
-
-  return (
-    <div className="mt-2 ml-7">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1"
-      >
-        <span className={`transition-transform ${expanded ? 'rotate-90' : ''}`}>▸</span>
-        {total > 0 ? `${completed}/${total} подзадач` : '+ Подзадача'}
-      </button>
-
-      {expanded && (
-        <div className="mt-2 space-y-1 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
-          {isLoading && subtasks.length === 0 && (
-            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
-          )}
-          {subtasks.map((st) => (
-            <div key={st.id} className="flex items-center gap-2 group">
-              <input
-                type="checkbox"
-                checked={st.completed}
-                onChange={() => {
-                  toggleSubtask(st.id)
-                  setTimeout(onSubtaskChange, 300)
-                }}
-                className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-              />
-              <span
-                className={`text-xs flex-1 ${st.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300'}`}
-              >
-                {st.title}
-              </span>
-              <button
-                onClick={() => {
-                  deleteSubtask(st.id)
-                  setTimeout(onSubtaskChange, 300)
-                }}
-                className="text-[10px] text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Новая подзадача..."
-              disabled={isAdding}
-              className="flex-1 text-xs px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={isAdding || !newTitle.trim()}
-              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50"
-            >
-              + Добавить
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
 }
 
 function formatShortDate(date: Date) {
@@ -487,9 +383,6 @@ export function TaskListView({
                       </span>
                     )}
                   </div>
-                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                    <SubtaskSection taskId={task.id} onSubtaskChange={() => onRefetch()} />
-                  </div>
                 </div>
                 <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                   {!hideMoveButtons &&
@@ -642,9 +535,6 @@ export function TaskListView({
                             {task.subtasks_completed}/{task.subtasks_count}
                           </span>
                         )}
-                      </div>
-                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                        <SubtaskSection taskId={task.id} onSubtaskChange={() => onRefetch()} />
                       </div>
                     </div>
                     <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>

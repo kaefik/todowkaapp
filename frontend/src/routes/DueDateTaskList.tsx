@@ -42,6 +42,11 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
     refetch()
   }
 
+  const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
+  const subtaskWarning = pendingDeleteTask && pendingDeleteTask.subtasks_count > 0
+    ? ` У задачи есть ${pendingDeleteTask.subtasks_count} ${pendingDeleteTask.subtasks_count === 1 ? 'подзадача' : pendingDeleteTask.subtasks_count < 5 ? 'подзадачи' : 'подзадач'}. Все будут перемещены в корзину.`
+    : ''
+
   const handleSaveTask = async (id: string, data: UpdateTask) => {
     await updateTask(id, data)
   }
@@ -73,7 +78,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
       <ConfirmDialog
         open={!!pendingDeleteId}
         title="Переместить в корзину?"
-        message="Задача будет перемещена в корзину."
+        message={`Задача будет перемещена в корзину.${subtaskWarning}`}
         confirmText="Удалить"
         variant="danger"
         onConfirm={confirmDelete}

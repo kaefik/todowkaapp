@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
-from sqlalchemy import Integer, delete, func, select
+from sqlalchemy import Integer, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -231,6 +231,23 @@ class TaskService:
             task.sent_reminder_offsets = []
 
         await self.db.flush()
+
+        if gtd_status == GtdStatus.TRASH:
+            subtasks_stmt = (
+                update(Task)
+                .where(Task.parent_task_id == str(task_id))
+                .values(
+                    gtd_status=gtd_status.value,
+                    updated_at=datetime.now(),
+                    trashed_at=datetime.now(),
+                    due_date=None,
+                    reminder_time=None,
+                    reminder_offsets=None,
+                    reminder_fired=False,
+                )
+            )
+            await self.db.execute(subtasks_stmt)
+            await self.db.flush()
 
         if gtd_status == GtdStatus.COMPLETED and self.recurrence_service and not was_recurring_and_completed:
             if self.recurrence_service.should_generate_task(task):

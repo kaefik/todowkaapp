@@ -58,6 +58,14 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     refetch()
   }
 
+  const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
+  const subtaskWarning = pendingDeleteTask && pendingDeleteTask.subtasks_count > 0
+    ? ` У задачи есть ${pendingDeleteTask.subtasks_count} ${pendingDeleteTask.subtasks_count === 1 ? 'подзадача' : pendingDeleteTask.subtasks_count < 5 ? 'подзадачи' : 'подзадач'}.${gtdStatus === 'trash' ? ' Все будут удалены навсегда.' : ' Все будут перемещены в корзину.'}`
+    : ''
+
+  const deleteTitle = gtdStatus === 'trash' ? 'Удалить навсегда?' : 'Переместить в корзину?'
+  const deleteMessage = (gtdStatus === 'trash' ? 'Это действие нельзя отменить.' : 'Задача будет перемещена в корзину.') + subtaskWarning
+
   const handleRestoreTask = async (id: string) => {
     setPendingRestoreId(id)
   }
@@ -113,8 +121,8 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
 
       <ConfirmDialog
         open={!!pendingDeleteId}
-        title={gtdStatus === 'trash' ? 'Удалить навсегда?' : 'Переместить в корзину?'}
-        message={gtdStatus === 'trash' ? 'Это действие нельзя отменить.' : 'Задача будет перемещена в корзину.'}
+        title={deleteTitle}
+        message={deleteMessage}
         confirmText={gtdStatus === 'trash' ? 'Удалить навсегда' : 'Удалить'}
         variant="danger"
         onConfirm={confirmDelete}

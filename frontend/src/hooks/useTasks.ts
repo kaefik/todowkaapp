@@ -319,6 +319,31 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
+
+    if (gtd_status === 'trash') {
+      const children = await db.tasks
+        .where('parentTaskId')
+        .equals(id)
+        .filter(t => t._syncStatus !== 'deleted')
+        .toArray()
+      for (const child of children) {
+        await db.tasks.update(child.id, {
+          gtdStatus: gtd_status,
+          updatedAt: now,
+          _syncStatus: 'modified',
+        })
+        await db.mutations.add({
+          id: uuidv4(),
+          entityType: 'task',
+          entityId: child.id,
+          action: 'move',
+          payload: JSON.stringify({ gtd_status }),
+          timestamp: Date.now(),
+          retryCount: 0,
+          lastError: null,
+        })
+      }
+    }
   }
 
   const restoreTask = async (id: string) => {
