@@ -1,0 +1,33 @@
+diff --git a/node_modules/vite-plugin-pwa/dist/index.js b/node_modules/vite-plugin-pwa/dist/index.js
+index 84bf280..9a16216 100644
+--- a/node_modules/vite-plugin-pwa/dist/index.js
++++ b/node_modules/vite-plugin-pwa/dist/index.js
+@@ -258,7 +258,6 @@ function _generateBundle(ctx, bundle, pluginCtx) {
+       source: generateSimpleSWRegister(options, false)
+     }, bundle, pluginCtx);
+   }
+-  return bundle;
+ }
+ function emitFile(asset, bundle, pluginCtx) {
+   if (pluginCtx) {
+@@ -268,16 +267,10 @@ function emitFile(asset, bundle, pluginCtx) {
+       source: asset.source
+     });
+   } else {
+-    bundle[asset.fileName] = {
+-      // @ts-expect-error: for Vite 3 support, Vite 4 has removed `isAsset` property
+-      isAsset: true,
+-      type: "asset",
+-      // vite 6 deprecation: replaced with names
+-      name: void 0,
+-      // fix vite 6 build with manifest enabled
+-      names: [],
+-      source: asset.source,
+-      fileName: asset.fileName
++    pluginCtx = {
++      emitFile: () => {
++        throw new Error("[vite-plugin-pwa] Cannot emit file without plugin context. Please report this issue.");
++      }
+     };
+   }
+ }
