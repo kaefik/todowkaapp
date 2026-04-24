@@ -113,6 +113,7 @@ interface UseTasksReturn {
   updateTask: (id: string, data: UpdateTask) => Promise<void>
   toggleTask: (id: string) => Promise<void>
   moveTask: (id: string, gtd_status: GtdStatus) => Promise<void>
+  restoreTask: (id: string) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   fetchTask: (id: string) => Promise<Task>
   refetch: () => Promise<unknown>
