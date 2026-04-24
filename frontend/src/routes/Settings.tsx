@@ -689,6 +689,10 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   }, [])
 
   const handleBlock = async (userId: string) => {
+    if (!window.confirm('Вы уверены, что хотите заблокировать этого пользователя?')) {
+      return
+    }
+
     try {
       setActionLoading(userId)
       await usersApi.blockUser(userId)
@@ -701,6 +705,10 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   }
 
   const handleUnblock = async (userId: string) => {
+    if (!window.confirm('Вы уверены, что хотите разблокировать этого пользователя?')) {
+      return
+    }
+
     try {
       setActionLoading(userId)
       await usersApi.unblockUser(userId)
