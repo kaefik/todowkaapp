@@ -724,6 +724,10 @@
 - Архивация проектов (is_active)
 - Страница списка проектов (/projects) с карточками и прогресс-барами
 - Страница деталей проекта (/projects/:id) с прогрессом и списком задач
+- Ярлыки GTD-статуса в списке задач проекта — цветные бейджи (Inbox, Next, Waiting, Someday) на строке дедлайна
+  - Цветовое кодирование: Inbox (серый), Active (синий), Next (зелёный), Waiting (жёлтый), Someday (фиолетовый)
+  - Отображается только на странице проекта (showGtdStatus prop)
+  - Компонент: `frontend/src/components/TaskListView.tsx` (GTD_STATUS_CONFIG, showGtdStatus prop)
 - Dropdown выбора проекта в форме редактирования задачи
 - Отображение названия проекта в карточке задачи с цветовым индикатором и кликабельной ссылкой на проект
 - API: GET/POST /api/projects, GET/PUT/DELETE /api/projects/{id}, GET /api/projects/{id}/tasks

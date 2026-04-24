@@ -49,6 +49,11 @@ export function ProjectDetail() {
     refetch,
   } = useTasks(activeFilters)
 
+  const visibleTasks = useMemo(
+    () => tasks.filter(t => t.gtd_status !== 'trash'),
+    [tasks]
+  )
+
   const handleAddTask = async (data: { title: string; description?: string }) => {
     await addTask({ ...data, project_id: id })
   }
@@ -154,7 +159,7 @@ export function ProjectDetail() {
       />
 
       <TaskListView
-        tasks={tasks}
+        tasks={visibleTasks}
         isLoading={isLoadingTasks}
         error={tasksError}
         searchQuery={filters.search}
@@ -167,6 +172,7 @@ export function ProjectDetail() {
         onSaveTask={handleSaveTask}
         onRefetch={() => refetch()}
         emptyMessage="В проекте пока нет задач."
+        showGtdStatus
       />
     </div>
   )

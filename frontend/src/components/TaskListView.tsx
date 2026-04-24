@@ -20,6 +20,16 @@ type TaskCreateFormData = z.infer<typeof taskCreateSchema>
 
 const DEFAULT_MOVE_TARGETS: { status: GtdStatus; label: string }[] = []
 
+const GTD_STATUS_CONFIG: Record<GtdStatus, { label: string; bg: string; text: string }> = {
+  inbox: { label: 'Inbox', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300' },
+  active: { label: 'Active', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-300' },
+  next: { label: 'Next', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300' },
+  waiting: { label: 'Waiting', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-300' },
+  someday: { label: 'Someday', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-700 dark:text-purple-300' },
+  completed: { label: 'Completed', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-500 dark:text-gray-400' },
+  trash: { label: 'Trash', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600 dark:text-red-400' },
+}
+
 export interface TaskListViewProps {
   tasks: Task[]
   isLoading: boolean
@@ -38,6 +48,7 @@ export interface TaskListViewProps {
   moveTargets?: { status: GtdStatus; label: string }[]
   emptyMessage?: string
   autoFocus?: boolean
+  showGtdStatus?: boolean
 }
 
 function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtaskChange: () => void }) {
@@ -237,6 +248,7 @@ export function TaskListView({
   moveTargets,
   emptyMessage = 'Нет задач.',
   autoFocus = false,
+  showGtdStatus = false,
 }: TaskListViewProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const initialFocusDone = useRef(false)
@@ -451,6 +463,14 @@ export function TaskListView({
                     </div>
                   )}
                   <div className="flex items-center gap-2 mt-1">
+                    {showGtdStatus && task.gtd_status && (() => {
+                      const cfg = GTD_STATUS_CONFIG[task.gtd_status]
+                      return cfg ? (
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}>
+                          {cfg.label}
+                        </span>
+                      ) : null
+                    })()}
                     {(() => {
                       const { text, overdue } = formatDueDate(task.due_date)
                       return (
@@ -591,6 +611,14 @@ export function TaskListView({
                         </div>
                       )}
                       <div className="flex items-center gap-2 mt-1">
+                        {showGtdStatus && task.gtd_status && (() => {
+                          const cfg = GTD_STATUS_CONFIG[task.gtd_status]
+                          return cfg ? (
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text} opacity-60`}>
+                              {cfg.label}
+                            </span>
+                          ) : null
+                        })()}
                         {(() => {
                           const { text, overdue } = formatDueDate(task.due_date)
                           return (
