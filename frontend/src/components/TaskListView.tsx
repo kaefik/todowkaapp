@@ -37,6 +37,7 @@ export interface TaskListViewProps {
   hideMoveButtons?: boolean
   moveTargets?: { status: GtdStatus; label: string }[]
   emptyMessage?: string
+  autoFocus?: boolean
 }
 
 function SubtaskSection({ taskId, onSubtaskChange }: { taskId: string; onSubtaskChange: () => void }) {
@@ -235,6 +236,7 @@ export function TaskListView({
   hideMoveButtons = false,
   moveTargets,
   emptyMessage = 'Нет задач.',
+  autoFocus = false,
 }: TaskListViewProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const initialFocusDone = useRef(false)
@@ -260,7 +262,7 @@ export function TaskListView({
   const titleField = register('title')
 
   useEffect(() => {
-    if (!isLoading && !initialFocusDone.current) {
+    if (autoFocus && !isLoading && !initialFocusDone.current) {
       initialFocusDone.current = true
       const id = requestAnimationFrame(() => {
         inputRef.current?.focus()
@@ -268,7 +270,7 @@ export function TaskListView({
       return () => cancelAnimationFrame(id)
     }
     return undefined
-  }, [isLoading])
+  }, [isLoading, autoFocus])
 
   const handleAddTask = async (data: TaskCreateFormData) => {
     setIsAdding(true)
@@ -276,9 +278,11 @@ export function TaskListView({
       await onAddTask({ title: data.title, description: data.description || undefined })
       reset()
       setShowDescription(false)
-      requestAnimationFrame(() => {
-        inputRef.current?.focus()
-      })
+      if (autoFocus) {
+        requestAnimationFrame(() => {
+          inputRef.current?.focus()
+        })
+      }
     } catch {}
     setIsAdding(false)
   }

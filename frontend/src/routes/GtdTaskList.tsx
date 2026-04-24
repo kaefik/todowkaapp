@@ -94,6 +94,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         onSaveTask={handleSaveTask}
         onRefetch={refetch}
         emptyMessage="Нет задач."
+        autoFocus={gtdStatus === 'inbox'}
       />
 
       <ConfirmDialog
