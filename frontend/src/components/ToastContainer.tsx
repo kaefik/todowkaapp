@@ -36,6 +36,10 @@ export function ToastContainer() {
                 <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
+              ) : toast.type === 'update' ? (
+                <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
               ) : (
                 <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -46,6 +50,21 @@ export function ToastContainer() {
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{toast.title}</p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{toast.body}</p>
             </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (toast.onAction) {
+                  toast.onAction()
+                }
+              }}
+              className={`flex-shrink-0 text-sm font-medium px-2 py-0.5 rounded ${
+                toast.type === 'update'
+                  ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                  : 'hidden'
+              }`}
+            >
+              Обновить
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation()

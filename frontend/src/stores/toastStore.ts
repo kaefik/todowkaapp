@@ -4,7 +4,8 @@ export interface ToastItem {
   id: string
   title: string
   body: string
-  type: 'reminder' | 'info' | 'error' | 'success'
+  type: 'reminder' | 'info' | 'error' | 'success' | 'update'
+  onAction?: () => void
   taskId?: string
   createdAt: number
 }
@@ -24,9 +25,11 @@ export const useToastStore = create<ToastState>((set) => ({
     const id = `toast-${Date.now()}-${++counter}`
     const item: ToastItem = { ...toast, id, createdAt: Date.now() }
     set((state) => ({ toasts: [...state.toasts, item] }))
-    setTimeout(() => {
-      set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }))
-    }, 8000)
+    if (toast.type !== 'update') {
+      setTimeout(() => {
+        set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }))
+      }, 8000)
+    }
     return id
   },
 
