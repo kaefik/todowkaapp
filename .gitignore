@@ -230,3 +230,4 @@ backend/data/*.db
 
 # SSL Certificates (generated locally)
 docker/certbot/
+.superpowers/

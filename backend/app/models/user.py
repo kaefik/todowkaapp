@@ -29,6 +29,7 @@ class User(Base):
     areas = relationship('Area', back_populates='user', cascade='all, delete-orphan')
     tags = relationship('Tag', back_populates='user', cascade='all, delete-orphan')
     projects = relationship('Project', back_populates='user', cascade='all, delete-orphan')
+    verb_templates = relationship('VerbTemplate', back_populates='user', cascade='all, delete-orphan')
 
     def __repr__(self) -> str:
         return f'<User(id={self.id}, username={self.username}, email={self.email})>'

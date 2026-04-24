@@ -5,9 +5,10 @@ import { useBrowserNotifications } from '../hooks/useBrowserNotifications'
 import { useToastStore } from '../stores/toastStore'
 import { usersApi } from '../api/users'
 import type { User } from '../api/users'
+import { VerbSettings } from '../components/VerbSettings'
 
 type Theme = 'light' | 'dark'
-type Tab = 'general' | 'profile' | 'security' | 'users'
+type Tab = 'general' | 'profile' | 'security' | 'verbs' | 'users'
 
 const DEFAULT_SECTIONS = [
   {
@@ -142,6 +143,7 @@ function SettingsContent() {
     { key: 'general', label: 'Общие', adminOnly: false },
     { key: 'profile', label: 'Профиль', adminOnly: false },
     { key: 'security', label: 'Безопасность', adminOnly: false },
+    { key: 'verbs', label: 'Глаголы', adminOnly: false },
     { key: 'users', label: 'Пользователи', adminOnly: true },
   ]
 
@@ -489,6 +491,9 @@ function SettingsContent() {
       )}
 
       {activeTab === 'security' && <SecurityTab />}
+      {activeTab === 'verbs' && (
+        <VerbSettings />
+      )}
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
     </div>
   )

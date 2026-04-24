@@ -82,11 +82,23 @@ export interface DbTag {
   _lastSyncedAt: string | null
 }
 
+export interface DbVerbTemplate {
+  id: string
+  userId: string
+  text: string
+  icon: string
+  position: number
+  createdAt: string
+  updatedAt: string
+  _syncStatus: SyncStatus
+  _lastSyncedAt: string | null
+}
+
 export interface DbMutation {
   id: string
-  entityType: 'task' | 'project' | 'area' | 'context' | 'tag'
+  entityType: 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate'
   entityId: string
-  action: 'create' | 'update' | 'delete' | 'toggle' | 'move'
+  action: 'create' | 'update' | 'delete' | 'toggle' | 'move' | 'reorder'
   payload: string | null
   timestamp: number
   retryCount: number
@@ -104,6 +116,7 @@ export class TodowkaDB extends Dexie {
   areas!: Table<DbArea>
   contexts!: Table<DbContext>
   tags!: Table<DbTag>
+  verbTemplates!: Table<DbVerbTemplate>
   mutations!: Table<DbMutation>
   syncMeta!: Table<DbSyncMeta>
 
@@ -131,6 +144,10 @@ export class TodowkaDB extends Dexie {
       return tx.table('projects').toCollection().modify(project => {
         project.sortOrder = 0
       })
+    })
+
+    this.version(3).stores({
+      verbTemplates: 'id, userId, _syncStatus, updatedAt, position',
     })
   }
 }

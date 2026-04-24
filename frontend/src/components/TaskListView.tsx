@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { useVerbTemplates, type VerbTemplate } from '../hooks/useVerbTemplates'
 import { TaskEditModal } from './TaskEditModal'
 import { TaskDetailModal } from './TaskDetailModal'
 import { HighlightText } from './TaskFilterPanel'
+import { VerbChips } from './VerbChips'
+import { VerbFab } from './VerbFab'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -158,6 +161,12 @@ export function TaskListView({
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null)
   const [historyTaskId, setHistoryTaskId] = useState<string | null>(null)
+  const { templates, ensureDefaults, addVerb } = useVerbTemplates()
+  const [activeVerb, setActiveVerb] = useState<VerbTemplate | null>(null)
+  const [inputFocused, setInputFocused] = useState(false)
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [fabOpen, setFabOpen] = useState(false)
+  const [mobileInputVisible, setMobileInputVisible] = useState(false)
 
   const {
     register,
@@ -172,6 +181,10 @@ export function TaskListView({
   const titleField = register('title')
 
   useEffect(() => {
+    ensureDefaults()
+  }, [ensureDefaults])
+
+  useEffect(() => {
     if (autoFocus && !isLoading && !initialFocusDone.current) {
       initialFocusDone.current = true
       const id = requestAnimationFrame(() => {
@@ -182,12 +195,41 @@ export function TaskListView({
     return undefined
   }, [isLoading, autoFocus])
 
+  const handleVerbSelect = (verb: VerbTemplate | null) => {
+    if (blurTimeoutRef.current) {
+      clearTimeout(blurTimeoutRef.current)
+      blurTimeoutRef.current = null
+    }
+    setInputFocused(true)
+    setActiveVerb(verb)
+    if (verb && window.innerWidth < 768) {
+      setMobileInputVisible(true)
+      setFabOpen(false)
+    }
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
+
+  const handleAddCustomVerb = async (text: string) => {
+    const icons = ['🎯', '📖', '🔧', '💡', '📊', '🗂️', '🚀', '⭐', '📝', '🎪']
+    const icon = icons[Math.floor(Math.random() * icons.length)]
+    await addVerb(text, icon)
+  }
+
+  const handleFabToggle = () => {
+    setFabOpen(prev => !prev)
+  }
+
   const handleAddTask = async (data: TaskCreateFormData) => {
     setIsAdding(true)
     try {
-      await onAddTask({ title: data.title, description: data.description || undefined })
+      const verbPrefix = activeVerb ? `${activeVerb.text} ` : ''
+      const titleWithVerb = verbPrefix + (data.title || '')
+      await onAddTask({ title: titleWithVerb, description: data.description || undefined })
       reset()
       setShowDescription(false)
+      setActiveVerb(null)
+      setMobileInputVisible(false)
+      setFabOpen(false)
       if (autoFocus) {
         requestAnimationFrame(() => {
           inputRef.current?.focus()
@@ -238,54 +280,103 @@ export function TaskListView({
       )}
 
       {showAddForm && (
-        <form onSubmit={handleSubmit(handleAddTask)} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Add a new task..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isAdding || isSubmitting}
-                {...titleField}
-                ref={(e) => {
-                  titleField.ref(e)
-                  inputRef.current = e
-                }}
+        <div className="hidden md:block">
+          <form onSubmit={handleSubmit(handleAddTask)} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4">
+            {inputFocused && (
+              <VerbChips
+                templates={templates}
+                activeVerb={activeVerb?.id ?? null}
+                onSelect={handleVerbSelect}
+                onAddCustom={handleAddCustomVerb}
               />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
-              )}
+            )}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  placeholder={activeVerb ? `${activeVerb.text} ...` : 'Добавьте задачу...'}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isAdding || isSubmitting}
+                  {...titleField}
+                  ref={(e) => {
+                    titleField.ref(e)
+                    inputRef.current = e
+                  }}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => {
+                    blurTimeoutRef.current = setTimeout(() => setInputFocused(false), 200)
+                  }}
+                />
+                {errors.title && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDescription(!showDescription)}
+                className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isAdding || isSubmitting}
+              >
+                {showDescription ? '−' : '+'}
+              </button>
+              <button
+                type="submit"
+                disabled={isAdding || isSubmitting}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isAdding || isSubmitting ? 'Adding...' : 'Add'}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowDescription(!showDescription)}
-              className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isAdding || isSubmitting}
-            >
-              {showDescription ? '−' : '+'}
-            </button>
-            <button
-              type="submit"
-              disabled={isAdding || isSubmitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isAdding || isSubmitting ? 'Adding...' : 'Add'}
-            </button>
-          </div>
 
-          {showDescription && (
-            <div className="mt-3">
-              <textarea
-                placeholder="Add a description (optional)"
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isAdding || isSubmitting}
-                {...register('description')}
-              />
-            </div>
-          )}
-        </form>
+            {showDescription && (
+              <div className="mt-3">
+                <textarea
+                  placeholder="Add a description (optional)"
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isAdding || isSubmitting}
+                  {...register('description')}
+                />
+              </div>
+            )}
+          </form>
+        </div>
       )}
+
+      {mobileInputVisible && showAddForm && (
+        <div className="md:hidden">
+          <form onSubmit={handleSubmit(handleAddTask)} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 border-2 border-indigo-500 dark:border-indigo-400">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  autoFocus
+                  placeholder={activeVerb ? `${activeVerb.text} ...` : 'Добавьте задачу...'}
+                  className="w-full px-3 py-2 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  {...titleField}
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600"
+              >
+                Add
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="md:hidden">
+        <VerbFab
+          templates={templates}
+          activeVerb={activeVerb?.id ?? null}
+          onSelect={handleVerbSelect}
+          onAddCustom={handleAddCustomVerb}
+          isOpen={fabOpen}
+          onToggle={handleFabToggle}
+        />
+      </div>
 
       {activeTasks.length === 0 && completedTasks.length === 0 && !isLoading && (
         <div className="text-center py-12">

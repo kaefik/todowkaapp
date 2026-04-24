@@ -5,11 +5,11 @@ import { httpClient, ApiError } from '../api/httpClient'
 import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
 
-type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag'
+type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate'
 
 interface SyncResourceConfig {
   endpoint: string
-  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags
+  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags | typeof db.verbTemplates
   entityType: EntityType
   transform: (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }
 }
@@ -87,6 +87,22 @@ const RESOURCES: SyncResourceConfig[] = [
       userId,
       name: item.name as string,
       color: (item.color as string | null) ?? null,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+  {
+    endpoint: '/verb-templates',
+    table: db.verbTemplates,
+    entityType: 'verbTemplate',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      text: item.text as string,
+      icon: item.icon as string,
+      position: (item.position as number) ?? 0,
       createdAt: (item.created_at as string) ?? new Date().toISOString(),
       updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
       _syncStatus: 'synced' as SyncStatus,
@@ -277,6 +293,7 @@ function getTableForType(entityType: EntityType) {
     case 'area': return db.areas
     case 'context': return db.contexts
     case 'tag': return db.tags
+    case 'verbTemplate': return db.verbTemplates
   }
 }
 
@@ -287,6 +304,7 @@ function getEndpointForType(entityType: EntityType): string {
     case 'area': return '/areas'
     case 'context': return '/contexts'
     case 'tag': return '/tags'
+    case 'verbTemplate': return '/verb-templates'
   }
 }
 
@@ -426,6 +444,11 @@ async function executeMutation(
     case 'move': {
       const body = mutation.payload ? JSON.parse(mutation.payload) : {}
       await httpClient.patch(`${endpoint}/${mutation.entityId}/move`, body)
+      break
+    }
+    case 'reorder': {
+      const body = mutation.payload ? JSON.parse(mutation.payload) : {}
+      await httpClient.put(`${endpoint}/reorder`, body)
       break
     }
     case 'delete': {

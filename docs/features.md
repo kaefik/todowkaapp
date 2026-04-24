@@ -37,6 +37,16 @@
   - Файлы: `backend/app/api/auth.py`, `backend/app/schemas/auth.py`, `backend/app/models/user.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`
 
 #### Управление задачами
+- Быстрые глаголы для добавления задач ✅ (Реализовано 24.04.2026)
+  - Предустановленные глаголы (Купить, Сделать, Проверить, Позвонить, Написать, Найти) для быстрого создания задач
+  - Desktop (>=768px): чипы-глаголы над полем ввода, появляются при фокусе, скрываются при потере фокуса
+  - Mobile (<768px): поле ввода скрыто, FAB-кнопка ✏️ раскрывает веер глаголов, после выбора появляется поле ввода
+  - Настраиваемый список глаголов: Настройки → Глаголы (добавление, редактирование, удаление, сброс)
+  - Drag-and-drop сортировка глаголов в настройках (иконка-ручка, @dnd-kit) ✅ (Реализовано 24.04.2026)
+  - Offline-first: глаголы работают без сети, синхронизируются между устройствами
+  - Backend: модель VerbTemplate, API CRUD + reorder + reset, миграция
+  - Frontend: Dexie table + sync engine, useVerbTemplates hook, VerbChips, VerbFab, VerbSettings
+  - Файлы: `backend/app/models/verb_template.py`, `backend/app/schemas/verb_template.py`, `backend/app/services/verb_template_service.py`, `backend/app/api/verb_templates.py`, `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/api/verbTemplates.ts`, `frontend/src/hooks/useVerbTemplates.ts`, `frontend/src/components/VerbChips.tsx`, `frontend/src/components/VerbFab.tsx`, `frontend/src/components/VerbSettings.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Settings.tsx`
 - Быстрое создание задачи с заголовком (обязательно) и описанием (опционально)
   - В GTD-секциях (Inbox, Active, Next, Waiting, Someday) задача создаётся с текущим статусом секции
   - В «Сегодня»/«Завтра» задача создаётся со статусом `active` и дедлайном на соответствующий день
