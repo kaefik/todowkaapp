@@ -20,6 +20,9 @@ function NotificationsContent() {
   const markAsRead = useNotificationStore((state) => state.markAsRead)
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead)
   const deleteNotification = useNotificationStore((state) => state.deleteNotification)
+  const deleteReadNotifications = useNotificationStore((state) => state.deleteReadNotifications)
+
+  const readCount = total - unreadCount
 
   useEffect(() => {
     setOffset(0)
@@ -55,6 +58,11 @@ function NotificationsContent() {
     await deleteNotification(notificationId)
   }
 
+  const handleDeleteRead = async () => {
+    if (!window.confirm('Удалить все прочитанные уведомления?')) return
+    await deleteReadNotifications()
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -64,14 +72,24 @@ function NotificationsContent() {
             {unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Все прочитано'}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            onClick={handleMarkAllRead}
-            className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
-          >
-            Прочитать все
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
+            >
+              Прочитать все
+            </button>
+          )}
+          {readCount > 0 && (
+            <button
+              onClick={handleDeleteRead}
+              className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+            >
+              Очистить прочитанные
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2">

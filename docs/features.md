@@ -376,6 +376,7 @@
 - `PATCH /api/notifications/{id}/read` — отметить как прочитанное
 - `PATCH /api/notifications/read-all` — отметить все как прочитанные
 - `DELETE /api/notifications/{id}` — удалить уведомление
+- `DELETE /api/notifications/read` — удалить все прочитанные уведомления
 - `GET /api/sse/notifications` — SSE поток уведомлений
 - `GET /api/sse/sync` — SSE поток синхронизации задач (фронтенд подключён через SyncSSEListener в SyncProvider)
 
@@ -388,6 +389,14 @@
 - Фронтенд: тесты SSE/polling/eventbus в `frontend/src/services/__tests__/ssePolling.test.ts`
 
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
+- Очистка прочитанных уведомлений ✅ (Реализовано 24.04.2026)
+  - Кнопка «Очистить прочитанные» на странице уведомлений (`/notifications`)
+  - Видна только при наличии прочитанных уведомлений
+  - Подтверждение через диалог перед удалением
+  - Backend: `DELETE /api/notifications/read` — массовое удаление прочитанных уведомлений пользователя
+  - Frontend: `deleteReadNotifications()` в store + API-клиент
+  - Файлы: `backend/app/api/notifications.py`, `backend/app/services/reminder_service.py`, `frontend/src/routes/Notifications.tsx`, `frontend/src/stores/notificationStore.ts`, `frontend/src/api/notifications.ts`
+
 - Обработка удалённых задач при клике на уведомление ✅ (Реализовано 24.04.2026)
   - При клике на уведомление о задаче, которая была удалена, показывается сообщение «Данная задача была удалена»
   - Проверка `_syncStatus === 'deleted'` в `fetchTask` (IndexedDB) — задача помечена как удалённая локально

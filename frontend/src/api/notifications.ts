@@ -41,4 +41,9 @@ export const notificationsApi = {
   deleteNotification: async (notificationId: string): Promise<void> => {
     await httpClient.delete(`/notifications/${notificationId}`)
   },
+
+  deleteReadNotifications: async (): Promise<{ status: string; count: string }> => {
+    const response = await httpClient.delete<{ status: string; count: string }>('/notifications/read')
+    return response.data
+  },
 }

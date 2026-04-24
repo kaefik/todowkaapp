@@ -176,6 +176,17 @@ class ReminderService:
         target_tz = ZoneInfo(user_timezone)
         return dt.astimezone(target_tz)
 
+    async def delete_read_notifications(self, user_id: str | UUID) -> int:
+        result = await self.db.execute(
+            delete(Notification).where(
+                Notification.user_id == str(user_id),
+                Notification.is_read.is_(True)
+            )
+        )
+        deleted_count = result.rowcount
+        await self.db.flush()
+        return deleted_count
+
     async def cleanup_expired_notifications(self, days: int = 30) -> int:
         now = datetime.now(ZoneInfo('UTC'))
 

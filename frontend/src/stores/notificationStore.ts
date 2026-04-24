@@ -21,6 +21,7 @@ interface NotificationState {
   markAsRead: (id: string) => Promise<void>
   markAllAsRead: () => Promise<void>
   deleteNotification: (id: string) => Promise<void>
+  deleteReadNotifications: () => Promise<void>
   startSSE: (userId: string) => void
   stopSSE: () => void
   startPolling: () => void
@@ -156,6 +157,23 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Failed to delete notification',
+      })
+      throw err
+    }
+  },
+
+  deleteReadNotifications: async () => {
+    try {
+      await notificationsApi.deleteReadNotifications()
+      const state = get()
+      const readCount = state.notifications.filter((n) => n.is_read).length
+      set({
+        notifications: state.notifications.filter((n) => !n.is_read),
+        total: Math.max(0, state.total - readCount),
+      })
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to delete read notifications',
       })
       throw err
     }

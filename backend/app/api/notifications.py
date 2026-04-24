@@ -104,6 +104,19 @@ async def mark_all_notifications_as_read(
     return {"status": "all_marked_as_read"}
 
 
+@notifications_router.delete("/read", status_code=status.HTTP_200_OK)
+async def delete_read_notifications(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, str]:
+    from app.services.reminder_service import ReminderService
+
+    service = ReminderService(db)
+    deleted_count = await service.delete_read_notifications(current_user.id)
+    await db.commit()
+    return {"status": "deleted", "count": str(deleted_count)}
+
+
 @notifications_router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_notification(
     notification_id: UUID,
