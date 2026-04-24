@@ -46,6 +46,7 @@ export interface TaskListViewProps {
   onRefetch: () => void
   hideMoveButtons?: boolean
   moveTargets?: { status: GtdStatus; label: string }[]
+  onRestoreTask?: (id: string) => void
   emptyMessage?: string
   autoFocus?: boolean
   showGtdStatus?: boolean
@@ -246,6 +247,7 @@ export function TaskListView({
   onRefetch,
   hideMoveButtons = false,
   moveTargets,
+  onRestoreTask,
   emptyMessage = 'Нет задач.',
   autoFocus = false,
   showGtdStatus = false,
@@ -503,6 +505,14 @@ export function TaskListView({
                           {t.label}
                         </button>
                       ))}
+                  {onRestoreTask && (
+                    <button
+                      onClick={() => onRestoreTask(task.id)}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 focus:outline-none font-medium"
+                    >
+                      Восстановить
+                    </button>
+                  )}
                   <button
                     onClick={() => setEditingTask(task)}
                     className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
@@ -651,6 +661,14 @@ export function TaskListView({
                               {t.label}
                             </button>
                           ))}
+                      {onRestoreTask && (
+                        <button
+                          onClick={() => onRestoreTask(task.id)}
+                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 focus:outline-none font-medium"
+                        >
+                          Восстановить
+                        </button>
+                      )}
                       <button
                         onClick={() => setEditingTask(task)}
                         className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"

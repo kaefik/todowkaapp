@@ -65,6 +65,13 @@
   - Компонент: `frontend/src/components/ConfirmDialog.tsx`
   - Файлы: `frontend/src/routes/GtdTaskList.tsx`, `frontend/src/routes/Trash.tsx`
 - Очистка корзины одной кнопкой с подтверждением действия (DELETE /api/tasks/trash/clear)
+- Восстановление задачи из корзины ✅ (Реализовано 24.04.2026)
+  - Кнопка «Восстановить» на каждой задаче в корзине
+  - Подтверждение через диалог: «Задача будет восстановлена во входящих. Дедлайн и напоминания будут сброшены.»
+  - Статус выставляется как `inbox`, очищаются: `due_date`, `reminder_time`, `reminder_offsets`, `reminder_fired`, `sent_reminder_offsets`, `trashed_at`
+  - Backend: `TaskService.move_task()` автоматически чистит поля при перемещении из корзины
+  - Frontend: `restoreTask()` в `useTasks.ts` — локальное обновление + мутация `move`
+  - Файлы: `backend/app/services/task_service.py`, `frontend/src/hooks/useTasks.ts`, `frontend/src/routes/GtdTaskList.tsx`, `frontend/src/components/TaskListView.tsx`
 - Автоочистка корзины: задачи в корзине (gtd_status='trash') автоматически удаляются через 30 дней
   - Поле `trashed_at` в модели Task фиксирует время перемещения в корзину
   - Фоновая задача (APScheduler) запускается раз в сутки

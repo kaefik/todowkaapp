@@ -321,6 +321,31 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     })
   }
 
+  const restoreTask = async (id: string) => {
+    if (!user) return
+    const now = new Date().toISOString()
+    await db.tasks.update(id, {
+      gtdStatus: 'inbox',
+      dueDate: null,
+      reminderTime: null,
+      reminderOffsets: null,
+      reminderFired: false,
+      trashedAt: null,
+      updatedAt: now,
+      _syncStatus: 'modified',
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'task',
+      entityId: id,
+      action: 'move',
+      payload: JSON.stringify({ gtd_status: 'inbox' }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
+
   const deleteTask = async (id: string) => {
     if (!user) return
     await db.tasks.update(id, {
@@ -354,6 +379,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     updateTask,
     toggleTask,
     moveTask,
+    restoreTask,
     deleteTask,
     fetchTask,
     refetch: async () => {},

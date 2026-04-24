@@ -31,11 +31,13 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     updateTask,
     toggleTask,
     moveTask,
+    restoreTask,
     deleteTask,
     refetch,
   } = useTasks(activeFilters)
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null)
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
     await addTask({ ...data, gtd_status: gtdStatus })
@@ -53,6 +55,17 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
       await moveTask(pendingDeleteId, 'trash')
     }
     setPendingDeleteId(null)
+    refetch()
+  }
+
+  const handleRestoreTask = async (id: string) => {
+    setPendingRestoreId(id)
+  }
+
+  const confirmRestore = async () => {
+    if (!pendingRestoreId) return
+    await restoreTask(pendingRestoreId)
+    setPendingRestoreId(null)
     refetch()
   }
 
@@ -91,6 +104,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         onToggleTask={toggleTask}
         onDeleteTask={handleDeleteTask}
         onMoveTask={handleMoveTask}
+        onRestoreTask={gtdStatus === 'trash' ? handleRestoreTask : undefined}
         onSaveTask={handleSaveTask}
         onRefetch={refetch}
         emptyMessage="Нет задач."
@@ -105,6 +119,16 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         variant="danger"
         onConfirm={confirmDelete}
         onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={!!pendingRestoreId}
+        title="Восстановить задачу?"
+        message="Задача будет восстановлена во входящих. Дедлайн и напоминания будут сброшены."
+        confirmText="Восстановить"
+        variant="normal"
+        onConfirm={confirmRestore}
+        onCancel={() => setPendingRestoreId(null)}
       />
     </div>
   )

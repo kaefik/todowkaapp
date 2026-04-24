@@ -202,6 +202,7 @@ class TaskService:
             return None
 
         was_recurring_and_completed = task.is_recurring and task.is_completed
+        was_trash = task.gtd_status == GtdStatus.TRASH.value
 
         task.gtd_status = gtd_status.value
         task.updated_at = datetime.now()
@@ -215,6 +216,13 @@ class TaskService:
             task.is_completed = False
             task.completed_at = None
             task.trashed_at = None
+
+        if was_trash and gtd_status != GtdStatus.TRASH:
+            task.due_date = None
+            task.reminder_time = None
+            task.reminder_offsets = None
+            task.reminder_fired = False
+            task.sent_reminder_offsets = []
 
         await self.db.flush()
 
