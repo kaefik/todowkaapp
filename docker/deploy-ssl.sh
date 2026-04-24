@@ -224,6 +224,7 @@ fi
 log_info "Сборка фронтенда..."
 cd "$PROJECT_ROOT/frontend"
 npm install --legacy-peer-deps
+npm audit fix --force
 npm run build
 log_info "Фронтенд собран в frontend/dist/"
 
