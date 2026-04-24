@@ -9,8 +9,8 @@ const RANDOM_ICONS = ['🎯', '📖', '🔧', '💡', '📊', '🗂️', '🚀',
 
 function arrayMove<T>(arr: T[], from: number, to: number): T[] {
   const result = [...arr]
-  const [item] = result.splice(from, 1)
-  result.splice(to, 0, item)
+  const [item] = result.splice(from, 1) as [T]
+  result.splice(to, 0, item!)
   return result
 }
 
@@ -136,7 +136,7 @@ export function VerbSettings() {
   const handleAdd = async () => {
     const text = newText.trim()
     if (!text) return
-    const icon = RANDOM_ICONS[Math.floor(Math.random() * RANDOM_ICONS.length)]
+    const icon = RANDOM_ICONS[Math.floor(Math.random() * RANDOM_ICONS.length)]!
     await addVerb(text, icon)
     setNewText('')
   }

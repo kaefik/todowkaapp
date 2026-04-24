@@ -211,7 +211,7 @@ export function TaskListView({
 
   const handleAddCustomVerb = async (text: string) => {
     const icons = ['🎯', '📖', '🔧', '💡', '📊', '🗂️', '🚀', '⭐', '📝', '🎪']
-    const icon = icons[Math.floor(Math.random() * icons.length)]
+    const icon = icons[Math.floor(Math.random() * icons.length)]!
     await addVerb(text, icon)
   }
 
