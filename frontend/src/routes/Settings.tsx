@@ -155,7 +155,7 @@ function SettingsContent() {
       </div>
 
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
+        <nav className="-mb-px flex flex-wrap gap-x-6 gap-y-0">
           {visibleTabs.map((tab) => (
             <button
               key={tab.key}
