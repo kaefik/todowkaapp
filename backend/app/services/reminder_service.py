@@ -28,6 +28,7 @@ class ReminderService:
                 Task.due_date.isnot(None),
                 Task.is_completed.is_(False),
                 Task.reminder_fired.is_(False),
+                Task.gtd_status != 'trash',
                 or_(Task.reminder_time.isnot(None), Task.reminder_offsets.isnot(None)),
             )
         )

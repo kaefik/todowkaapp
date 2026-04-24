@@ -406,13 +406,20 @@
   - Файлы: `backend/app/api/notifications.py`, `backend/app/services/reminder_service.py`, `frontend/src/routes/Notifications.tsx`, `frontend/src/stores/notificationStore.ts`, `frontend/src/api/notifications.ts`
 
 - Обработка удалённых задач при клике на уведомление ✅ (Реализовано 24.04.2026)
-  - При клике на уведомление о задаче, которая была удалена, показывается сообщение «Данная задача была удалена»
-  - Проверка `_syncStatus === 'deleted'` в `fetchTask` (IndexedDB) — задача помечена как удалённая локально
-  - Проверка отсутствия записи в IndexedDB — задача не найдена
-  - В `TaskDetailModal` показывается иконка корзины + поясняющий текст вместо технической ошибки
-  - Кнопка «Редактировать» скрыта при ошибке загрузки задачи
-  - Работает в обоих местах: страница уведомлений (`/notifications`) и dropdown-колокольчик
-  - Файлы: `frontend/src/hooks/useTasks.ts`, `frontend/src/components/TaskDetailModal.tsx`
+   - При клике на уведомление о задаче, которая была удалена, показывается сообщение «Данная задача была удалена»
+   - Проверка `_syncStatus === 'deleted'` в `fetchTask` (IndexedDB) — задача помечена как удалённая локально
+   - Проверка отсутствия записи в IndexedDB — задача не найдена
+   - В `TaskDetailModal` показывается иконка корзины + поясняющий текст вместо технической ошибки
+   - Кнопка «Редактировать» скрыта при ошибке загрузки задачи
+   - Работает в обоих местах: страница уведомлений (`/notifications`) и dropdown-колокольчик
+   - Файлы: `frontend/src/hooks/useTasks.ts`, `frontend/src/components/TaskDetailModal.tsx`
+
+- Очистка уведомлений при удалении задачи ✅ (Реализовано 24.04.2026)
+  - При полном удалении задачи (DELETE /api/tasks/{id}) связанные уведомления удаляются из БД через CASCADE
+  - Backend публикует SSE-событие `task_deleted` в канал `{user_id}:notifications` с `task_id`
+  - Frontend фильтрует уведомления с совпадающим `task_id` из notificationStore без полного refetch
+  - При очистке корзины (DELETE /api/tasks/trash/clear) публикуется SSE-событие `tasks_cleared` → refetch
+  - Файлы: `backend/app/api/tasks.py`, `frontend/src/stores/notificationStore.ts`
 
 - Два режима напоминаний: конкретное время дня или смещение от дедлайна
 - Режим "конкретное время": напоминать в указанное время (например, 09:00) в день дедлайна

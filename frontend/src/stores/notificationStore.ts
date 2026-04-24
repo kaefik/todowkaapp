@@ -199,6 +199,21 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             if (data?.type === 'queue_overflow') {
               devLog('[NotificationStore] Queue overflow detected, refetching')
               get().refetch()
+            } else if (data?.type === 'task_deleted') {
+              const taskId = data?.task_id
+              devLog('[NotificationStore] Task deleted, removing related notifications:', taskId)
+              set((state) => {
+                const remaining = state.notifications.filter((n) => n.task_id !== taskId)
+                const removed = state.notifications.length - remaining.length
+                return {
+                  notifications: remaining,
+                  total: Math.max(0, state.total - removed),
+                  unreadCount: remaining.filter((n) => !n.is_read).length,
+                }
+              })
+            } else if (data?.type === 'tasks_cleared') {
+              devLog('[NotificationStore] Trash cleared, refetching notifications')
+              get().refetch()
             } else if (data?.data?.type === 'due_reminder' && data?.data?.task_id) {
               const notificationData = data?.data?.notification_data
               devLog('[NotificationStore] Due reminder fired:', { taskId: data.data.task_id, notificationData })

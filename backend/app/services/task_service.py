@@ -208,6 +208,12 @@ class TaskService:
         task.updated_at = datetime.now()
         if gtd_status == GtdStatus.TRASH:
             task.trashed_at = datetime.now()
+            task.due_date = None
+            task.reminder_time = None
+            task.reminder_offsets = None
+            task.reminder_fired = False
+            task.sent_reminder_offsets = []
+            task.last_reminder_sent_at = None
         elif gtd_status == GtdStatus.COMPLETED:
             task.is_completed = True
             task.completed_at = datetime.now()

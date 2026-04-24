@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useDueDateTasks } from '../hooks/useDueDateTasks'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { TaskListView } from '../components/TaskListView'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 interface DueDateTaskListProps {
   dayOffset: number
@@ -19,6 +21,8 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
     refetch,
   } = useTasks()
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
   const handleAddTask = async (data: { title: string; description?: string }) => {
     const now = new Date()
     const target = new Date(now)
@@ -28,7 +32,13 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
   }
 
   const handleDeleteTask = async (id: string) => {
-    await moveTask(id, 'trash')
+    setPendingDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
+    await moveTask(pendingDeleteId, 'trash')
+    setPendingDeleteId(null)
     refetch()
   }
 
@@ -58,6 +68,16 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
         onSaveTask={handleSaveTask}
         onRefetch={refetch}
         emptyMessage={emptyMessage}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title="Переместить в корзину?"
+        message="Задача будет перемещена в корзину."
+        confirmText="Удалить"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
       />
     </div>
   )

@@ -243,6 +243,10 @@ async def clear_trash(
     service = TaskService(db)
     deleted_count = await service.clear_trash(user_id=current_user.id)
     await _publish_task_event(current_user.id, "all", "trash_cleared")
+
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{current_user.id}:notifications", "tasks_cleared", {})
+
     return {"deleted": deleted_count}
 
 
@@ -262,6 +266,12 @@ async def delete_task(
         )
 
     await _publish_task_event(current_user.id, task_id, "deleted")
+
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{current_user.id}:notifications", "task_deleted", {
+        "task_id": str(task_id),
+    })
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
