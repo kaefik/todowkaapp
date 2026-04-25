@@ -227,7 +227,11 @@ export function TaskListView({
     setIsAdding(true)
     try {
       const verbPrefix = activeVerb ? `${activeVerb.text} ` : ''
-      const titleWithVerb = verbPrefix + (data.title || '')
+      const userText = data.title || ''
+      const normalizedText = verbPrefix
+        ? userText.charAt(0).toLowerCase() + userText.slice(1)
+        : userText
+      const titleWithVerb = verbPrefix + normalizedText
       await onAddTask({ title: titleWithVerb, description: data.description || undefined })
       reset()
       setShowDescription(false)
