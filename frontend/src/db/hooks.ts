@@ -1,70 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { db } from './database'
+import { useState, useEffect } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 
 export function useDexieQuery<T>(
   querier: () => T | Promise<T>,
   deps?: unknown[]
 ) {
-  const [result, setResult] = useState<T | undefined>(undefined)
-  const [isLoading, setIsLoading] = useState(true)
-  const querierRef = useRef(querier)
-  querierRef.current = querier
-  const versionRef = useRef(0)
-
-  const execute = useCallback(async () => {
-    const v = ++versionRef.current
-    try {
-      const data = await querierRef.current()
-      if (v === versionRef.current) {
-        setResult(data)
-        setIsLoading(false)
-      }
-    } catch {
-      if (v === versionRef.current) {
-        setIsLoading(false)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    execute()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps || [])
-
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null
-    let cancelled = false
-
-    const handler = () => {
-      if (cancelled) return
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => {
-        if (!cancelled) execute()
-      }, 50)
-    }
-
-    let subscribed = false
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(db.on as any)('changes', handler)
-      subscribed = true
-    } catch {}
-
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-      if (subscribed) {
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(db.on as any)('changes').unsubscribe(handler)
-        } catch {}
-      }
-    }
-  }, [execute])
-
+  const data = useLiveQuery(querier, deps)
   return {
-    data: result,
-    isLoading,
+    data,
+    isLoading: data === undefined,
   }
 }
 

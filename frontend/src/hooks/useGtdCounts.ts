@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import Dexie from 'dexie'
 import { db } from '../db/database'
-import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 import type { GtdStatus } from './useTasks'
 
@@ -77,7 +77,7 @@ const GTD_STATUSES: GtdStatus[] = ['inbox', 'active', 'next', 'waiting', 'someda
 export function useGtdCounts(): UseGtdCountsReturn {
   const user = useAuthStore(s => s.user)
 
-  const { data: counts, isLoading } = useDexieQuery(async () => {
+  const counts = useLiveQuery(async () => {
     if (!user) return defaultCounts
 
     const result: GtdCounts = { ...defaultCounts }
@@ -116,11 +116,11 @@ export function useGtdCounts(): UseGtdCountsReturn {
       .count()
 
     return result
-  }, [user?.id])
+  }, [user?.id], defaultCounts)
 
   const refetch = useCallback(async () => {}, [])
 
-  return { counts: counts ?? defaultCounts, isLoading, error: null, refetch }
+  return { counts: counts ?? defaultCounts, isLoading: counts === undefined, error: null, refetch }
 }
 
 export const GTD_STATUS_LABELS: Record<GtdStatus, string> = {

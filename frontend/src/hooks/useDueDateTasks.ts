@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { db, activeTasks } from '../db/database'
 import { dbTaskToUi } from '../db/mappers'
-import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 import type { Task } from './useTasks'
 
@@ -52,7 +52,7 @@ export function useDueDateTasks(dayOffset: number): {
 } {
   const user = useAuthStore(s => s.user)
 
-  const { data: result, isLoading } = useDexieQuery(async () => {
+  const result = useLiveQuery(async () => {
     if (!user) return { tasks: [], count: 0 }
 
     const { start, end } = getDayBounds(user.timezone, dayOffset)
@@ -74,7 +74,7 @@ export function useDueDateTasks(dayOffset: number): {
 
   return {
     tasks: result?.tasks ?? [],
-    isLoading,
+    isLoading: result === undefined,
     count: result?.count ?? 0,
   }
 }
@@ -82,7 +82,7 @@ export function useDueDateTasks(dayOffset: number): {
 export function useDueDateCount(dayOffset: number): number {
   const user = useAuthStore(s => s.user)
 
-  const { data: count } = useDexieQuery(async () => {
+  const count = useLiveQuery(async () => {
     if (!user) return 0
 
     const { start, end } = getDayBounds(user.timezone, dayOffset)
