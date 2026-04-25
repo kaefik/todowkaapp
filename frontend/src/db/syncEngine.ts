@@ -146,7 +146,7 @@ async function mergeAndPut(
       const existing = await table
         .where('userId')
         .equals(userId)
-        .filter(r => (r as Record<string, unknown>).text && String((r as Record<string, unknown>).text).toLowerCase() === text && (r as Record<string, unknown>).id !== id)
+        .filter((r: Record<string, unknown>) => r.text && String(r.text).toLowerCase() === text && r.id !== id)
         .first()
       if (existing) {
         await table.delete(existing.id as string).catch(() => {})
