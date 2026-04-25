@@ -45,7 +45,8 @@ export function useDexieQuery<T>(
 
     let subscribed = false
     try {
-      db.on('changes', handler)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(db.on as any)('changes', handler)
       subscribed = true
     } catch {}
 
@@ -54,7 +55,8 @@ export function useDexieQuery<T>(
       if (timer) clearTimeout(timer)
       if (subscribed) {
         try {
-          db.on('changes').unsubscribe(handler)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(db.on as any)('changes').unsubscribe(handler)
         } catch {}
       }
     }
