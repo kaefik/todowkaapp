@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useDueDateTasks } from '../hooks/useDueDateTasks'
+import { getDayBounds, useDueDateTasks } from '../hooks/useDueDateTasks'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
+import { useAuthStore } from '../stores/authStore'
 import { TaskListView } from '../components/TaskListView'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
@@ -11,6 +12,7 @@ interface DueDateTaskListProps {
 }
 
 export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskListProps) {
+  const user = useAuthStore(s => s.user)
   const { tasks, isLoading } = useDueDateTasks(dayOffset)
 
   const {
@@ -24,11 +26,8 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
-    const now = new Date()
-    const target = new Date(now)
-    target.setDate(target.getDate() + dayOffset)
-    const dueDate = target.toISOString()
-    await addTask({ ...data, due_date: dueDate, gtd_status: 'active' })
+    const { end } = getDayBounds(user?.timezone ?? null, dayOffset)
+    await addTask({ ...data, due_date: end, gtd_status: 'active' })
   }
 
   const handleDeleteTask = async (id: string) => {

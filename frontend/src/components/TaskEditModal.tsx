@@ -1,4 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
+
+function toLocalDateStr(isoString: string | null | undefined): string | null {
+  if (!isoString) return null
+  const d = new Date(isoString)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function todayLocalDateStr(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -145,7 +162,6 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const { subtasks, isLoading: isLoadingSubtasks, addSubtask, toggleSubtask, deleteSubtask, refetch: refetchSubtasks } = useSubtasks(task?.id ?? null)
   const defaultValues = useMemo(() => {
     if (!task) return undefined
-    const dueDateStr = task.due_date ? task.due_date.slice(0, 10) : null
     return {
       title: task.title,
       description: task.description,
@@ -153,7 +169,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       area_id: task.area_id ?? null,
       project_id: task.project_id ?? null,
       gtd_status: task.gtd_status,
-      due_date: dueDateStr,
+      due_date: toLocalDateStr(task.due_date),
       notes: task.notes ?? null,
     }
   }, [task])
@@ -171,8 +187,8 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   useEffect(() => {
     if (task && isOpen) {
-      const dueDateStr = task.due_date ? task.due_date.slice(0, 10) : null
-      const today = new Date().toISOString().slice(0, 10)
+      const dueDateStr = toLocalDateStr(task.due_date)
+      const today = todayLocalDateStr()
 
       reset({
         title: task.title,
@@ -221,14 +237,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const handleTodayToggle = (checked: boolean) => {
     setIsTodayDue(checked)
     if (checked) {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = todayLocalDateStr()
       reset(prev => ({ ...prev, due_date: today }))
     }
   }
 
   const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayLocalDateStr()
     setIsTodayDue(newDate === today)
     if (!newDate && recurrenceData.recurrence_type) {
       setRecurrenceData({
@@ -247,7 +263,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     const currentDueDate = watch('due_date')
     const hasReminder = !!data.reminder_time || !!data.reminder_offsets?.length
     if (hasReminder && !currentDueDate) {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = todayLocalDateStr()
       reset(prev => ({ ...prev, due_date: today }))
       setIsTodayDue(true)
     }

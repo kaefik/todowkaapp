@@ -5,7 +5,7 @@ import { dbTaskToUi } from '../db/mappers'
 import { useAuthStore } from '../stores/authStore'
 import type { Task } from './useTasks'
 
-function getDayBounds(timezone: string | null, dayOffset: number): { start: string; end: string } {
+export function getDayBounds(timezone: string | null, dayOffset: number): { start: string; end: string } {
   const now = new Date()
   const tz = timezone || 'UTC'
 
@@ -16,26 +16,21 @@ function getDayBounds(timezone: string | null, dayOffset: number): { start: stri
     day: '2-digit',
   })
 
-  const targetDate = new Date(now)
-  targetDate.setDate(targetDate.getDate() + dayOffset)
+  const parts = formatter.formatToParts(now)
+  const year = parseInt(parts.find(p => p.type === 'year')!.value)
+  const month = parseInt(parts.find(p => p.type === 'month')!.value)
+  const day = parseInt(parts.find(p => p.type === 'day')!.value)
 
-  const parts = formatter.formatToParts(targetDate)
-  const year = parts.find(p => p.type === 'year')!.value
-  const month = parts.find(p => p.type === 'month')!.value
-  const day = parts.find(p => p.type === 'day')!.value
+  const startUtc = new Date(Date.UTC(year, month - 1, day + dayOffset, 0, 0, 0, 0))
+  const tzOffset = getOffsetMinutes(tz, startUtc)
+  startUtc.setUTCMinutes(startUtc.getUTCMinutes() - tzOffset)
 
-  const dateStr = `${year}-${month}-${day}`
-
-  const start = new Date(`${dateStr}T00:00:00`)
-  const tzOffset = getOffsetMinutes(tz, start)
-  start.setMinutes(start.getMinutes() - tzOffset)
-
-  const end = new Date(`${dateStr}T23:59:59.999`)
-  end.setMinutes(end.getMinutes() - tzOffset)
+  const endUtc = new Date(Date.UTC(year, month - 1, day + dayOffset, 23, 59, 59, 999))
+  endUtc.setUTCMinutes(endUtc.getUTCMinutes() - tzOffset)
 
   return {
-    start: start.toISOString(),
-    end: end.toISOString(),
+    start: startUtc.toISOString(),
+    end: endUtc.toISOString(),
   }
 }
 

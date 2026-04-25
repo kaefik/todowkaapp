@@ -3,39 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import Dexie from 'dexie'
 import { db } from '../db/database'
 import { useAuthStore } from '../stores/authStore'
+import { getDayBounds } from './useDueDateTasks'
 import type { GtdStatus } from './useTasks'
-
-function getDayBoundsForCounts(timezone: string | null, dayOffset: number): { start: string; end: string } {
-  const tz = timezone || 'UTC'
-  const now = new Date()
-  const targetDate = new Date(now)
-  targetDate.setDate(targetDate.getDate() + dayOffset)
-
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(targetDate)
-
-  const year = parts.find(p => p.type === 'year')!.value
-  const month = parts.find(p => p.type === 'month')!.value
-  const day = parts.find(p => p.type === 'day')!.value
-  const dateStr = `${year}-${month}-${day}`
-
-  const getOffset = (d: Date) => {
-    const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }))
-    const local = new Date(d.toLocaleString('en-US', { timeZone: tz }))
-    return (local.getTime() - utc.getTime()) / 60000
-  }
-
-  const start = new Date(`${dateStr}T00:00:00`)
-  start.setMinutes(start.getMinutes() - getOffset(start))
-  const end = new Date(`${dateStr}T23:59:59.999`)
-  end.setMinutes(end.getMinutes() - getOffset(end))
-
-  return { start: start.toISOString(), end: end.toISOString() }
-}
 
 export const TASKS_CHANGED_EVENT = 'todowka:tasks-changed'
 
@@ -89,7 +58,7 @@ export function useGtdCounts(): UseGtdCountsReturn {
         .count()
     }
 
-    const todayBounds = getDayBoundsForCounts(user.timezone, 0)
+    const todayBounds = getDayBounds(user.timezone, 0)
     result.today = await db.tasks
       .where('[userId+gtdStatus]')
       .between([user.id, Dexie.minKey], [user.id, Dexie.maxKey])
@@ -102,7 +71,7 @@ export function useGtdCounts(): UseGtdCountsReturn {
       )
       .count()
 
-    const tomorrowBounds = getDayBoundsForCounts(user.timezone, 1)
+    const tomorrowBounds = getDayBounds(user.timezone, 1)
     result.tomorrow = await db.tasks
       .where('[userId+gtdStatus]')
       .between([user.id, Dexie.minKey], [user.id, Dexie.maxKey])
