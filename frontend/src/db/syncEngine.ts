@@ -147,7 +147,7 @@ async function mergeAndPut(
       const existing = await verbTable
         .where('userId')
         .equals(userId)
-        .filter(r => r.text && r.text.toLowerCase() === text && r.id !== id)
+        .filter(r => !!r.text && r.text.toLowerCase() === text && r.id !== id)
         .first()
       if (existing) {
         await table.delete(existing.id as string).catch(() => {})
