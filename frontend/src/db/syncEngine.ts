@@ -143,10 +143,11 @@ async function mergeAndPut(
 
     if (entityType === 'verbTemplate') {
       const text = (item.text as string).toLowerCase()
-      const existing = await table
+      const verbTable = db.verbTemplates
+      const existing = await verbTable
         .where('userId')
         .equals(userId)
-        .filter((r: Record<string, unknown>) => r.text && String(r.text).toLowerCase() === text && r.id !== id)
+        .filter(r => r.text && r.text.toLowerCase() === text && r.id !== id)
         .first()
       if (existing) {
         await table.delete(existing.id as string).catch(() => {})
