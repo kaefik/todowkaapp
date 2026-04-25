@@ -128,6 +128,7 @@ function TasksContent() {
       }, 100)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [isLoading])
 
   useEffect(() => {
