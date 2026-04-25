@@ -122,6 +122,15 @@ function TasksContent() {
   const titleField = register('title')
 
   useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoading])
+
+  useEffect(() => {
     const editTaskId = searchParams.get('editTaskId')
     if (editTaskId && !isLoading && tasks.length > 0 && !editingTask) {
       const task = tasks.find((t) => t.id === editTaskId)
@@ -161,6 +170,7 @@ function TasksContent() {
       await addTask(taskData)
       reset()
       setShowDescription(false)
+      setTimeout(() => inputRef.current?.focus(), 0)
     } catch {
     }
     setIsAdding(false)

@@ -358,6 +358,7 @@ describe('Settings', () => {
 
     it('calls blockUser when block button is clicked', async () => {
       const user = userEvent.setup()
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
       vi.mocked(usersApi.blockUser).mockResolvedValue(undefined)
       renderSettings()
 
@@ -368,10 +369,12 @@ describe('Settings', () => {
       await user.click(blockButton)
 
       expect(usersApi.blockUser).toHaveBeenCalledWith('2')
+      confirmSpy.mockRestore()
     })
 
     it('calls unblockUser when unblock button is clicked', async () => {
       const user = userEvent.setup()
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
       const blockedUser: User = {
         ...mockRegularUser,
         is_active: false,
@@ -387,6 +390,7 @@ describe('Settings', () => {
       await user.click(unblockButton)
 
       expect(usersApi.unblockUser).toHaveBeenCalledWith('2')
+      confirmSpy.mockRestore()
     })
 
     it('shows confirm dialog before deleting user', async () => {

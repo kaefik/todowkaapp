@@ -26,6 +26,7 @@ vi.mock('./hooks/useProjects', () => ({
 
 vi.mock('./db/hooks', () => ({
   useOnlineStatus: vi.fn().mockReturnValue(true),
+  useDexieQuery: vi.fn().mockReturnValue({ data: [], isLoading: false }),
 }))
 
 import { useTasks } from './hooks/useTasks'
