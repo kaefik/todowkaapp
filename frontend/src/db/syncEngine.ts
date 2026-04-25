@@ -136,6 +136,8 @@ async function mergeAndPut(
   userId: string,
   transform: SyncResourceConfig['transform']
 ): Promise<void> {
+  const mergedRecords: unknown[] = []
+
   for (const item of items) {
     const id = item.id as string
     const skip = await shouldSkipMerge(entityType, id)
@@ -161,20 +163,23 @@ async function mergeAndPut(
     const serverRecord = transform(item, userId)
     const localRecord = await table.get(id)
     const merged = mergeRecord(localRecord as Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null } | undefined, serverRecord)
+    mergedRecords.push(merged)
+  }
 
-    try {
-      await table.put(merged as never)
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-        useToastStore.getState().addToast({
-          title: 'Хранилище заполнено',
-          body: 'Синхронизация остановлена. Освободите место.',
-          type: 'error',
-        })
-        throw err
-      }
+  if (mergedRecords.length === 0) return
+
+  try {
+    await table.bulkPut(mergedRecords as never[])
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+      useToastStore.getState().addToast({
+        title: 'Хранилище заполнено',
+        body: 'Синхронизация остановлена. Освободите место.',
+        type: 'error',
+      })
       throw err
     }
+    throw err
   }
 }
 
@@ -200,17 +205,17 @@ export async function initialSync(userId: string): Promise<void> {
 }
 
 async function initialSyncInternal(userId: string): Promise<void> {
-  for (const resource of RESOURCES) {
+  await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint)
     await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
-  }
+  }))
 }
 
 export async function pull(userId: string): Promise<void> {
-  for (const resource of RESOURCES) {
+  await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint)
     await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
-  }
+  }))
 }
 
 interface MergedMutations {
@@ -363,7 +368,33 @@ export async function push(): Promise<void> {
     await db.mutations.delete(id)
   }
 
-  for (const mutation of toSend) {
+  const groups = new Map<string, typeof toSend>()
+  for (const m of toSend) {
+    const key = `${m.entityType}:${m.entityId}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key)!.push(m)
+  }
+
+  const groupEntries = [...groups.values()]
+  const BATCH_SIZE = 5
+
+  for (let i = 0; i < groupEntries.length; i += BATCH_SIZE) {
+    const batch = groupEntries.slice(i, i + BATCH_SIZE)
+    await Promise.allSettled(batch.map(group => executeMutationGroup(group)))
+  }
+}
+
+async function executeMutationGroup(
+  mutations: {
+    id: string
+    action: string
+    entityId: string
+    entityType: EntityType
+    payload: string | null
+    retryCount: number
+  }[]
+): Promise<void> {
+  for (const mutation of mutations) {
     let success = false
 
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -428,7 +459,7 @@ export async function push(): Promise<void> {
         }
 
         if (err instanceof TypeError) {
-          console.warn('[SyncEngine] Network error, stopping push')
+          console.warn('[SyncEngine] Network error, stopping mutation group')
           return
         }
 
@@ -449,12 +480,6 @@ export async function push(): Promise<void> {
         _lastSyncedAt: new Date().toISOString(),
       }).catch(() => {})
     }
-  }
-
-  try {
-    await pull(userId)
-  } catch (err) {
-    console.warn('[SyncEngine] Pull after push failed:', err)
   }
 }
 

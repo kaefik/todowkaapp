@@ -11,31 +11,47 @@ const PULL_DEBOUNCE_MS = 1500
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pullTimer: ReturnType<typeof setTimeout> | null = null
+let pushingRefGlobal = false
+let pullingRefGlobal = false
+let setIsSyncingFn: ((v: boolean) => void) | null = null
+let setLastSyncAtFn: ((d: Date) => void) | null = null
 
-function schedulePush(onSyncChange: (syncing: boolean, lastSyncAt: Date | null) => void) {
+function updateSyncing() {
+  setIsSyncingFn?.(pushingRefGlobal || pullingRefGlobal)
+}
+
+function schedulePush() {
   if (pushTimer) clearTimeout(pushTimer)
   pushTimer = setTimeout(async () => {
-    onSyncChange(true, null)
+    if (pushingRefGlobal) return
+    pushingRefGlobal = true
+    updateSyncing()
     try {
       await push()
-      onSyncChange(false, new Date())
+      setLastSyncAtFn?.(new Date())
     } catch (err) {
       console.warn('[SyncProvider] Debounced push failed:', err)
-      onSyncChange(false, null)
+    } finally {
+      pushingRefGlobal = false
+      updateSyncing()
     }
   }, PUSH_DEBOUNCE_MS)
 }
 
-function schedulePull(userId: string, onSyncChange: (syncing: boolean, lastSyncAt: Date | null) => void) {
+function schedulePull(userId: string) {
   if (pullTimer) clearTimeout(pullTimer)
   pullTimer = setTimeout(async () => {
-    onSyncChange(true, null)
+    if (pullingRefGlobal) return
+    pullingRefGlobal = true
+    updateSyncing()
     try {
       await pull(userId)
-      onSyncChange(false, new Date())
+      setLastSyncAtFn?.(new Date())
     } catch (err) {
       console.warn('[SyncProvider] Debounced pull failed:', err)
-      onSyncChange(false, null)
+    } finally {
+      pullingRefGlobal = false
+      updateSyncing()
     }
   }, PULL_DEBOUNCE_MS)
 }
@@ -115,56 +131,48 @@ export function SyncProvider({ children }: SyncProviderProps) {
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isMountedRef = useRef(true)
-  const syncingRef = useRef(false)
 
-  const onSyncChange = useCallback((syncing: boolean, last: Date | null) => {
-    if (!isMountedRef.current) return
-    syncingRef.current = syncing
-    setIsSyncing(syncing)
-    if (last) setLastSyncAt(last)
+  useEffect(() => {
+    isMountedRef.current = true
+    setIsSyncingFn = (v: boolean) => { if (isMountedRef.current) setIsSyncing(v) }
+    setLastSyncAtFn = (d: Date) => { if (isMountedRef.current) setLastSyncAt(d) }
+    return () => {
+      isMountedRef.current = false
+      setIsSyncingFn = null
+      setLastSyncAtFn = null
+    }
   }, [])
 
   const userRef = useRef(user)
   userRef.current = user
 
   const doPush = useCallback(async () => {
-    if (!userRef.current || syncingRef.current) return
-    syncingRef.current = true
-    setIsSyncing(true)
+    if (!userRef.current || pushingRefGlobal) return
+    pushingRefGlobal = true
+    updateSyncing()
     try {
       await push()
-      setLastSyncAt(new Date())
+      if (isMountedRef.current) setLastSyncAt(new Date())
     } catch (err) {
       console.warn('[SyncProvider] Push failed:', err)
     } finally {
-      if (isMountedRef.current) {
-        syncingRef.current = false
-        setIsSyncing(false)
-      }
+      pushingRefGlobal = false
+      updateSyncing()
     }
   }, [])
 
   const doPull = useCallback(async () => {
-    if (!userRef.current || syncingRef.current) return
-    syncingRef.current = true
-    setIsSyncing(true)
+    if (!userRef.current || pullingRefGlobal) return
+    pullingRefGlobal = true
+    updateSyncing()
     try {
       await pull(userRef.current.id)
-      setLastSyncAt(new Date())
+      if (isMountedRef.current) setLastSyncAt(new Date())
     } catch (err) {
       console.warn('[SyncProvider] Pull failed:', err)
     } finally {
-      if (isMountedRef.current) {
-        syncingRef.current = false
-        setIsSyncing(false)
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
+      pullingRefGlobal = false
+      updateSyncing()
     }
   }, [])
 
@@ -177,23 +185,23 @@ export function SyncProvider({ children }: SyncProviderProps) {
     }
 
     countPending()
-
     const interval = setInterval(countPending, 5000)
 
-    doPush().then(() => doPull()).then(() => {
-      if (isMountedRef.current) {
-        intervalRef.current = setInterval(() => {
-          doPull()
-        }, PULL_INTERVAL)
-      }
-    })
+    doPush()
+    doPull()
+
+    if (isMountedRef.current) {
+      intervalRef.current = setInterval(() => {
+        doPull()
+      }, PULL_INTERVAL)
+    }
 
     db.mutations.hook('creating', () => {
-      schedulePush(onSyncChange)
+      schedulePush()
     })
 
     syncSSE.connect(() => {
-      if (userRef.current) schedulePull(userRef.current.id, onSyncChange)
+      if (userRef.current) schedulePull(userRef.current.id)
     })
 
     return () => {
@@ -204,18 +212,14 @@ export function SyncProvider({ children }: SyncProviderProps) {
       }
       syncSSE.disconnect()
     }
-  }, [user?.id, onSyncChange, doPush, doPull])
+  }, [user?.id, doPush, doPull])
 
-  const isOnlineRef = useRef(isOnline)
   const prevOnlineRef = useRef(isOnline)
 
   useEffect(() => {
-    isOnlineRef.current = isOnline
-  }, [isOnline])
-
-  useEffect(() => {
     if (prevOnlineRef.current === false && isOnline && userRef.current) {
-      doPush().then(() => doPull())
+      doPush()
+      doPull()
     }
     prevOnlineRef.current = isOnline
   }, [isOnline, doPush, doPull])
