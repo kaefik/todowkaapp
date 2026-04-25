@@ -62,6 +62,14 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
         >
           ✏️
         </button>
+        <button
+          type="button"
+          onClick={() => onSelect(null)}
+          className="px-4 py-2 rounded-full text-sm font-medium shadow-md transition-colors flex items-center gap-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500"
+        >
+          <span>✏️</span>
+          <span>Без глагола</span>
+        </button>
         {templates.map((template) => (
           <button
             key={template.id}

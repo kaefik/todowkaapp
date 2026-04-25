@@ -203,7 +203,7 @@ export function TaskListView({
     }
     setInputFocused(true)
     setActiveVerb(verb)
-    if (verb && window.innerWidth < 768) {
+    if (window.innerWidth < 768) {
       setMobileInputVisible(true)
       setFabOpen(false)
     }
