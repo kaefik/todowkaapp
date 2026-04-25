@@ -4,6 +4,7 @@ import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useVerbTemplates, type VerbTemplate } from '../hooks/useVerbTemplates'
+import { useToastStore } from '../stores/toastStore'
 import { TaskEditModal } from './TaskEditModal'
 import { TaskDetailModal } from './TaskDetailModal'
 import { HighlightText } from './TaskFilterPanel'
@@ -212,7 +213,10 @@ export function TaskListView({
   const handleAddCustomVerb = async (text: string) => {
     const icons = ['🎯', '📖', '🔧', '💡', '📊', '🗂️', '🚀', '⭐', '📝', '🎪']
     const icon = icons[Math.floor(Math.random() * icons.length)]!
-    await addVerb(text, icon)
+    const result = await addVerb(text, icon)
+    if (result.duplicate) {
+      useToastStore.getState().addToast({ title: 'Дубликат', body: `Глагол «${text}» уже есть`, type: 'warning' })
+    }
   }
 
   const handleFabToggle = () => {

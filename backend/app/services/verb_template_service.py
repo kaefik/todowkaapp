@@ -39,12 +39,26 @@ class VerbTemplateService:
         return items, total
 
     async def create_verb_template(self, user_id: UUID, data: VerbTemplateCreate) -> VerbTemplate:
+        import uuid as uuid_mod
+
+        dup_q = select(func.count()).select_from(VerbTemplate).where(
+            VerbTemplate.user_id == str(user_id),
+            func.lower(VerbTemplate.text) == data.text.lower(),
+        )
+        if (await self.db.execute(dup_q)).scalar() > 0:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=409,
+                detail=f'Глагол «{data.text}» уже существует',
+            )
+
         max_pos_q = select(func.coalesce(func.max(VerbTemplate.position), -1)).where(
             VerbTemplate.user_id == user_id
         )
         max_pos = (await self.db.execute(max_pos_q)).scalar() or 0
 
         verb = VerbTemplate(
+            id=data.id if data.id else str(uuid_mod.uuid4()),
             user_id=str(user_id),
             text=data.text,
             icon=data.icon,

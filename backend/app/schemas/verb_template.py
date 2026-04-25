@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class VerbTemplateCreate(BaseModel):
+    id: str | None = Field(default=None, max_length=36)
     text: str = Field(min_length=1, max_length=30)
     icon: str = Field(min_length=1, max_length=10)
 

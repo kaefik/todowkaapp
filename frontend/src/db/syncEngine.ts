@@ -161,7 +161,28 @@ async function mergeAndPut(
   }
 }
 
+let _initialSyncDone = false
+let _initialSyncPromise: Promise<void> | null = null
+
+export function isInitialSyncDone(): boolean {
+  return _initialSyncDone
+}
+
+export function getInitialSyncPromise(): Promise<void> | null {
+  return _initialSyncPromise
+}
+
 export async function initialSync(userId: string): Promise<void> {
+  _initialSyncPromise = initialSyncInternal(userId)
+  try {
+    await _initialSyncPromise
+  } finally {
+    _initialSyncDone = true
+    _initialSyncPromise = null
+  }
+}
+
+async function initialSyncInternal(userId: string): Promise<void> {
   for (const resource of RESOURCES) {
     const items = await fetchAllPages(resource.endpoint)
     await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)

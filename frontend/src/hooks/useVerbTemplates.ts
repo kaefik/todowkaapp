@@ -3,6 +3,7 @@ import { db, activeTable } from '../db/database'
 import { useDexieQuery } from '../db/hooks'
 import { v4 as uuidv4 } from 'uuid'
 import { verbTemplatesApi } from '../api/verbTemplates'
+import { getInitialSyncPromise, isInitialSyncDone } from '../db/syncEngine'
 
 export interface VerbTemplate {
   id: string
@@ -51,6 +52,13 @@ export function useVerbTemplates() {
 
     ensureDefaultsPromise = (async () => {
       try {
+        const syncPromise = getInitialSyncPromise()
+        if (syncPromise) {
+          await syncPromise
+        } else if (!isInitialSyncDone()) {
+          return
+        }
+
         const existing = await activeTable(db.verbTemplates, user.id).count()
         if (existing > 0) return
 
@@ -73,7 +81,7 @@ export function useVerbTemplates() {
             entityType: 'verbTemplate',
             entityId: id,
             action: 'create',
-            payload: JSON.stringify({ text: def.text, icon: def.icon }),
+            payload: JSON.stringify({ id, text: def.text, icon: def.icon }),
             timestamp: Date.now(),
             retryCount: 0,
             lastError: null,
@@ -87,17 +95,22 @@ export function useVerbTemplates() {
     await ensureDefaultsPromise
   }
 
-  const addVerb = async (text: string, icon: string) => {
-    if (!user) return
+  const addVerb = async (text: string, icon: string): Promise<{ duplicate: boolean }> => {
+    if (!user) return { duplicate: false }
+
+    const normalizedName = text.trim().toLowerCase()
+    const all = await activeTable(db.verbTemplates, user.id).toArray()
+    const duplicate = all.some(v => v.text.toLowerCase() === normalizedName)
+    if (duplicate) return { duplicate: true }
+
     const id = uuidv4()
     const now = new Date().toISOString()
-    const all = await activeTable(db.verbTemplates, user.id).toArray()
     const maxPos = all.length > 0 ? Math.max(...all.map(v => v.position)) + 1 : 0
 
     await db.verbTemplates.add({
       id,
       userId: user.id,
-      text,
+      text: text.trim(),
       icon,
       position: maxPos,
       createdAt: now,
@@ -110,11 +123,12 @@ export function useVerbTemplates() {
       entityType: 'verbTemplate',
       entityId: id,
       action: 'create',
-      payload: JSON.stringify({ text, icon }),
+      payload: JSON.stringify({ id, text: text.trim(), icon }),
       timestamp: Date.now(),
       retryCount: 0,
       lastError: null,
     })
+    return { duplicate: false }
   }
 
   const updateVerb = async (id: string, data: { text?: string; icon?: string }) => {

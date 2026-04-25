@@ -137,7 +137,11 @@ export function VerbSettings() {
     const text = newText.trim()
     if (!text) return
     const icon = RANDOM_ICONS[Math.floor(Math.random() * RANDOM_ICONS.length)]!
-    await addVerb(text, icon)
+    const result = await addVerb(text, icon)
+    if (result.duplicate) {
+      addToast({ title: 'Дубликат', body: `Глагол «${text}» уже есть`, type: 'warning' })
+      return
+    }
     setNewText('')
   }
 
