@@ -169,7 +169,8 @@ async function mergeAndPut(
   if (mergedRecords.length === 0) return
 
   try {
-    await table.bulkPut(mergedRecords as never[])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (table as any).bulkPut(mergedRecords)
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
       useToastStore.getState().addToast({
