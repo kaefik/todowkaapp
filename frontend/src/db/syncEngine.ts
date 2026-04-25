@@ -141,6 +141,22 @@ async function mergeAndPut(
     const skip = await shouldSkipMerge(entityType, id)
     if (skip) continue
 
+    if (entityType === 'verbTemplate') {
+      const text = (item.text as string).toLowerCase()
+      const existing = await table
+        .where('userId')
+        .equals(userId)
+        .filter(r => (r as Record<string, unknown>).text && String((r as Record<string, unknown>).text).toLowerCase() === text && (r as Record<string, unknown>).id !== id)
+        .first()
+      if (existing) {
+        await table.delete(existing.id as string).catch(() => {})
+        await db.mutations
+          .where('[entityType+entityId]')
+          .equals(['verbTemplate', existing.id as string])
+          .delete()
+      }
+    }
+
     const serverRecord = transform(item, userId)
     const localRecord = await table.get(id)
     const merged = mergeRecord(localRecord as Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null } | undefined, serverRecord)
@@ -377,6 +393,9 @@ export async function push(): Promise<void> {
 
           if (err.status === 409) {
             if (mutation.action === 'create') {
+              const table = getTableForType(mutation.entityType)
+              await table.delete(mutation.entityId).catch(() => {})
+              await db.mutations.delete(mutation.id)
               success = true
               break
             }

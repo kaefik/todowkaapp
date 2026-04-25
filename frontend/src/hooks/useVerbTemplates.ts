@@ -62,6 +62,13 @@ export function useVerbTemplates() {
         const existing = await activeTable(db.verbTemplates, user.id).count()
         if (existing > 0) return
 
+        const serverSynced = await db.verbTemplates
+          .where('userId')
+          .equals(user.id)
+          .filter(r => r._syncStatus === 'synced')
+          .count()
+        if (serverSynced > 0) return
+
         for (const def of DEFAULT_VERBS) {
           const id = uuidv4()
           const now = new Date().toISOString()
