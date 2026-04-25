@@ -4,7 +4,7 @@ export interface ToastItem {
   id: string
   title: string
   body: string
-  type: 'reminder' | 'info' | 'error' | 'success' | 'update'
+  type: 'reminder' | 'info' | 'error' | 'success' | 'update' | 'warning'
   onAction?: () => void
   taskId?: string
   createdAt: number
