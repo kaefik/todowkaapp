@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
 import { db, activeTasks } from '../db/database'
@@ -177,6 +177,8 @@ function applyFilters(records: UiTask[], filters?: TaskFilters): UiTask[] {
 
 export function useTasks(filters?: TaskFilters): UseTasksReturn {
   const user = useAuthStore(s => s.user)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const refresh = useCallback(() => setRefreshKey(k => k + 1), [])
 
   const { data: rawTasks = [], isLoading } = useDexieQuery(
     async () => {
@@ -185,7 +187,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       const uiTasks = await Promise.all(dbRecords.map(dbTaskToUi))
       return applyFilters(uiTasks, filters)
     },
-    [user?.id]
+    [user?.id, refreshKey]
   )
 
   const tasks = rawTasks as Task[]
@@ -233,6 +235,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
+    refresh()
   }
 
   const updateTask = async (id: string, data: UpdateTask) => {
@@ -277,6 +280,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
+    refresh()
   }
 
   const toggleTask = async (id: string) => {
@@ -300,6 +304,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
+    refresh()
   }
 
   const moveTask = async (id: string, gtd_status: GtdStatus) => {
@@ -345,6 +350,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
         })
       }
     }
+    refresh()
   }
 
   const restoreTask = async (id: string) => {
@@ -370,6 +376,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
+    refresh()
   }
 
   const deleteTask = async (id: string) => {
@@ -388,6 +395,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
+    refresh()
   }
 
   const fetchTask = useCallback(async (id: string): Promise<Task> => {
@@ -408,7 +416,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     restoreTask,
     deleteTask,
     fetchTask,
-    refetch: async () => {},
+    refetch: async () => { refresh() },
   }
 }
 
