@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -17,12 +18,15 @@ export function ConfirmDialog({
   title,
   message,
   confirmText,
-  cancelText = 'Отмена',
+  cancelText,
   variant = 'danger',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation('common')
   const [isMobile, setIsMobile] = useState(false)
+
+  const resolvedCancelText = cancelText ?? t('cancel')
 
   useEffect(() => {
     if (!open) return
@@ -58,7 +62,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            {cancelText}
+            {resolvedCancelText}
           </button>
           <button
             onClick={onConfirm}

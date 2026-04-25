@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { db } from '../db/database'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { useAuthStore } from '../stores/authStore'
@@ -7,6 +8,7 @@ import { GtdTaskList } from './GtdTaskList'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 export function Trash() {
+  const { t } = useTranslation('tasks')
   const [isClearing, setIsClearing] = useState(false)
   const [clearError, setClearError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -51,7 +53,7 @@ export function Trash() {
       }
       setRefreshKey((k) => k + 1)
     } catch {
-      setClearError('Не удалось очистить корзину')
+      setClearError(t('clearTrashFailed'))
     } finally {
       setIsClearing(false)
     }
@@ -60,7 +62,7 @@ export function Trash() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Корзина</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('trashTitle')}</h1>
         <button
           onClick={handleClearTrash}
           disabled={isClearing || isEmpty}
@@ -72,10 +74,10 @@ export function Trash() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
-              Очистка...
+              {t('clearing')}
             </>
           ) : (
-            'Очистить корзину'
+            t('clearTrash')
           )}
         </button>
       </div>
@@ -90,9 +92,9 @@ export function Trash() {
 
       <ConfirmDialog
         open={showClearConfirm}
-        title="Очистить корзину?"
-        message="Все задачи будут удалены навсегда. Это действие нельзя отменить."
-        confirmText="Очистить"
+        title={t('clearTrashConfirm')}
+        message={t('clearTrashMessage')}
+        confirmText={t('clearBtn')}
         variant="danger"
         onConfirm={confirmClearTrash}
         onCancel={() => setShowClearConfirm(false)}

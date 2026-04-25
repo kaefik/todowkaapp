@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { RecurrenceConfig } from '../hooks/useTasks'
 
 interface RecurrenceEditorProps {
@@ -13,41 +14,28 @@ interface RecurrenceEditorProps {
   }) => void
 }
 
-const RECURRENCE_TYPES = [
-  { value: 'daily', label: 'Ежедневно' },
-  { value: 'weekly', label: 'Еженедельно' },
-  { value: 'monthly', label: 'Ежемесячно' },
-]
+const RECURRENCE_TYPE_KEYS = [
+  { value: 'daily', labelKey: 'recurrenceDaily' },
+  { value: 'weekly', labelKey: 'recurrenceWeekly' },
+  { value: 'monthly', labelKey: 'recurrenceMonthly' },
+] as const
 
-const WEEKDAYS = [
-  { value: 1, label: 'Пн' },
-  { value: 2, label: 'Вт' },
-  { value: 3, label: 'Ср' },
-  { value: 4, label: 'Чт' },
-  { value: 5, label: 'Пт' },
-  { value: 6, label: 'Сб' },
-  { value: 7, label: 'Вс' },
-]
+const WEEKDAY_KEYS = [
+  { value: 1, labelKey: 'mon' },
+  { value: 2, labelKey: 'tue' },
+  { value: 3, labelKey: 'wed' },
+  { value: 4, labelKey: 'thu' },
+  { value: 5, labelKey: 'fri' },
+  { value: 6, labelKey: 'sat' },
+  { value: 7, labelKey: 'sun' },
+] as const
 
-const WEEK_OF_MONTH_LABELS = ['Первый', 'Второй', 'Третий', 'Четвёртый']
-const DAY_OF_WEEK_LABELS = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+const WEEK_OF_MONTH_KEYS = ['recurrenceFirst', 'recurrenceSecond', 'recurrenceThird', 'recurrenceFourth'] as const
+const DAY_OF_WEEK_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
 
 const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400'
 const selectClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400'
 const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
-
-function getIntervalLabel(type: string, interval: number): string {
-  if (type === 'daily') {
-    if (interval === 1) return 'каждый день'
-    return `каждые ${interval} дней`
-  }
-  if (type === 'weekly') {
-    if (interval === 1) return 'каждую неделю'
-    return `каждые ${interval} недель`
-  }
-  if (interval === 1) return 'каждый месяц'
-  return `каждые ${interval} месяцев`
-}
 
 export function RecurrenceEditor({
   recurrenceType,
@@ -56,6 +44,7 @@ export function RecurrenceEditor({
   dueDate,
   onChange,
 }: RecurrenceEditorProps) {
+  const { t } = useTranslation('tasks')
   const [enabled, setEnabled] = useState(!!recurrenceType)
   const [type, setType] = useState<string>(recurrenceType || 'daily')
   const [interval, setIntervalValue] = useState(recurrenceConfig?.interval || 1)
@@ -81,6 +70,19 @@ export function RecurrenceEditor({
     setEndType(recurrenceEndDate ? 'on_date' : 'never')
     setEndDate(recurrenceEndDate ? recurrenceEndDate.slice(0, 10) : '')
   }, [recurrenceType, recurrenceConfig, recurrenceEndDate])
+
+  const getIntervalLabel = (recType: string, iv: number): string => {
+    if (recType === 'daily') {
+      if (iv === 1) return t('recurrenceEveryDay')
+      return t('recurrenceEveryDays', { count: iv })
+    }
+    if (recType === 'weekly') {
+      if (iv === 1) return t('recurrenceEveryWeek')
+      return t('recurrenceEveryWeeks', { count: iv })
+    }
+    if (iv === 1) return t('recurrenceEveryMonth')
+    return t('recurrenceEveryMonths', { count: iv })
+  }
 
   const handleToggleEnabled = () => {
     const next = !enabled
@@ -114,7 +116,7 @@ export function RecurrenceEditor({
       return
     }
 
-    const t = overrides.type ?? type
+    const tp = overrides.type ?? type
     const iv = overrides.interval ?? interval
     const sd = overrides.selectedDays ?? selectedDays
     const mm = overrides.monthlyMode ?? monthlyMode
@@ -125,13 +127,13 @@ export function RecurrenceEditor({
     const ed = overrides.endDate ?? endDate
 
     const config: RecurrenceConfig = {
-      type: t as RecurrenceConfig['type'],
+      type: tp as RecurrenceConfig['type'],
       interval: iv,
     }
 
-    if (t === 'weekly') {
+    if (tp === 'weekly') {
       config.days = sd.length > 0 ? sd : [1]
-    } else if (t === 'monthly') {
+    } else if (tp === 'monthly') {
       if (mm === 'day') {
         config.day_of_month = dom
       } else {
@@ -141,7 +143,7 @@ export function RecurrenceEditor({
     }
 
     onChange({
-      recurrence_type: t,
+      recurrence_type: tp,
       recurrence_config: config,
       recurrence_end_date: et === 'on_date' && ed ? `${ed}T00:00:00Z` : null,
     })
@@ -206,33 +208,33 @@ export function RecurrenceEditor({
           className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Повторяющаяся задача
+          {t('recurringTask')}
         </span>
       </label>
       {!dueDate && (
         <p className="text-xs text-amber-600 dark:text-amber-400 pl-6">
-          Для настройки повторения необходимо указать дедлайн
+          {t('recurrenceNeedDeadline')}
         </p>
       )}
 
       {enabled && (
         <div className="space-y-3 pl-6 border-l-2 border-indigo-200 dark:border-indigo-800">
           <div>
-            <label className={labelClass}>Тип повторения</label>
+            <label className={labelClass}>{t('recurrenceType')}</label>
             <select
               value={type}
               onChange={e => handleTypeChange(e.target.value)}
               className={selectClass}
             >
-              {RECURRENCE_TYPES.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              {RECURRENCE_TYPE_KEYS.map(opt => (
+                <option key={opt.value} value={opt.value}>{t(opt.labelKey)}</option>
               ))}
             </select>
           </div>
 
           <div>
             <label className={labelClass}>
-              Интервал — {getIntervalLabel(type, interval)}
+              {t('recurrenceInterval')} — {getIntervalLabel(type, interval)}
             </label>
             <input
               type="number"
@@ -246,9 +248,9 @@ export function RecurrenceEditor({
 
           {type === 'weekly' && (
             <div>
-              <label className={labelClass}>Дни недели</label>
+              <label className={labelClass}>{t('recurrenceDaysOfWeek')}</label>
               <div className="flex flex-wrap gap-1.5">
-                {WEEKDAYS.map(day => {
+                {WEEKDAY_KEYS.map(day => {
                   const active = selectedDays.includes(day.value)
                   return (
                     <button
@@ -261,7 +263,7 @@ export function RecurrenceEditor({
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                       }`}
                     >
-                      {day.label}
+                      {t(day.labelKey)}
                     </button>
                   )
                 })}
@@ -272,20 +274,20 @@ export function RecurrenceEditor({
           {type === 'monthly' && (
             <div className="space-y-3">
               <div>
-                <label className={labelClass}>Способ</label>
+                <label className={labelClass}>{t('recurrenceMethod')}</label>
                 <select
                   value={monthlyMode}
                   onChange={e => handleMonthlyModeChange(e.target.value as 'day' | 'weekday')}
                   className={selectClass}
                 >
-                  <option value="day">По числу месяца</option>
-                  <option value="weekday">По дню недели</option>
+                  <option value="day">{t('recurrenceByDate')}</option>
+                  <option value="weekday">{t('recurrenceByDay')}</option>
                 </select>
               </div>
 
               {monthlyMode === 'day' && (
                 <div>
-                  <label className={labelClass}>Число месяца</label>
+                  <label className={labelClass}>{t('recurrenceDayOfMonth')}</label>
                   <input
                     type="number"
                     min={1}
@@ -300,26 +302,26 @@ export function RecurrenceEditor({
               {monthlyMode === 'weekday' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelClass}>Неделя</label>
+                    <label className={labelClass}>{t('recurrenceWeek')}</label>
                     <select
                       value={weekOfMonth}
                       onChange={e => handleWeekOfMonthChange(parseInt(e.target.value))}
                       className={selectClass}
                     >
-                      {WEEK_OF_MONTH_LABELS.map((label, i) => (
-                        <option key={i} value={i + 1}>{label}</option>
+                      {WEEK_OF_MONTH_KEYS.map((key, i) => (
+                        <option key={i} value={i + 1}>{t(key)}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className={labelClass}>День недели</label>
+                    <label className={labelClass}>{t('recurrenceDayOfWeek')}</label>
                     <select
                       value={dayOfWeek}
                       onChange={e => handleDayOfWeekChange(parseInt(e.target.value))}
                       className={selectClass}
                     >
-                      {DAY_OF_WEEK_LABELS.map((label, i) => (
-                        <option key={i} value={i + 1}>{label}</option>
+                      {DAY_OF_WEEK_KEYS.map((key, i) => (
+                        <option key={i} value={i + 1}>{t(key)}</option>
                       ))}
                     </select>
                   </div>
@@ -329,7 +331,7 @@ export function RecurrenceEditor({
           )}
 
           <div>
-            <label className={labelClass}>Окончание</label>
+            <label className={labelClass}>{t('recurrenceEnd')}</label>
             <div className="space-y-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -339,7 +341,7 @@ export function RecurrenceEditor({
                   onChange={() => handleEndTypeChange('never')}
                   className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Никогда</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('recurrenceNever')}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -349,7 +351,7 @@ export function RecurrenceEditor({
                   onChange={() => handleEndTypeChange('on_date')}
                   className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Дата:</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('recurrenceDate')}:</span>
               </label>
               {endType === 'on_date' && (
                 <input

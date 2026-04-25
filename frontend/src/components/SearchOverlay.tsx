@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { httpClient } from '../api/httpClient'
 import { Link } from 'react-router-dom'
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function SearchOverlay({ open, onClose }: Props) {
+  const { t } = useTranslation('tasks')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<TaskHit[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -73,8 +75,8 @@ export function SearchOverlay({ open, onClose }: Props) {
     next: 'Next',
     waiting: 'Waiting',
     someday: 'Someday',
-    completed: 'Выполнено',
-    trash: 'Корзина',
+    completed: t('statusCompleted'),
+    trash: t('statusTrash'),
   }
 
   return (
@@ -91,7 +93,7 @@ export function SearchOverlay({ open, onClose }: Props) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Поиск задач..."
+              placeholder={t('searchTasks')}
               className="w-full px-3 py-4 text-sm bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
             />
             {query && (
@@ -112,7 +114,7 @@ export function SearchOverlay({ open, onClose }: Props) {
 
             {!isLoading && query.trim() && results.length === 0 && (
               <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                Ничего не найдено
+                {t('searchNothingFound')}
               </div>
             )}
 

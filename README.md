@@ -17,6 +17,7 @@ A modern, full-stack Todo application with user authentication, task management,
 - **PWA Support**: Installable as a desktop/mobile app with offline capabilities
 - **Real-time Updates**: Instant UI updates using React state management
 - **Type Safety**: Full TypeScript support on frontend, Python type hints on backend
+- **Multi-language (i18n)**: Russian and English with easy language addition (react-i18next)
 
 ## Tech Stack
 
@@ -39,6 +40,7 @@ A modern, full-stack Todo application with user authentication, task management,
 - **Tailwind CSS** for utility-first styling
 - **react-hook-form** for form handling
 - **zod** for schema validation
+- **react-i18next** + **i18next** for internationalization
 - **vite-plugin-pwa** for PWA features
 
 ### Database
@@ -727,6 +729,87 @@ todowkaapp/
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
+
+## Adding a New Language
+
+The app supports Russian (RU) and English (EN) out of the box. To add a new language:
+
+### 1. Create translation files
+
+Copy the English locale folder and translate all JSON files:
+
+```bash
+cd frontend/src/i18n/locales
+
+# Copy English translations as a starting point
+cp -r en <lang-code>   # e.g.: de, fr, es, ja
+
+# Translate each file in the new folder:
+# <lang-code>/common.json
+# <lang-code>/nav.json
+# <lang-code>/auth.json
+# <lang-code>/tasks.json
+# <lang-code>/settings.json
+# <lang-code>/projects.json
+# <lang-code>/notifications.json
+# <lang-code>/sync.json
+# <lang-code>/verbs.json
+```
+
+### 2. Register the language in i18n config
+
+Edit `frontend/src/i18n/index.ts`:
+
+```typescript
+// 1. Import the new locale files
+import commonDe from './locales/de/common.json'
+import navDe from './locales/de/nav.json'
+// ... import all 9 namespaces
+
+// 2. Add to resources object
+const resources = {
+  ru: { ... },
+  en: { ... },
+  de: {                    // <-- add new language
+    common: commonDe,
+    nav: navDe,
+    // ... all namespaces
+  },
+}
+
+// 3. Add to supported languages array
+const SUPPORTED_LANGS = ['ru', 'en', 'de']  // <-- add code
+```
+
+### 3. Add the language option in Settings
+
+Edit `frontend/src/routes/Settings.tsx` — find the language dropdown and add an `<option>`:
+
+```tsx
+<select ...>
+  <option value="ru">Русский</option>
+  <option value="en">English</option>
+  <option value="de">Deutsch</option>   {/* <-- add this */}
+</select>
+```
+
+### Translation file structure
+
+Each namespace covers a specific area of the app:
+
+| Namespace | Contents | ~Keys |
+|-----------|----------|-------|
+| `common` | Buttons, statuses, generic labels | ~30 |
+| `nav` | Sidebar, header, navigation labels | ~20 |
+| `auth` | Login, registration, timezone setup | ~25 |
+| `tasks` | Task CRUD, filters, dates, GTD, recurrence, reminders | ~80 |
+| `settings` | All settings tabs, profile, password, users, language | ~100 |
+| `projects` | Projects, areas, contexts, tags CRUD | ~25 |
+| `notifications` | Notifications, bell, updates | ~15 |
+| `sync` | Offline, sync status, errors | ~25 |
+| `verbs` | Quick verbs for task creation | ~15 |
+
+Keys use interpolation for dynamic values: `"overdueDays": "Overdue by {{count}} d. ({{date}})"`.
 
 ## License
 

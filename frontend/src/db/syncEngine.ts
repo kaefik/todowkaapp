@@ -4,6 +4,7 @@ import { apiTaskToDb } from './mappers'
 import { httpClient, ApiError } from '../api/httpClient'
 import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
+import i18n from '../i18n'
 
 type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate'
 
@@ -174,8 +175,8 @@ async function mergeAndPut(
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
       useToastStore.getState().addToast({
-        title: 'Хранилище заполнено',
-        body: 'Синхронизация остановлена. Освободите место.',
+        title: i18n.t('sync:storageFull'),
+        body: i18n.t('sync:storageFullDescription'),
         type: 'error',
       })
       throw err

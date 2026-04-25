@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { HexColorInput } from 'react-colorful'
+import { useTranslation } from 'react-i18next'
 
 const PRESET_COLORS = [
   '#ef4444',
@@ -26,6 +27,7 @@ interface ColorPickerFieldProps {
 }
 
 export function ColorPickerField({ value, onChange }: ColorPickerFieldProps) {
+  const { t } = useTranslation('projects')
   const [isOpen, setIsOpen] = useState(false)
 
   const toggleOpen = () => setIsOpen((prev) => !prev)
@@ -60,7 +62,7 @@ export function ColorPickerField({ value, onChange }: ColorPickerFieldProps) {
           style={{ backgroundColor: value || 'transparent' }}
         />
         <span className="text-sm text-gray-600 dark:text-gray-300">
-          {value || 'Цвет'}
+          {value || t('color')}
         </span>
       </button>
 
@@ -103,7 +105,7 @@ export function ColorPickerField({ value, onChange }: ColorPickerFieldProps) {
                 onClick={handleClear}
                 className="mt-2 w-full text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 py-1"
               >
-                Сбросить цвет
+                {t('resetColor')}
               </button>
             )}
           </div>

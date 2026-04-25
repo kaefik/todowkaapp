@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
+import i18n from '../i18n'
 
 interface Props {
   children: ReactNode
@@ -36,22 +37,22 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Что-то пошло не так
+              {i18n.t('sync:somethingWentWrong')}
             </h1>
 
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {this.state.error?.message || 'Произошла неожиданная ошибка'}
+              {this.state.error?.message || i18n.t('sync:unexpectedError')}
             </p>
 
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
               <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                Что вы можете сделать:
+                {i18n.t('sync:whatYouCanDo')}
               </h3>
               <ul className="text-sm text-blue-700 dark:text-blue-400 text-left space-y-1">
-                <li>• Обновите страницу</li>
-                <li>• Проверьте подключение к интернету</li>
-                <li>• Очистите кэш браузера и попробуйте снова</li>
-                <li>• Если проблема сохраняется, обратитесь в поддержку</li>
+                <li>• {i18n.t('sync:refreshPageAction')}</li>
+                <li>• {i18n.t('sync:checkConnection')}</li>
+                <li>• {i18n.t('sync:clearCacheAction')}</li>
+                <li>• {i18n.t('sync:contactSupport')}</li>
               </ul>
             </div>
 
@@ -59,7 +60,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onClick={() => window.location.reload()}
               className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors"
             >
-              Обновить страницу
+              {i18n.t('sync:refreshPage')}
             </button>
           </div>
         </div>

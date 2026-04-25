@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 export function OfflinePage() {
+  const { t } = useTranslation('sync')
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
@@ -11,22 +14,22 @@ export function OfflinePage() {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          Офлайн-режим
+          {t('offlinePageTitle')}
         </h1>
 
         <p className="text-gray-600 dark:text-gray-400 mb-6">
-          Нет подключения к интернету. Пожалуйста, проверьте ваше соединение и попробуйте снова.
+          {t('offlinePageDescription')}
         </p>
 
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
           <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
-            Что вы можете сделать:
+            {t('offlinePageFeatures')}
           </h3>
           <ul className="text-sm text-blue-700 dark:text-blue-400 text-left space-y-1">
-            <li>• Проверьте подключение к интернету</li>
-            <li>• Подключите Wi-Fi или мобильный интернет</li>
-            <li>• Обновите страницу после восстановления соединения</li>
-            <li>• Если у вас есть кэшированные данные, они будут загружены автоматически</li>
+            <li>• {t('offlineFeatureCheck')}</li>
+            <li>• {t('offlineFeatureWifi')}</li>
+            <li>• {t('offlineFeatureRefresh')}</li>
+            <li>• {t('offlineFeatureCached')}</li>
           </ul>
         </div>
 
@@ -35,11 +38,11 @@ export function OfflinePage() {
           onClick={() => window.location.reload()}
           className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors"
         >
-          Обновить страницу
+          {t('refreshPage')}
         </Link>
 
         <p className="mt-4 text-xs text-gray-500 dark:text-gray-500">
-          Todowka работает офлайн, если данные уже были загружены ранее.
+          {t('offlineNote')}
         </p>
       </div>
     </div>

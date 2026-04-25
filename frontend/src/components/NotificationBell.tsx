@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useNotificationStore } from '../stores/notificationStore'
@@ -6,6 +7,7 @@ import { formatTime, typeIcon } from '../utils/notificationUtils.tsx'
 import { TaskDetailModal } from './TaskDetailModal'
 
 export function NotificationBell() {
+  const { t } = useTranslation('notifications')
   const [isOpen, setIsOpen] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -99,13 +101,13 @@ export function NotificationBell() {
           style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Уведомления</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('notifications')}</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
                 className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
               >
-                Прочитать все
+                {t('markAllRead')}
               </button>
             )}
           </div>
@@ -120,7 +122,7 @@ export function NotificationBell() {
                 <svg className="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Нет уведомлений</p>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('noNotifications')}</p>
               </div>
             ) : (
               recentNotifications.map((notification) => (
@@ -160,7 +162,7 @@ export function NotificationBell() {
                 onClick={handleViewAll}
                 className="w-full px-4 py-2.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-center"
               >
-                Все уведомления
+                {t('allNotifications')}
               </button>
             </div>
           )}

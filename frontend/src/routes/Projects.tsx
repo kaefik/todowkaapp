@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslation } from 'react-i18next'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -11,16 +12,16 @@ import { ColorPickerField } from '../components/ColorPickerField'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
-const projectSchema = z.object({
-  name: z.string().min(1, 'Название обязательно').max(200, 'Максимум 200 символов'),
+const baseProjectSchema = z.object({
+  name: z.string().min(1).max(200),
   description: z.string().nullable().optional(),
   color: z.string().nullable().optional().refine(
     (val) => val === null || val === undefined || val === '' || colorHexRegex.test(val),
-    { message: 'Формат: #RRGGBB' }
+    { message: 'colorFormat' }
   ),
 })
 
-type ProjectFormData = z.infer<typeof projectSchema>
+type ProjectFormData = z.infer<typeof baseProjectSchema>
 
 function getStoredSortMode(): SortMode | null {
   try {
@@ -58,6 +59,8 @@ function ProjectCard({
   onDelete: (id: string) => void
   onClick: (id: string) => void
 }) {
+  const { t } = useTranslation('projects')
+  const tc = useTranslation('common').t
   return (
     <div
       className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
@@ -77,7 +80,7 @@ function ProjectCard({
             {project.name}
           </span>
           {!project.is_active && (
-            <span className="text-xs text-gray-400 dark:text-gray-500">(архив)</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">({t('archive')})</span>
           )}
         </div>
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
@@ -85,13 +88,13 @@ function ProjectCard({
             onClick={() => onEdit(project)}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
           >
-            Ред.
+            {tc('edit')}
           </button>
           <button
             onClick={() => onDelete(project.id)}
             className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
           >
-            Удалить
+            {tc('delete')}
           </button>
         </div>
       </div>
@@ -104,7 +107,7 @@ function ProjectCard({
           color={project.color}
         />
         <div className="flex justify-between text-xs text-gray-400 dark:text-gray-500">
-          <span>{project.progress.tasks_completed} / {project.progress.tasks_total} задач</span>
+          <span>{t('tasksCount', { completed: project.progress.tasks_completed, total: project.progress.tasks_total })}</span>
           <span>{project.progress.progress_percent}%</span>
         </div>
       </div>
@@ -123,6 +126,7 @@ function SortableProjectCard({
   onDelete: (id: string) => void
   onClick: (id: string) => void
 }) {
+  const { t } = useTranslation('projects')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -136,7 +140,7 @@ function SortableProjectCard({
         {...attributes}
         {...listeners}
         className="cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-1 flex-shrink-0 focus:outline-none"
-        aria-label="Перетащить"
+        aria-label={t('dragToSort')}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
           <circle cx="5" cy="3" r="1.5" />
@@ -154,16 +158,17 @@ function SortableProjectCard({
   )
 }
 
-const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
-  { mode: 'name', label: 'По имени' },
-  { mode: 'date', label: 'По дате' },
-  { mode: 'tasks', label: 'По задачам' },
-]
-
 function SortPanel({ activeMode, onSort }: { activeMode: SortMode | null; onSort: (mode: SortMode) => void }) {
+  const { t } = useTranslation('projects')
+  const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
+    { mode: 'name', label: t('sortByName') },
+    { mode: 'date', label: t('sortByDate') },
+    { mode: 'tasks', label: t('sortByTasks') },
+  ]
+
   return (
     <div className="flex items-center gap-1">
-      <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Сортировка:</span>
+      <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">{t('sorting')}</span>
       {SORT_OPTIONS.map(opt => (
         <button
           key={opt.mode}
@@ -192,13 +197,22 @@ function ProjectForm({
   onCancel: () => void
   isSubmitting: boolean
 }) {
+  const { t } = useTranslation('projects')
+  const tc = useTranslation('common').t
+  const schema = baseProjectSchema.extend({
+    name: z.string().min(1, t('nameRequired')).max(200, t('nameMax200')),
+    color: z.string().nullable().optional().refine(
+      (val) => val === null || val === undefined || val === '' || colorHexRegex.test(val),
+      { message: t('colorFormat') }
+    ),
+  })
   const {
     register,
     handleSubmit,
     control,
     formState: { errors },
   } = useForm<ProjectFormData>({
-    resolver: zodResolver(projectSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       name: initialData?.name || '',
       description: initialData?.description || null,
@@ -214,7 +228,7 @@ function ProjectForm({
             <input
               {...register('name')}
               type="text"
-              placeholder="Название проекта"
+              placeholder={t('projectName')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm"
               autoFocus
             />
@@ -236,7 +250,7 @@ function ProjectForm({
           <input
             {...register('description')}
             type="text"
-            placeholder="Описание (необязательно)"
+            placeholder={t('projectDescription')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm"
           />
         </div>
@@ -247,14 +261,14 @@ function ProjectForm({
           onClick={onCancel}
           className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
         >
-          Отмена
+          {tc('cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Сохранение...' : initialData ? 'Сохранить' : 'Создать'}
+          {isSubmitting ? tc('saving') : initialData ? tc('save') : tc('create')}
         </button>
       </div>
     </form>
@@ -262,6 +276,8 @@ function ProjectForm({
 }
 
 function ProjectsContent() {
+  const { t } = useTranslation('projects')
+  const tc = useTranslation('common').t
   const navigate = useNavigate()
   const { projects, isLoading, error, addProject, updateProject, deleteProject, refetch } = useProjects()
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -324,7 +340,7 @@ function ProjectsContent() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Удалить проект? Задачи проекта будут отвязаны.')) return
+    if (!confirm(t('confirmDeleteProject'))) return
     try {
       await deleteProject(id)
     } catch {
@@ -351,13 +367,13 @@ function ProjectsContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Проекты</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('projects')}</h1>
         {!isCreating && !editingProject && (
           <button
             onClick={() => setIsCreating(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600"
           >
-            + Новый проект
+            {t('newProject')}
           </button>
         )}
       </div>
@@ -370,7 +386,7 @@ function ProjectsContent() {
               onClick={() => refetch()}
               className="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
             >
-              Повторить
+              {tc('retry')}
             </button>
           </div>
         </div>
@@ -395,9 +411,9 @@ function ProjectsContent() {
 
       {projects.length === 0 && !isLoading && !isCreating && (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Нет проектов.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">{t('noProjects')}</p>
           <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-            Создайте первый проект для организации задач
+            {t('createFirstProject')}
           </p>
         </div>
       )}

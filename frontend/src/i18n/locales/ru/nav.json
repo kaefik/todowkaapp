@@ -1,0 +1,22 @@
+{
+  "searchPlaceholder": "Поиск задач...",
+  "groupGtd": "GTD",
+  "groupView": "Просмотр",
+  "groupManage": "Управление",
+  "settings": "Настройки",
+  "logout": "Выйти",
+  "inbox": "Входящие",
+  "active": "Активные",
+  "today": "Сегодня",
+  "tomorrow": "Завтра",
+  "nextActions": "Next Actions",
+  "waitingFor": "Ожидание",
+  "someday": "Когда-нибудь",
+  "completed": "Завершённые",
+  "trash": "Корзина",
+  "projects": "Проекты",
+  "contexts": "Контексты",
+  "areas": "Области",
+  "tags": "Теги",
+  "profile": "Профиль"
+}

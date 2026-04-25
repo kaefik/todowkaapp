@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function toLocalDateStr(isoString: string | null | undefined): string | null {
   if (!isoString) return null
@@ -60,14 +61,14 @@ function Accordion({ title, isOpen, onToggle, children }: {
   )
 }
 
-const GTD_STATUS_OPTIONS: { value: GtdStatus; label: string }[] = [
-  { value: 'inbox', label: 'Inbox' },
-  { value: 'active', label: 'Active' },
-  { value: 'next', label: 'Next Action' },
-  { value: 'waiting', label: 'Waiting For' },
-  { value: 'someday', label: 'Someday / Maybe' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'trash', label: 'Trash' },
+const GTD_STATUS_OPTIONS: { value: GtdStatus; labelKey: string }[] = [
+  { value: 'inbox', labelKey: 'gtdInbox' },
+  { value: 'active', labelKey: 'gtdActive' },
+  { value: 'next', labelKey: 'gtdNext' },
+  { value: 'waiting', labelKey: 'gtdWaiting' },
+  { value: 'someday', labelKey: 'gtdSomeday' },
+  { value: 'completed', labelKey: 'gtdCompleted' },
+  { value: 'trash', labelKey: 'gtdTrash' },
 ]
 
 const editTaskSchema = z.object({
@@ -95,6 +96,7 @@ function TagChips({ tags, selectedTagIds, onToggle }: {
   selectedTagIds: string[]
   onToggle: (tagId: string) => void
 }) {
+  const { t } = useTranslation('tasks')
   return (
     <div className="flex flex-wrap gap-2">
       {tags.map((tag) => {
@@ -117,7 +119,7 @@ function TagChips({ tags, selectedTagIds, onToggle }: {
       })}
       {tags.length === 0 && (
         <span className="text-xs text-gray-400 dark:text-gray-500">
-          Нет тегов. Создайте их на странице «Теги».
+          {t('noTags')}
         </span>
       )}
     </div>
@@ -125,6 +127,7 @@ function TagChips({ tags, selectedTagIds, onToggle }: {
 }
 
 export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalProps) {
+  const { t } = useTranslation('tasks')
   const { contexts } = useContexts()
   const { areas } = useAreas()
   const { tags } = useTags()
@@ -308,6 +311,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   if (!isOpen || !task) return null
 
+  const subtasksAccordionTitle = subtasks.length > 0
+    ? t('subtasksCount', { completed: subtasks.filter(s => s.completed).length, total: subtasks.length })
+    : t('subtasks')
+
+  const deadlineRecurrenceTitle = t('deadlineRecurrenceReminders')
+    + (recurrenceData.recurrence_type ? ' \u{1F504}' : '')
+    + ((reminderData.reminder_time || reminderData.reminder_offsets?.length) && !task?.reminder_fired ? ' \u{1F514}' : '')
+
   return createPortal(
     <div
       className={`fixed inset-0 z-[9999] ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
@@ -323,10 +334,10 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       >
         <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            Edit Task
-            {task.is_recurring && <span title="Повторяющаяся задача">&#x1F504;</span>}
-            {(task.reminder_time || task.reminder_offsets?.length) && !task.reminder_fired && <span title="Есть напоминание">&#x1F514;</span>}
-            {!isOnline && <span className="text-amber-500 text-sm" title="Офлайн режим: изменения будут сохранены локально">&#128268; Офлайн</span>}
+            {t('editTask')}
+            {task.is_recurring && <span title={t('recurringTask')}>&#x1F504;</span>}
+            {(task.reminder_time || task.reminder_offsets?.length) && !task.reminder_fired && <span title={t('hasReminder')}>&#x1F514;</span>}
+            {!isOnline && <span className="text-amber-500 text-sm" title={t('offlineMode')}>&#128268; Offline</span>}
           </h2>
         </div>
 
@@ -334,14 +345,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           <div className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Title
+                {t('taskTitle')}
               </label>
               <input
                 {...register('title')}
                 type="text"
                 id="title"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                placeholder="Task title"
+                placeholder={t('taskTitle')}
               />
               {errors.title && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
@@ -350,14 +361,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Description
+                {t('taskDescription')}
               </label>
               <textarea
                 {...register('description')}
                 id="description"
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                placeholder="Task description (optional)"
+                placeholder={t('taskDescription')}
               />
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
@@ -365,7 +376,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             </div>
 
             <Accordion
-              title={`Подзадачи${subtasks.length > 0 ? ` (${subtasks.filter(s => s.completed).length}/${subtasks.length})` : ''}`}
+              title={subtasksAccordionTitle}
               isOpen={accordionStates.subtasks}
               onToggle={() => toggleAccordion('subtasks')}
             >
@@ -410,7 +421,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   value={newSubtaskTitle}
                   onChange={(e) => setNewSubtaskTitle(e.target.value)}
                   onKeyDown={handleSubtaskKeyDown}
-                  placeholder="Новая подзадача..."
+                  placeholder={t('newSubtask')}
                   disabled={isAddingSubtask}
                   className="flex-1 text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
@@ -427,7 +438,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
             <div>
               <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                GTD-статус
+                {t('gtdStatus')}
               </label>
               <select
                 {...register('gtd_status')}
@@ -436,21 +447,21 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               >
                 {GTD_STATUS_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </option>
                 ))}
               </select>
             </div>
             <div>
               <label htmlFor="project_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Проект
+                {t('project')}
               </label>
               <select
                 {...register('project_id')}
                 id="project_id"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               >
-                <option value="">Без проекта</option>
+                <option value="">{t('noProject')}</option>
                 {projects.filter((p) => p.is_active).map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
@@ -461,13 +472,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </div>
 
           <Accordion
-            title={`Дедлайн, повторение и напоминания${recurrenceData.recurrence_type ? ' \u{1F504}' : ''}${(reminderData.reminder_time || reminderData.reminder_offsets?.length) && !task?.reminder_fired ? ' \u{1F514}' : ''}`}
+            title={deadlineRecurrenceTitle}
             isOpen={accordionStates.recurrence}
             onToggle={() => toggleAccordion('recurrence')}
           >
             <div>
               <label htmlFor="due_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Дедлайн
+                {t('deadline')}
               </label>
               <label className="flex items-center gap-2 cursor-pointer mb-2">
                 <input
@@ -476,7 +487,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   onChange={(e) => handleTodayToggle(e.target.checked)}
                   className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
                 />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Сегодня</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('today')}</span>
               </label>
               <input
                 {...register('due_date', {
@@ -510,7 +521,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </Accordion>
 
           <Accordion
-            title="Теги"
+            title={t('tags')}
             isOpen={accordionStates.tags}
             onToggle={() => toggleAccordion('tags')}
           >
@@ -522,20 +533,20 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </Accordion>
 
           <Accordion
-            title="Категоризация"
+            title={t('categorization')}
             isOpen={accordionStates.categorization}
             onToggle={() => toggleAccordion('categorization')}
           >
             <div>
               <label htmlFor="context_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Контекст
+                {t('context')}
               </label>
               <select
                 {...register('context_id')}
                 id="context_id"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               >
-                <option value="">Без контекста</option>
+                <option value="">{t('noContext')}</option>
                 {contexts.map((ctx) => (
                   <option key={ctx.id} value={ctx.id}>
                     {ctx.name}
@@ -546,14 +557,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
             <div>
               <label htmlFor="area_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Область
+                {t('area')}
               </label>
               <select
                 {...register('area_id')}
                 id="area_id"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               >
-                <option value="">Без области</option>
+                <option value="">{t('noArea')}</option>
                 {areas.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}
@@ -565,20 +576,20 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </Accordion>
 
           <Accordion
-            title="Заметки"
+            title={t('notes')}
             isOpen={accordionStates.datesAndNotes}
             onToggle={() => toggleAccordion('datesAndNotes')}
           >
             <div>
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Заметки
+                {t('notes')}
               </label>
               <textarea
                 {...register('notes')}
                 id="notes"
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                placeholder="Заметки к задаче (optional)"
+                placeholder={t('notesOptional')}
               />
             </div>
           </Accordion>
@@ -590,14 +601,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
           >
-            Cancel
+            {t('cancel', { ns: 'common' })}
           </button>
           <button
             type="button"
             onClick={handleSubmit(onSubmit as never)}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
           >
-            Save
+            {t('save', { ns: 'common' })}
           </button>
         </div>
       </div>

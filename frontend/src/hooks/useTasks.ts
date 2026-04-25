@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { v4 as uuidv4 } from 'uuid'
+import i18n from '../i18n'
 
 import { db, activeTasks } from '../db/database'
 import { dbTaskToUi, type UiTask } from '../db/mappers'
@@ -392,8 +393,8 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
 
   const fetchTask = useCallback(async (id: string): Promise<Task> => {
     const record = await db.tasks.get(id)
-    if (!record) throw new Error('Задача не найдена. Возможно, она была удалена.')
-    if (record._syncStatus === 'deleted') throw new Error('Данная задача была удалена')
+    if (!record) throw new Error(i18n.t('tasks:taskNotFoundMaybe'))
+    if (record._syncStatus === 'deleted') throw new Error(i18n.t('tasks:taskDeleted'))
     return dbTaskToUi(record) as Promise<Task>
   }, [])
 

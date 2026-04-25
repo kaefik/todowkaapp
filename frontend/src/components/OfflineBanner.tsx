@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function OfflineBanner() {
+  const { t } = useTranslation('sync')
   const [isOffline, setIsOffline] = useState(!navigator.onLine)
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function OfflineBanner() {
     <div className="fixed top-0 left-0 right-0 bg-amber-500 text-white py-2 px-4 text-center z-50">
       <div className="flex items-center justify-center gap-2">
         <span className="text-xl">🔌</span>
-        <span className="font-medium">Вы офлайн — работаем с кэшированными данными</span>
+        <span className="font-medium">{t('offlineBanner')}</span>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'ui-browser-notifications-enabled'
+import i18n from '../i18n'
 
 export type BrowserNotificationPermission = 'default' | 'granted' | 'denied'
 
@@ -89,14 +90,15 @@ export async function show(options: ShowOptions): Promise<boolean> {
 }
 
 export async function showReminder(taskTitle: string, taskId?: string): Promise<boolean> {
+  const reminderTitle = i18n.t('sync:taskReminder')
   console.log('[BrowserNotifications] Showing notification:', {
-    title: 'Напоминание о задаче',
+    title: reminderTitle,
     body: taskTitle,
     permission: getPermission(),
     enabled: isEnabled()
   })
   return show({
-    title: 'Напоминание о задаче',
+    title: reminderTitle,
     body: taskTitle,
     tag: taskId ? `reminder-${taskId}` : undefined,
     onClick: () => {

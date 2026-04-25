@@ -1,0 +1,18 @@
+{
+  "notifications": "Уведомления",
+  "unreadCount": "{{count}} непрочитанных",
+  "allRead": "Все прочитано",
+  "markAllRead": "Прочитать все",
+  "clearRead": "Очистить прочитанные",
+  "confirmClearRead": "Удалить все прочитанные уведомления?",
+  "all": "Все",
+  "unread": "Непрочитанные",
+  "noUnread": "Нет непрочитанных уведомлений",
+  "noNotifications": "Нет уведомлений",
+  "loadMore": "Загрузить ещё",
+  "allNotifications": "Все уведомления",
+  "newVersionAvailable": "Доступна новая версия",
+  "updateApp": "Обновите приложение для получения последней версии.",
+  "taskReminder": "Напоминание о задаче",
+  "reminder": "Напоминание"
+}

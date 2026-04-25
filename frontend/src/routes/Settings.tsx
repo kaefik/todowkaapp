@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useBrowserNotifications } from '../hooks/useBrowserNotifications'
@@ -10,55 +11,26 @@ import { VerbSettings } from '../components/VerbSettings'
 type Theme = 'light' | 'dark'
 type Tab = 'general' | 'profile' | 'security' | 'verbs' | 'users'
 
-const DEFAULT_SECTIONS = [
-  {
-    group: 'GTD',
-    items: [
-      { value: 'inbox', label: 'Входящие' },
-      { value: 'active', label: 'Активные' },
-      { value: 'today', label: 'Сегодня' },
-      { value: 'tomorrow', label: 'Завтра' },
-      { value: 'next', label: 'Next Actions' },
-      { value: 'waiting', label: 'Ожидание' },
-      { value: 'someday', label: 'Когда-нибудь' },
-    ],
-  },
-  {
-    group: 'Просмотр',
-    items: [
-      { value: 'completed', label: 'Завершённые' },
-      { value: 'trash', label: 'Корзина' },
-    ],
-  },
-  {
-    group: 'Управление',
-    items: [
-      { value: 'projects', label: 'Проекты' },
-      { value: 'contexts', label: 'Контексты' },
-      { value: 'areas', label: 'Области' },
-      { value: 'tags', label: 'Теги' },
-    ],
-  },
-]
-
-const POPULAR_TIMEZONES = [
-  { name: 'Москва (UTC+3)', value: 'Europe/Moscow' },
-  { name: 'Лондон (UTC+0)', value: 'Europe/London' },
-  { name: 'Нью-Йорк (UTC-5)', value: 'America/New_York' },
-  { name: 'Токио (UTC+9)', value: 'Asia/Tokyo' },
-  { name: 'Берлин (UTC+1)', value: 'Europe/Berlin' },
-  { name: 'Париж (UTC+1)', value: 'Europe/Paris' },
-  { name: 'Сидней (UTC+10)', value: 'Australia/Sydney' },
-  { name: 'Дубай (UTC+4)', value: 'Asia/Dubai' },
-  { name: 'Киев (UTC+2)', value: 'Europe/Kiev' },
-  { name: 'Санкт-Петербург (UTC+3)', value: 'Europe/Moscow' },
-  { name: 'Екатеринбург (UTC+5)', value: 'Asia/Yekaterinburg' },
-  { name: 'Новосибирск (UTC+7)', value: 'Asia/Novosibirsk' },
-  { name: 'Владивосток (UTC+10)', value: 'Asia/Vladivostok' },
-  { name: 'Калининград (UTC+2)', value: 'Europe/Kaliningrad' },
-]
-
 function SettingsContent() {
+  const { t, i18n } = useTranslation('settings')
+  const { t: tNav } = useTranslation('nav')
+
+  const POPULAR_TIMEZONES = [
+    { name: t('timezoneMoscow', { ns: 'auth' }), value: 'Europe/Moscow' },
+    { name: t('timezoneLondon', { ns: 'auth' }), value: 'Europe/London' },
+    { name: t('timezoneNewYork', { ns: 'auth' }), value: 'America/New_York' },
+    { name: t('timezoneTokyo', { ns: 'auth' }), value: 'Asia/Tokyo' },
+    { name: t('timezoneBerlin', { ns: 'auth' }), value: 'Europe/Berlin' },
+    { name: t('timezoneParis', { ns: 'auth' }), value: 'Europe/Paris' },
+    { name: t('timezoneSydney', { ns: 'auth' }), value: 'Australia/Sydney' },
+    { name: t('timezoneDubai', { ns: 'auth' }), value: 'Asia/Dubai' },
+    { name: t('timezoneKiev', { ns: 'auth' }), value: 'Europe/Kiev' },
+    { name: t('timezoneSpb', { ns: 'auth' }), value: 'Europe/Moscow' },
+    { name: t('timezoneEkb', { ns: 'auth' }), value: 'Asia/Yekaterinburg' },
+    { name: t('timezoneNovosibirsk', { ns: 'auth' }), value: 'Asia/Novosibirsk' },
+    { name: t('timezoneVladivostok', { ns: 'auth' }), value: 'Asia/Vladivostok' },
+    { name: t('timezoneKaliningrad', { ns: 'auth' }), value: 'Europe/Kaliningrad' },
+  ]
   const { user, setCurrentUser } = useAuthStore()
   const browserNotifications = useBrowserNotifications()
   const addToast = useToastStore((s) => s.addToast)
@@ -100,6 +72,37 @@ function SettingsContent() {
     }
   }, [user])
 
+  const DEFAULT_SECTIONS = useMemo(() => [
+    {
+      group: tNav('groupGtd'),
+      items: [
+        { value: 'inbox', label: tNav('inbox') },
+        { value: 'active', label: tNav('active') },
+        { value: 'today', label: tNav('today') },
+        { value: 'tomorrow', label: tNav('tomorrow') },
+        { value: 'next', label: tNav('nextActions') },
+        { value: 'waiting', label: tNav('waitingFor') },
+        { value: 'someday', label: tNav('someday') },
+      ],
+    },
+    {
+      group: tNav('groupView'),
+      items: [
+        { value: 'completed', label: tNav('completed') },
+        { value: 'trash', label: tNav('trash') },
+      ],
+    },
+    {
+      group: tNav('groupManage'),
+      items: [
+        { value: 'projects', label: tNav('projects') },
+        { value: 'contexts', label: tNav('contexts') },
+        { value: 'areas', label: tNav('areas') },
+        { value: 'tags', label: tNav('tags') },
+      ],
+    },
+  ], [tNav])
+
   const handleDefaultSectionChange = async (value: string) => {
     setDefaultSection(value)
     localStorage.setItem('default-section', value)
@@ -108,7 +111,7 @@ function SettingsContent() {
       const updatedUser = await usersApi.updateCurrentUser({ default_section: value })
       setCurrentUser(updatedUser)
     } catch {
-      addToast({ title: 'Ошибка', body: 'Не удалось сохранить настройку', type: 'error' })
+      addToast({ title: t('errorSaving'), body: '', type: 'error' })
     } finally {
       setSectionSaving(false)
     }
@@ -140,11 +143,11 @@ function SettingsContent() {
   }
 
   const tabs: { key: Tab; label: string; adminOnly: boolean }[] = [
-    { key: 'general', label: 'Общие', adminOnly: false },
-    { key: 'profile', label: 'Профиль', adminOnly: false },
-    { key: 'security', label: 'Безопасность', adminOnly: false },
-    { key: 'verbs', label: 'Глаголы', adminOnly: false },
-    { key: 'users', label: 'Пользователи', adminOnly: true },
+    { key: 'general', label: t('tabGeneral'), adminOnly: false },
+    { key: 'profile', label: t('tabProfile'), adminOnly: false },
+    { key: 'security', label: t('tabSecurity'), adminOnly: false },
+    { key: 'verbs', label: t('tabVerbs'), adminOnly: false },
+    { key: 'users', label: t('tabUsers'), adminOnly: true },
   ]
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || user?.is_admin)
@@ -152,8 +155,8 @@ function SettingsContent() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Настройки</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">Персонализируйте приложение под себя</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('title')}</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">{t('subtitle')}</p>
       </div>
 
       <div className="border-b border-gray-200 dark:border-gray-700">
@@ -177,13 +180,13 @@ function SettingsContent() {
       {activeTab === 'general' && (
         <>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Начальная страница</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('defaultSection')}</h2>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Раздел по умолчанию
+                {t('defaultSectionLabel')}
               </label>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                Этот раздел будет открываться при входе в приложение
+                {t('defaultSectionHint')}
               </p>
               <select
                 value={defaultSection}
@@ -205,12 +208,12 @@ function SettingsContent() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Внешний вид</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('appearance')}</h2>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Тема оформления
+                  {t('theme')}
                 </label>
                 <div className="flex gap-3">
                   <button
@@ -223,7 +226,7 @@ function SettingsContent() {
                   >
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 rounded-full bg-white border-2 border-gray-300 dark:border-gray-600" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Светлая</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('themeLight')}</span>
                     </div>
                   </button>
 
@@ -237,7 +240,7 @@ function SettingsContent() {
                   >
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 rounded-full bg-gray-900 dark:bg-gray-100" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Тёмная</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('themeDark')}</span>
                     </div>
                   </button>
                 </div>
@@ -246,19 +249,19 @@ function SettingsContent() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Уведомления браузера</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('browserNotifications')}</h2>
 
             {!browserNotifications.supported ? (
               <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                  Ваш браузер не поддерживает уведомления. Попробуйте использовать Chrome, Firefox, Edge или Safari.
+                  {t('notificationsNotSupported')}
                 </p>
               </div>
             ) : browserNotifications.permission === 'denied' ? (
               <div className="space-y-3">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <p className="text-sm text-red-700 dark:text-red-400">
-                    Уведомления заблокированы браузером. Разрешите уведомления в настройках сайта и обновите страницу.
+                    {t('notificationsBlocked')}
                   </p>
                 </div>
                 {browserNotifications.enabled && (
@@ -266,25 +269,24 @@ function SettingsContent() {
                     onClick={browserNotifications.disable}
                     className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    Отключить уведомления
+                    {t('disableNotifications')}
                   </button>
                 )}
               </div>
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Получайте системные уведомления браузера при наступлении напоминаний о задачах.
-                  Уведомления отображаются даже когда приложение свёрнуто.
+                  {t('notificationsDescription')}
                 </p>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Браузерные уведомления
+                      {t('browserNotificationsLabel')}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {browserNotifications.enabled
-                        ? 'Уведомления включены'
-                        : 'Уведомления отключены'}
+                        ? t('notificationsEnabled')
+                        : t('notificationsDisabled')}
                     </p>
                   </div>
                   <button
@@ -295,10 +297,10 @@ function SettingsContent() {
                         const ok = await browserNotifications.enable()
                         if (!ok) {
                           addToast({
-                            title: 'Не удалось включить уведомления',
+                            title: t('enableNotificationsFailed'),
                             body: browserNotifications.permission === 'denied'
-                              ? 'Уведомления заблокированы браузером. Разрешите их в настройках сайта.'
-                              : 'Не удалось получить разрешение на уведомления.',
+                              ? t('notificationsBlockedMsg')
+                              : t('notificationsPermissionFailed'),
                             type: 'error',
                           })
                         }
@@ -323,21 +325,21 @@ function SettingsContent() {
                     <button
                       onClick={async () => {
                         const ok = await browserNotifications.showNotification(
-                          'Напоминание о задаче',
-                          'Тестовое уведомление от Todowka',
+                          t('testNotificationTitle'),
+                          t('testNotificationBody'),
                           'test-notification'
                         )
                         if (!ok) {
                           addToast({
-                            title: 'Напоминание о задаче',
-                            body: 'Тестовое уведомление от Todowka',
+                            title: t('testNotificationTitle'),
+                            body: t('testNotificationBody'),
                             type: 'info',
                           })
                         }
                       }}
                       className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
                     >
-                      Отправить тестовое уведомление
+                      {t('sendTestNotification')}
                     </button>
                   )}
                 </div>
@@ -345,24 +347,44 @@ function SettingsContent() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">О приложении</h2>
-            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-              <p><strong>Версия:</strong> 1.0.0</p>
-              <p><strong>Название:</strong> Todowka</p>
-              <p>Приложение для управления задачами с поддержкой PWA</p>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('language')}</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('languageLabel')}
+              </label>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                {t('languageHint')}
+              </p>
+              <select
+                value={i18n.language}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="ru">Русский</option>
+                <option value="en">English</option>
+              </select>
             </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Управление данными</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('aboutApp')}</h2>
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+              <p><strong>{t('aboutVersion')}:</strong> 1.0.0</p>
+              <p><strong>{t('aboutName')}:</strong> Todowka</p>
+              <p>{t('aboutAppDescription')}</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('dataManagement')}</h2>
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Сбросить все настройки интерфейса (фильтры, сворачивание разделов, открытые вкладки и т.д.)
+                  {t('resetUiDescription')}
                 </p>
                 <button
                   onClick={() => {
-                    if (confirm('Сбросить все настройки интерфейса?')) {
+                    if (confirm(t('confirmResetUi'))) {
                       Object.keys(localStorage)
                         .filter(key => key.startsWith('ui-'))
                         .forEach(key => localStorage.removeItem(key))
@@ -370,7 +392,7 @@ function SettingsContent() {
                   }}
                   className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
                 >
-                  Сбросить настройки интерфейса
+                  {t('resetUiButton')}
                 </button>
               </div>
             </div>
@@ -380,7 +402,7 @@ function SettingsContent() {
 
       {activeTab === 'profile' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Редактирование профиля</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('editProfile')}</h2>
           
           {profileError && (
             <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
@@ -390,14 +412,14 @@ function SettingsContent() {
 
           {profileSuccess && (
             <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded">
-              Профиль успешно обновлён
+              {t('profileUpdated')}
             </div>
           )}
 
           <form onSubmit={handleProfileUpdate} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Имя пользователя
+                {t('usernameLabel')}
               </label>
               <input
                 type="text"
@@ -412,7 +434,7 @@ function SettingsContent() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Email
+                {t('emailLabel')}
               </label>
               <input
                 type="email"
@@ -425,10 +447,10 @@ function SettingsContent() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Часовой пояс
+                {t('timezoneLabel')}
               </label>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                Выберите часовой пояс для корректного отображения времени в напоминаниях и дедлайнах
+                {t('timezoneHint')}
               </p>
               
               <select
@@ -445,7 +467,7 @@ function SettingsContent() {
 
               <div className="mt-3">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Или введите свой часовой пояс (IANA формат, например: Europe/Moscow)
+                  {t('customTimezoneLabel')}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -465,14 +487,14 @@ function SettingsContent() {
                     }}
                     className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
                   >
-                    Применить
+                    {t('saveChanges')}
                   </button>
                 </div>
               </div>
 
               <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
                 <p className="text-sm text-blue-700 dark:text-blue-400">
-                  <strong>Текущий часовой пояс:</strong> {timezone}
+                  <strong>{t('currentTimezone')}</strong> {timezone}
                 </p>
               </div>
             </div>
@@ -483,7 +505,7 @@ function SettingsContent() {
                 disabled={profileLoading}
                 className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {profileLoading ? 'Сохранение...' : 'Сохранить изменения'}
+                {profileLoading ? t('saving') : t('saveChanges')}
               </button>
             </div>
           </form>
@@ -500,6 +522,7 @@ function SettingsContent() {
 }
 
 function SecurityTab() {
+  const { t } = useTranslation('settings')
   const addToast = useToastStore((s) => s.addToast)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -511,14 +534,14 @@ function SecurityTab() {
   const [showConfirm, setShowConfirm] = useState(false)
 
   const validate = (): string | null => {
-    if (!currentPassword) return 'Введите текущий пароль'
-    if (!newPassword) return 'Введите новый пароль'
-    if (newPassword.length < 8) return 'Пароль должен содержать минимум 8 символов'
-    if (!/\d/.test(newPassword)) return 'Пароль должен содержать хотя бы одну цифру'
-    if (!/\p{Lu}/u.test(newPassword)) return 'Пароль должен содержать хотя бы одну заглавную букву'
-    if (!/[^\p{L}\p{N}]/u.test(newPassword)) return 'Пароль должен содержать хотя бы один спецсимвол'
-    if (newPassword !== confirmPassword) return 'Пароли не совпадают'
-    if (currentPassword === newPassword) return 'Новый пароль совпадает с текущим'
+    if (!currentPassword) return t('enterCurrentPassword')
+    if (!newPassword) return t('enterNewPassword')
+    if (newPassword.length < 8) return t('passwordMinLength')
+    if (!/\d/.test(newPassword)) return t('passwordNeedDigit')
+    if (!/\p{Lu}/u.test(newPassword)) return t('passwordNeedUppercase')
+    if (!/[^\p{L}\p{N}]/u.test(newPassword)) return t('passwordNeedSpecial')
+    if (newPassword !== confirmPassword) return t('passwordsDontMatch')
+    if (currentPassword === newPassword) return t('passwordSameAsCurrent')
     return null
   }
 
@@ -535,7 +558,7 @@ function SecurityTab() {
 
     try {
       await usersApi.changePassword(currentPassword, newPassword)
-      addToast({ title: 'Пароль изменён', body: 'Ваш пароль успешно обновлён', type: 'success' })
+      addToast({ title: t('passwordChanged'), body: t('passwordChangedBody'), type: 'success' })
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
@@ -543,14 +566,14 @@ function SecurityTab() {
       if (err instanceof Error && 'status' in err) {
         const apiErr = err as { status: number; message: string }
         if (apiErr.status === 400) {
-          setError(apiErr.message || 'Неверный текущий пароль')
+          setError(apiErr.message || t('wrongCurrentPassword'))
         } else if (apiErr.status === 422) {
-          setError('Новый пароль не соответствует требованиям')
+          setError(t('newPasswordInvalid'))
         } else {
-          setError(apiErr.message || 'Ошибка при смене пароля')
+          setError(apiErr.message || t('passwordChangeError'))
         }
       } else {
-        setError('Ошибка при смене пароля')
+        setError(t('passwordChangeError'))
       }
     } finally {
       setLoading(false)
@@ -559,7 +582,7 @@ function SecurityTab() {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Смена пароля</h2>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('changePassword')}</h2>
 
       {error && (
         <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
@@ -570,7 +593,7 @@ function SecurityTab() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Текущий пароль
+            {t('currentPassword')}
           </label>
           <div className="relative">
             <input
@@ -598,7 +621,7 @@ function SecurityTab() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Новый пароль
+            {t('newPassword')}
           </label>
           <div className="relative">
             <input
@@ -624,13 +647,13 @@ function SecurityTab() {
             </button>
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Минимум 8 символов, хотя бы одна цифра, одна заглавная буква и один спецсимвол
+            {t('passwordRequirements')}
           </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Подтвердите новый пароль
+            {t('confirmNewPassword')}
           </label>
           <div className="relative">
             <input
@@ -662,7 +685,7 @@ function SecurityTab() {
             disabled={loading}
             className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Сохранение...' : 'Изменить пароль'}
+            {loading ? t('saving') : t('changePasswordBtn')}
           </button>
         </div>
       </form>
@@ -671,6 +694,7 @@ function SecurityTab() {
 }
 
 function UsersTab({ currentUser }: { currentUser: User }) {
+  const { t, i18n } = useTranslation('settings')
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -694,7 +718,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   }, [])
 
   const handleBlock = async (userId: string) => {
-    if (!window.confirm('Вы уверены, что хотите заблокировать этого пользователя?')) {
+    if (!window.confirm(t('confirmBlock'))) {
       return
     }
 
@@ -710,7 +734,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   }
 
   const handleUnblock = async (userId: string) => {
-    if (!window.confirm('Вы уверены, что хотите разблокировать этого пользователя?')) {
+    if (!window.confirm(t('confirmUnblock'))) {
       return
     }
 
@@ -726,7 +750,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   }
 
   const handleDelete = async (userId: string) => {
-    if (!window.confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+    if (!window.confirm(t('confirmDeleteUser'))) {
       return
     }
 
@@ -760,13 +784,13 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   if (users.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">Управление пользователями</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Всего: 0</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('userManagement')}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('totalUsers', { count: 0 })}</p>
         <div className="text-center py-12">
           <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Нет пользователей</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('noUsers')}</p>
         </div>
       </div>
     )
@@ -775,33 +799,33 @@ function UsersTab({ currentUser }: { currentUser: User }) {
   return (
     <div className="space-y-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">Управление пользователями</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Всего: {users.length}</p>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('userManagement')}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('totalUsers', { count: users.length })}</p>
 
         <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Пользователь
+                  {t('user')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Email
+                  {t('emailLabel')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Часовой пояс
+                  {t('userTimezone')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Статус
+                  {t('active')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Роль
+                  {t('administrator')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Дата регистрации
+                  {t('registrationDate')}
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
-                  Действия
+                  {t('actions')}
                 </th>
               </tr>
             </thead>
@@ -818,7 +842,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                         {u.username}
                         {currentUser.id === u.id && (
-                          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">(Вы)</span>
+                          <span className="ml-1 text-xs text-gray-400 dark:text-gray-500">{t('you')}</span>
                         )}
                   </span>
                 </div>
@@ -830,27 +854,27 @@ function UsersTab({ currentUser }: { currentUser: User }) {
               <td className="px-4 py-3">
                     {u.is_active ? (
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400">
-                        Активен
+                        {t('active')}
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
-                        Заблокирован
+                        {t('blocked')}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     {u.is_admin ? (
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
-                        Администратор
+                        {t('administrator')}
                       </span>
                     ) : (
                       <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400">
-                        Пользователь
+                        {t('userRole')}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(u.created_at).toLocaleDateString('ru-RU')}
+                    {new Date(u.created_at).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'en-US')}
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
                     {currentUser.id !== u.id && !u.is_admin && (
@@ -861,7 +885,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                             disabled={actionLoading === u.id}
                             className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 disabled:opacity-50"
                           >
-                            {actionLoading === u.id ? '...' : 'Блокировать'}
+                            {actionLoading === u.id ? '...' : t('block')}
                           </button>
                         ) : (
                           <button
@@ -869,7 +893,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                             disabled={actionLoading === u.id}
                             className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 disabled:opacity-50"
                           >
-                            {actionLoading === u.id ? '...' : 'Разблокировать'}
+                            {actionLoading === u.id ? '...' : t('unblock')}
                           </button>
                         )}
                         <button
@@ -877,7 +901,7 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                           disabled={actionLoading === u.id}
                           className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 disabled:opacity-50"
                         >
-                          {actionLoading === u.id ? '...' : 'Удалить'}
+                          {actionLoading === u.id ? '...' : t('delete', { ns: 'common' })}
                         </button>
                       </div>
                     )}

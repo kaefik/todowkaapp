@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { clearLocalData, performInitialSync } from '../db/init'
+import i18n from '../i18n'
 
 export interface User {
   id: string
@@ -49,7 +50,7 @@ export const useAuthStore = create<AuthState>()(
       if (!response.ok) {
         const error = await response.json()
         if (response.status === 429) {
-          throw new Error('Слишком много попыток. Попробуйте снова через минуту.')
+          throw new Error(i18n.t('auth:tooManyAttempts'))
         }
         throw new Error(error.detail || 'Login failed')
       }
@@ -101,7 +102,7 @@ export const useAuthStore = create<AuthState>()(
       if (!response.ok) {
         const error = await response.json()
         if (response.status === 429) {
-          throw new Error('Слишком много попыток регистрации. Попробуйте снова через час.')
+          throw new Error(i18n.t('auth:tooManyRegisterAttempts'))
         }
         throw new Error(error.detail || 'Registration failed')
       }
@@ -149,7 +150,7 @@ export const useAuthStore = create<AuthState>()(
       if (!loginResponse.ok) {
         const error = await loginResponse.json()
         if (loginResponse.status === 429) {
-          throw new Error('Слишком много попыток. Попробуйте снова через минуту.')
+          throw new Error(i18n.t('auth:tooManyAttempts'))
         }
         throw new Error(error.detail || 'Login after registration failed')
       }

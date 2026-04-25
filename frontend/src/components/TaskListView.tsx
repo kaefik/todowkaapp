@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
@@ -23,14 +24,14 @@ type TaskCreateFormData = z.infer<typeof taskCreateSchema>
 
 const DEFAULT_MOVE_TARGETS: { status: GtdStatus; label: string }[] = []
 
-const GTD_STATUS_CONFIG: Record<GtdStatus, { label: string; bg: string; text: string }> = {
-  inbox: { label: 'Inbox', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300' },
-  active: { label: 'Active', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-300' },
-  next: { label: 'Next', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300' },
-  waiting: { label: 'Waiting', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-300' },
-  someday: { label: 'Someday', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-700 dark:text-purple-300' },
-  completed: { label: 'Completed', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-500 dark:text-gray-400' },
-  trash: { label: 'Trash', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600 dark:text-red-400' },
+const GTD_STATUS_CONFIG: Record<GtdStatus, { labelKey: string; bg: string; text: string }> = {
+  inbox: { labelKey: 'gtdInbox', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300' },
+  active: { labelKey: 'gtdActive', bg: 'bg-blue-100 dark:bg-blue-900/40', text: 'text-blue-700 dark:text-blue-300' },
+  next: { labelKey: 'gtdNext', bg: 'bg-emerald-100 dark:bg-emerald-900/40', text: 'text-emerald-700 dark:text-emerald-300' },
+  waiting: { labelKey: 'gtdWaiting', bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-700 dark:text-amber-300' },
+  someday: { labelKey: 'gtdSomeday', bg: 'bg-purple-100 dark:bg-purple-900/40', text: 'text-purple-700 dark:text-purple-300' },
+  completed: { labelKey: 'gtdCompleted', bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-500 dark:text-gray-400' },
+  trash: { labelKey: 'gtdTrash', bg: 'bg-red-100 dark:bg-red-900/40', text: 'text-red-600 dark:text-red-400' },
 }
 
 export interface TaskListViewProps {
@@ -55,12 +56,20 @@ export interface TaskListViewProps {
   showGtdStatus?: boolean
 }
 
-function formatShortDate(date: Date) {
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+function formatShortDate(date: Date, locale: string) {
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
 }
 
-function formatDueDate(dueDate: string | null): { text: string; overdue: boolean } {
-  if (!dueDate) return { text: 'Без срока', overdue: false }
+interface DueDateResult {
+  text: string
+  overdue: boolean
+  date?: string
+  count?: number
+  isPlain?: boolean
+}
+
+function formatDueDate(dueDate: string | null, locale: string): DueDateResult {
+  if (!dueDate) return { text: 'noDueDate', overdue: false }
 
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -68,18 +77,18 @@ function formatDueDate(dueDate: string | null): { text: string; overdue: boolean
   const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
   const diffMs = dueDay.getTime() - today.getTime()
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
-  const shortDate = formatShortDate(due)
+  const shortDate = formatShortDate(due, locale)
 
-  if (diffDays === 0) return { text: `Сегодня (${shortDate})`, overdue: false }
-  if (diffDays === 1) return { text: `Завтра (${shortDate})`, overdue: false }
-  if (diffDays === -1) return { text: `Вчера (${shortDate})`, overdue: true }
-  if (diffDays < -1) return { text: `Просрочен на ${Math.abs(diffDays)} дн. (${shortDate})`, overdue: true }
-  if (diffDays <= 7) return { text: `Через ${diffDays} дн. (${shortDate})`, overdue: false }
-  return { text: shortDate, overdue: false }
+  if (diffDays === 0) return { text: 'todayDate', overdue: false, date: shortDate }
+  if (diffDays === 1) return { text: 'tomorrowDate', overdue: false, date: shortDate }
+  if (diffDays === -1) return { text: 'yesterdayDate', overdue: true, date: shortDate }
+  if (diffDays < -1) return { text: 'overdueDays', overdue: true, date: shortDate, count: Math.abs(diffDays) }
+  if (diffDays <= 7) return { text: 'inDays', overdue: false, date: shortDate, count: diffDays }
+  return { text: shortDate, overdue: false, isPlain: true }
 }
 
-
 function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () => void }) {
+  const { t } = useTranslation('tasks')
   return (
     <span className="inline-flex items-center gap-1 ml-2 flex-shrink-0">
       {task.is_recurring && (
@@ -87,43 +96,47 @@ function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () =>
           type="button"
           onClick={onHistoryClick}
           className="text-sm hover:opacity-70 focus:outline-none"
-          title="Повторяющаяся задача — показать историю"
+          title={t('recurringTask')}
         >
           &#x1F504;
         </button>
       )}
       {(task.reminder_time || (task.reminder_offsets && task.reminder_offsets.length > 0)) && !task.reminder_fired && (
-        <span className="text-sm" title="Есть напоминание">&#x1F514;</span>
+        <span className="text-sm" title={t('hasReminder')}>&#x1F514;</span>
       )}
     </span>
   )
 }
 
 function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+  const { t } = useTranslation('tasks')
   const { recurrences, isLoading, error, fetchRecurrences } = useRecurrences()
+  const { i18n } = useTranslation()
 
   useEffect(() => {
     fetchRecurrences(taskId)
   }, [taskId, fetchRecurrences])
 
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+
   return (
     <div className="absolute z-50 left-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">История повторений</span>
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('recurrenceHistory')}</span>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs focus:outline-none">
           &#x2715;
         </button>
       </div>
-      {isLoading && <p className="text-xs text-gray-400">Загрузка...</p>}
+      {isLoading && <p className="text-xs text-gray-400">{t('loading', { ns: 'common' })}</p>}
       {error && <p className="text-xs text-red-500">{error}</p>}
       {!isLoading && !error && recurrences.length === 0 && (
-        <p className="text-xs text-gray-400">Нет повторений</p>
+        <p className="text-xs text-gray-400">{t('noRecurrences')}</p>
       )}
       {!isLoading && recurrences.length > 0 && (
         <ul className="space-y-1 max-h-40 overflow-y-auto">
           {recurrences.map((r) => (
             <li key={r.id} className="text-xs text-gray-600 dark:text-gray-400 flex justify-between">
-              <span>{r.due_date_of_generated_task ? new Date(r.due_date_of_generated_task).toLocaleDateString('ru-RU') : '—'}</span>
+              <span>{r.due_date_of_generated_task ? new Date(r.due_date_of_generated_task).toLocaleDateString(locale) : '—'}</span>
               <span className="text-gray-400">{r.status}</span>
             </li>
           ))}
@@ -148,10 +161,12 @@ export function TaskListView({
   hideMoveButtons = false,
   moveTargets,
   onRestoreTask,
-  emptyMessage = 'Нет задач.',
+  emptyMessage,
   autoFocus = false,
   showGtdStatus = false,
 }: TaskListViewProps) {
+  const { t, i18n } = useTranslation('tasks')
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
   const inputRef = useRef<HTMLInputElement>(null)
   const initialFocusDone = useRef(false)
   const [showDescription, setShowDescription] = useLocalStorage(
@@ -215,7 +230,7 @@ export function TaskListView({
     const icon = icons[Math.floor(Math.random() * icons.length)]!
     const result = await addVerb(text, icon)
     if (result.duplicate) {
-      useToastStore.getState().addToast({ title: 'Дубликат', body: `Глагол «${text}» уже есть`, type: 'warning' })
+      useToastStore.getState().addToast({ title: t('verbDuplicate'), body: t('verbAlreadyExists', { text }), type: 'warning' })
     }
   }
 
@@ -258,6 +273,8 @@ export function TaskListView({
   const completedTasks = tasks.filter((t) => t.completed)
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(true)
 
+  const effectiveEmptyMessage = emptyMessage ?? t('noTasks')
+
   if (isLoading && tasks.length === 0) {
     return (
       <>
@@ -281,7 +298,7 @@ export function TaskListView({
               onClick={() => onRefetch()}
               className="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
             >
-              Retry
+              {t('retry', { ns: 'common' })}
             </button>
           </div>
         </div>
@@ -302,7 +319,7 @@ export function TaskListView({
               <div className="flex-1">
                 <input
                   type="text"
-                  placeholder={activeVerb ? `${activeVerb.text} ...` : 'Добавьте задачу...'}
+                  placeholder={activeVerb ? `${activeVerb.text} ...` : t('addTask')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isAdding || isSubmitting}
                   {...titleField}
@@ -332,14 +349,14 @@ export function TaskListView({
                 disabled={isAdding || isSubmitting}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isAdding || isSubmitting ? 'Adding...' : 'Add'}
+                {isAdding || isSubmitting ? t('adding') : t('addBtn')}
               </button>
             </div>
 
             {showDescription && (
               <div className="mt-3">
                 <textarea
-                  placeholder="Add a description (optional)"
+                  placeholder={t('addDescription')}
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isAdding || isSubmitting}
@@ -359,7 +376,7 @@ export function TaskListView({
                 <input
                   type="text"
                   autoFocus
-                  placeholder={activeVerb ? `${activeVerb.text} ...` : 'Добавьте задачу...'}
+                  placeholder={activeVerb ? `${activeVerb.text} ...` : t('addTask')}
                   className="w-full px-3 py-2 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   {...titleField}
                 />
@@ -368,7 +385,7 @@ export function TaskListView({
                 type="submit"
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600"
               >
-                Add
+                {t('addBtnMobile')}
               </button>
             </div>
           </form>
@@ -388,7 +405,7 @@ export function TaskListView({
 
       {activeTasks.length === 0 && completedTasks.length === 0 && !isLoading && (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400 text-lg">{emptyMessage}</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">{effectiveEmptyMessage}</p>
         </div>
       )}
 
@@ -464,15 +481,21 @@ export function TaskListView({
                       const cfg = GTD_STATUS_CONFIG[task.gtd_status]
                       return cfg ? (
                         <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}>
-                          {cfg.label}
+                          {t(cfg.labelKey)}
                         </span>
                       ) : null
                     })()}
                     {(() => {
-                      const { text, overdue } = formatDueDate(task.due_date)
+                      const result = formatDueDate(task.due_date, locale)
+                      const isOverdue = result.overdue
+                      const dueText = !task.due_date
+                        ? t('noDueDate')
+                        : result.isPlain
+                          ? result.text
+                          : t(result.text, { date: result.date, count: result.count })
                       return (
-                        <p className={`text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
-                          {text}
+                        <p className={`text-xs ${isOverdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {dueText}
                         </p>
                       )
                     })()}
@@ -486,15 +509,15 @@ export function TaskListView({
                 <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                   {!hideMoveButtons &&
                     effectiveMoveTargets
-                      .filter((t) => t.status !== task.gtd_status)
-                      .map((t) => (
+                      .filter((mt) => mt.status !== task.gtd_status)
+                      .map((mt) => (
                         <button
-                          key={t.status}
-                          onClick={() => onMoveTask(task.id, t.status)}
+                          key={mt.status}
+                          onClick={() => onMoveTask(task.id, mt.status)}
                           className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none"
-                          title={`Move to ${t.label}`}
+                          title={t('moveTo', { label: mt.label })}
                         >
-                          {t.label}
+                          {mt.label}
                         </button>
                       ))}
                   {onRestoreTask && (
@@ -502,20 +525,20 @@ export function TaskListView({
                       onClick={() => onRestoreTask(task.id)}
                       className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 focus:outline-none font-medium"
                     >
-                      Восстановить
+                      {t('restore')}
                     </button>
                   )}
                   <button
                     onClick={() => setEditingTask(task)}
                     className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
                   >
-                    Edit
+                    {t('editBtn', { ns: 'common' })}
                   </button>
                   <button
                     onClick={() => onDeleteTask(task.id)}
                     className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
                   >
-                    Delete
+                    {t('deleteBtn', { ns: 'common' })}
                   </button>
                 </div>
               </div>
@@ -530,7 +553,7 @@ export function TaskListView({
             onClick={() => setIsCompletedCollapsed(!isCompletedCollapsed)}
             className="w-full flex items-center justify-between text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition-colors"
           >
-            <span>Выполненные ({completedTasks.length})</span>
+            <span>{t('completedCount', { count: completedTasks.length })}</span>
             <svg
               className={`h-4 w-4 transition-transform duration-200 ${isCompletedCollapsed ? '' : 'rotate-180'}`}
               xmlns="http://www.w3.org/2000/svg"
@@ -617,15 +640,21 @@ export function TaskListView({
                           const cfg = GTD_STATUS_CONFIG[task.gtd_status]
                           return cfg ? (
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cfg.bg} ${cfg.text} opacity-60`}>
-                              {cfg.label}
+                              {t(cfg.labelKey)}
                             </span>
                           ) : null
                         })()}
                         {(() => {
-                          const { text, overdue } = formatDueDate(task.due_date)
+                          const result = formatDueDate(task.due_date, locale)
+                          const isOverdue = result.overdue
+                          const dueText = !task.due_date
+                            ? t('noDueDate')
+                            : result.isPlain
+                              ? result.text
+                              : t(result.text, { date: result.date, count: result.count })
                           return (
-                            <p className={`text-xs ${overdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
-                              {text}
+                            <p className={`text-xs ${isOverdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                              {dueText}
                             </p>
                           )
                         })()}
@@ -640,14 +669,14 @@ export function TaskListView({
                       {!hideMoveButtons &&
                         effectiveMoveTargets
                           .filter((t) => t.status !== task.gtd_status)
-                          .map((t) => (
+                          .map((mt) => (
                             <button
-                              key={t.status}
-                              onClick={() => onMoveTask(task.id, t.status)}
+                              key={mt.status}
+                              onClick={() => onMoveTask(task.id, mt.status)}
                               className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none"
-                              title={`Move to ${t.label}`}
+                              title={t('moveTo', { label: mt.label })}
                             >
-                              {t.label}
+                              {mt.label}
                             </button>
                           ))}
                       {onRestoreTask && (
@@ -655,20 +684,20 @@ export function TaskListView({
                           onClick={() => onRestoreTask(task.id)}
                           className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 focus:outline-none font-medium"
                         >
-                          Восстановить
+                          {t('restore')}
                         </button>
                       )}
                       <button
                         onClick={() => setEditingTask(task)}
                         className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
                       >
-                        Edit
+                        {t('editBtn', { ns: 'common' })}
                       </button>
                       <button
                         onClick={() => onDeleteTask(task.id)}
                         className="text-sm text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-300 focus:outline-none"
                       >
-                        Delete
+                        {t('deleteBtn', { ns: 'common' })}
                       </button>
                     </div>
                   </div>

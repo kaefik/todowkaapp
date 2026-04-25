@@ -1,8 +1,10 @@
 import { useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { useToastStore } from '../stores/toastStore'
 
 export function UpdateNotification() {
+  const { t } = useTranslation('notifications')
   const { needRefresh, updateServiceWorker } = useRegisterSW()
   const addToast = useToastStore((s) => s.addToast)
   const removeToast = useToastStore((s) => s.removeToast)
@@ -22,13 +24,13 @@ export function UpdateNotification() {
     if (existingUpdate) return
 
     const id = addToast({
-      title: 'Доступна новая версия',
-      body: 'Обновите приложение для получения последней версии.',
+      title: t('newVersionAvailable'),
+      body: t('updateApp'),
       type: 'update',
       onAction: handleUpdate,
     })
     toastIdRef.current = id
-  }, [needRefreshValue, addToast, toasts, handleUpdate])
+  }, [needRefreshValue, addToast, toasts, handleUpdate, t])
 
   useEffect(() => {
     if (!needRefreshValue && toastIdRef.current) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import type { Task } from '../hooks/useTasks'
 import type { Tag } from '../hooks/useTags'
 import { useTasks } from '../hooks/useTasks'
@@ -16,9 +17,9 @@ interface TaskDetailModalProps {
   onEdit?: (task: Task) => void
 }
 
-function formatDate(dateStr: string | null, timezone: string | null): string {
+function formatDate(dateStr: string | null, timezone: string | null, locale: string): string {
   if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('ru-RU', {
+  return new Date(dateStr).toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -26,8 +27,8 @@ function formatDate(dateStr: string | null, timezone: string | null): string {
   })
 }
 
-function formatDateTime(dateStr: string, timezone: string | null): string {
-  return new Date(dateStr).toLocaleString('ru-RU', {
+function formatDateTime(dateStr: string, timezone: string | null, locale: string): string {
+  return new Date(dateStr).toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -44,16 +45,18 @@ function formatTime(timeStr: string | null): string {
   return `${hours}:${minutes}`
 }
 
-function formatReminderOffsets(offsets: number[] | null): string {
+function formatReminderOffsets(offsets: number[] | null, t: (key: string, opts?: Record<string, unknown>) => string): string {
   if (!offsets || offsets.length === 0) return '-'
   return offsets.map(o => {
-    if (o < 60) return `за ${o} мин`
-    if (o < 1440) return `за ${Math.floor(o / 60)} ч`
-    return `за ${Math.floor(o / 1440)} д`
+    if (o < 60) return t('remindersBefore', { count: o })
+    if (o < 1440) return t('remindersBeforeHours', { count: Math.floor(o / 60) })
+    return t('remindersBeforeDays', { count: Math.floor(o / 1440) })
   }).join(', ')
 }
 
 export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailModalProps) {
+  const { t, i18n } = useTranslation('tasks')
+  const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const { fetchTask } = useTasks()
@@ -106,7 +109,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Детали задачи</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('taskDetail')}</h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
@@ -127,7 +130,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               <svg className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-1">Задача не найдена</p>
+              <p className="text-gray-600 dark:text-gray-400 text-lg font-medium mb-1">{t('taskNotFound')}</p>
               <p className="text-gray-500 dark:text-gray-500 text-sm">{error}</p>
             </div>
           ) : task ? (
@@ -150,17 +153,17 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                      Выполнено
+                      {t('completedStatus')}
                     </span>
                   )}
                   {task.is_recurring && (
-                    <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1" title="Повторяющаяся задача">
-                      &#x1F504; Повторяется
+                    <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1" title={t('recurringTask')}>
+                      &#x1F504; {t('recurring')}
                     </span>
                   )}
                   {(task.reminder_time || task.reminder_offsets?.length) && !task.reminder_fired && (
-                    <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1" title="Есть напоминание">
-                      &#x1F514; Напоминание
+                    <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-1" title={t('hasReminder')}>
+                      &#x1F514; {t('hasReminder')}
                     </span>
                   )}
                 </div>
@@ -168,7 +171,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
               {task.description && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Описание</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('descriptionLabel')}</h4>
                   <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{task.description}</p>
                 </div>
               )}
@@ -176,7 +179,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               <div className="grid grid-cols-2 gap-4">
                 {context && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Контекст</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('context')}</h4>
                     <div className="flex items-center gap-2">
                       {context.icon && <span>{context.icon}</span>}
                       <span 
@@ -191,7 +194,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
                 {project && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Проект</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('project')}</h4>
                     <div className="flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded-full"
@@ -204,7 +207,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
                 {area && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Область</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('area')}</h4>
                     <div className="flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded-full"
@@ -217,25 +220,25 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
                 {task.due_date && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Дедлайн</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(task.due_date, user?.timezone ?? null)}</p>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('deadline')}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(task.due_date, user?.timezone ?? null, locale)}</p>
                   </div>
                 )}
 
                 {task.reminder_time && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Напоминание</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('reminderLabel')}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {formatTime(task.reminder_time)} {task.reminder_fired && '(уже сработало)'}
+                      {formatTime(task.reminder_time)} {task.reminder_fired && t('alreadyFired')}
                     </p>
                   </div>
                 )}
 
                 {task.reminder_offsets && task.reminder_offsets.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Напоминания</h4>
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('remindersLabel')}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {formatReminderOffsets(task.reminder_offsets)} {task.reminder_fired && '(уже сработало)'}
+                      {formatReminderOffsets(task.reminder_offsets, t)} {task.reminder_fired && t('alreadyFired')}
                     </p>
                   </div>
                 )}
@@ -243,7 +246,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
               {task.tags && task.tags.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Теги</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tags')}</h4>
                   <div className="flex flex-wrap gap-2">
                     {task.tags.map((tag: Tag) => (
                       <span
@@ -260,16 +263,16 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
               {task.notes && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Заметки</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('notes')}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{task.notes}</p>
                 </div>
               )}
 
               {task.subtasks_count > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Подзадачи</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('subtasksLabel')}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {task.subtasks_completed} из {task.subtasks_count} выполнено
+                    {t('ofCompletedSub', { completed: task.subtasks_completed, total: task.subtasks_count })}
                   </p>
                   <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div 
@@ -281,8 +284,8 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               )}
 
               <div className="text-xs text-gray-400 dark:text-gray-500 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p>Создано: {formatDateTime(task.created_at, user?.timezone ?? null)}</p>
-                <p>Обновлено: {formatDateTime(task.updated_at, user?.timezone ?? null)}</p>
+                <p>{t('createdAt')}: {formatDateTime(task.created_at, user?.timezone ?? null, locale)}</p>
+                <p>{t('updatedAt')}: {formatDateTime(task.updated_at, user?.timezone ?? null, locale)}</p>
               </div>
             </div>
           ) : null}
@@ -294,7 +297,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
           >
-            Закрыть
+            {t('close', { ns: 'common' })}
           </button>
           {task && !error && (
             <button
@@ -302,7 +305,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               onClick={handleEdit}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
             >
-              Редактировать
+              {t('editTaskBtn')}
             </button>
           )}
         </div>

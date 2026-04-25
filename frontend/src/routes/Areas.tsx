@@ -2,21 +2,25 @@ import { useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslation } from 'react-i18next'
 import { useAreas, type Area } from '../hooks/useAreas'
 import { ColorPickerField } from '../components/ColorPickerField'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
-const areaSchema = z.object({
-  name: z.string().min(1, 'Название обязательно').max(100, 'Максимум 100 символов'),
-  description: z.string().nullable().optional(),
-  color: z.string().nullable().optional().refine(
-    (val) => val === null || val === undefined || val === '' || colorHexRegex.test(val),
-    { message: 'Формат: #RRGGBB' }
-  ),
-})
+function useAreaSchema() {
+  const { t } = useTranslation('projects')
+  return z.object({
+    name: z.string().min(1, t('nameRequired')).max(100, t('nameMax100')),
+    description: z.string().nullable().optional(),
+    color: z.string().nullable().optional().refine(
+      (val) => val === null || val === undefined || val === '' || colorHexRegex.test(val),
+      { message: t('colorFormat') }
+    ),
+  })
+}
 
-type AreaFormData = z.infer<typeof areaSchema>
+type AreaFormData = z.infer<ReturnType<typeof useAreaSchema>>
 
 function AreaItem({
   area,
@@ -27,6 +31,7 @@ function AreaItem({
   onEdit: (area: Area) => void
   onDelete: (id: string) => void
 }) {
+  const { t } = useTranslation('projects')
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow">
       <div className="flex items-center justify-between">
@@ -56,13 +61,13 @@ function AreaItem({
             onClick={() => onEdit(area)}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
           >
-            Ред.
+            {t('edit', { ns: 'common' })}
           </button>
           <button
             onClick={() => onDelete(area.id)}
             className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
           >
-            Удалить
+            {t('delete', { ns: 'common' })}
           </button>
         </div>
       </div>
@@ -81,6 +86,8 @@ function AreaForm({
   onCancel: () => void
   isSubmitting: boolean
 }) {
+  const { t } = useTranslation('projects')
+  const areaSchema = useAreaSchema()
   const {
     register,
     handleSubmit,
@@ -103,7 +110,7 @@ function AreaForm({
             <input
               {...register('name')}
               type="text"
-              placeholder="Название области"
+              placeholder={t('areaName')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm"
               autoFocus
             />
@@ -125,7 +132,7 @@ function AreaForm({
           <input
             {...register('description')}
             type="text"
-            placeholder="Описание (необязательно)"
+            placeholder={t('areaDescription')}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm"
           />
         </div>
@@ -136,14 +143,14 @@ function AreaForm({
           onClick={onCancel}
           className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
         >
-          Отмена
+          {t('cancel', { ns: 'common' })}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Сохранение...' : initialData ? 'Сохранить' : 'Создать'}
+          {isSubmitting ? t('saving', { ns: 'common' }) : initialData ? t('save', { ns: 'common' }) : t('create', { ns: 'common' })}
         </button>
       </div>
     </form>
@@ -151,6 +158,7 @@ function AreaForm({
 }
 
 function AreasContent() {
+  const { t } = useTranslation('projects')
   const { areas, isLoading, error, addArea, updateArea, deleteArea, refetch } = useAreas()
   const [editingArea, setEditingArea] = useState<Area | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -180,7 +188,7 @@ function AreasContent() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Удалить область?')) return
+    if (!confirm(t('confirmDeleteArea'))) return
     try {
       await deleteArea(id)
     } catch {
@@ -202,13 +210,13 @@ function AreasContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Области</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('areas')}</h1>
         {!isCreating && !editingArea && (
           <button
             onClick={() => setIsCreating(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600"
           >
-            + Новая область
+            {t('newArea')}
           </button>
         )}
       </div>
@@ -221,7 +229,7 @@ function AreasContent() {
               onClick={() => refetch()}
               className="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
             >
-              Повторить
+              {t('retry', { ns: 'common' })}
             </button>
           </div>
         </div>
@@ -246,9 +254,9 @@ function AreasContent() {
 
       {areas.length === 0 && !isLoading && !isCreating && (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Нет областей.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">{t('noAreas')}</p>
           <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-            Создайте первую область (например: &laquo;Работа&raquo;, &laquo;Личное&raquo;, &laquo;Здоровье&raquo;)
+            {t('createFirstArea')}
           </p>
         </div>
       )}

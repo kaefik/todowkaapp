@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { InstallPrompt } from './InstallPrompt'
@@ -11,15 +12,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
   const { counts } = useGtdCounts()
   const { user, logout } = useAuthStore()
+  const { t } = useTranslation('nav')
 
   const gtdItems = [
-    { path: '/inbox', label: 'Inbox', count: counts.inbox },
-    { path: '/active', label: 'Active', count: counts.active },
-    { path: '/today', label: 'Сегодня', count: counts.today },
-    { path: '/tomorrow', label: 'Завтра', count: counts.tomorrow },
-    { path: '/next', label: 'Next Actions', count: counts.next },
-    { path: '/waiting', label: 'Waiting For', count: counts.waiting },
-    { path: '/someday', label: 'Someday / Maybe', count: counts.someday },
+    { path: '/inbox', label: t('inbox'), count: counts.inbox },
+    { path: '/active', label: t('active'), count: counts.active },
+    { path: '/today', label: t('today'), count: counts.today },
+    { path: '/tomorrow', label: t('tomorrow'), count: counts.tomorrow },
+    { path: '/next', label: t('nextActions'), count: counts.next },
+    { path: '/waiting', label: t('waitingFor'), count: counts.waiting },
+    { path: '/someday', label: t('someday'), count: counts.someday },
   ]
 
   const isActive = (path: string) => location.pathname === path
@@ -29,7 +31,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex-1 space-y-1">
         <div className="px-3 py-2">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            GTD
+            {t('groupGtd')}
           </p>
         </div>
         {gtdItems.map((item) => (
@@ -58,7 +60,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         <div className="px-3 pt-4 pb-2">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Просмотр
+            {t('groupView')}
           </p>
         </div>
         <Link
@@ -70,7 +72,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          <span>Completed</span>
+          <span>{t('completed')}</span>
           {counts.completed > 0 && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
               {counts.completed}
@@ -86,7 +88,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          <span>Trash</span>
+          <span>{t('trash')}</span>
           {counts.trash > 0 && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
               {counts.trash}
@@ -96,14 +98,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         <div className="px-3 pt-4 pb-2">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            Управление
+            {t('groupManage')}
           </p>
         </div>
         {[
-          { path: '/projects', label: 'Проекты' },
-          { path: '/contexts', label: 'Контексты' },
-          { path: '/areas', label: 'Области' },
-          { path: '/tags', label: 'Теги' },
+          { path: '/projects', label: t('projects') },
+          { path: '/contexts', label: t('contexts') },
+          { path: '/areas', label: t('areas') },
+          { path: '/tags', label: t('tags') },
         ].map((item) => (
           <Link
             key={item.path}
@@ -133,7 +135,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           onClick={onNavigate}
           className="block px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
         >
-          Настройки
+          {t('settings')}
         </Link>
         <button
           onClick={() => {
@@ -142,7 +144,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           }}
           className="w-full text-left px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
         >
-          Выйти
+          {t('logout')}
         </button>
       </div>
     </nav>
@@ -153,6 +155,7 @@ export function AppLayout() {
   const { isAuthenticated, user } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const { t } = useTranslation('nav')
 
   if (!isAuthenticated) {
     return (
@@ -175,7 +178,7 @@ export function AppLayout() {
           onClick={() => setSearchOpen(true)}
           className="ml-8 flex-1 max-w-md text-left px-3 py-1.5 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
-          Поиск задач...
+          {t('searchPlaceholder')}
         </button>
         <div className="ml-auto flex items-center gap-2">
           <NotificationBell />

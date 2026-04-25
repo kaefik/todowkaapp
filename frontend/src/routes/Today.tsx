@@ -1,5 +1,7 @@
+import { useTranslation } from 'react-i18next'
 import { DueDateTaskList } from './DueDateTaskList'
 
 export function Today() {
-  return <DueDateTaskList dayOffset={0} title="Сегодня" emptyMessage="Нет задач на сегодня." />
+  const { t } = useTranslation('tasks')
+  return <DueDateTaskList dayOffset={0} title={t('todayTitle')} emptyMessage={t('noTasksToday')} />
 }

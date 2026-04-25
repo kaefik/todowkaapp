@@ -1,7 +1,9 @@
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useToastStore } from '../stores/toastStore'
 
 export function ToastContainer() {
+  const { t } = useTranslation('common')
   const toasts = useToastStore((s) => s.toasts)
   const removeToast = useToastStore((s) => s.removeToast)
 
@@ -67,7 +69,7 @@ export function ToastContainer() {
                   : 'hidden'
               }`}
             >
-              Обновить
+              {t('update')}
             </button>
             <button
               onClick={(e) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -50,6 +51,7 @@ function SortableVerbItem({
   setEditText: (v: string) => void
   setEditIcon: (v: string) => void
 }) {
+  const { t } = useTranslation('verbs')
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: template.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -64,7 +66,7 @@ function SortableVerbItem({
         {...attributes}
         {...listeners}
         className="cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-1 flex-shrink-0 focus:outline-none"
-        aria-label="Перетащить"
+        aria-label={t('dragToSort')}
       >
         <GripIcon />
       </button>
@@ -86,10 +88,10 @@ function SortableVerbItem({
             onKeyDown={(e) => e.key === 'Enter' && onSaveEdit()}
           />
           <button onClick={onSaveEdit} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
-            Сохранить
+            {t('save')}
           </button>
           <button onClick={onCancelEdit} className="text-sm text-gray-500 hover:underline">
-            Отмена
+            {t('cancel')}
           </button>
         </>
       ) : (
@@ -97,10 +99,10 @@ function SortableVerbItem({
           <span className="text-lg">{template.icon}</span>
           <span className="flex-1 text-sm text-gray-900 dark:text-gray-100">{template.text}</span>
           <button onClick={() => onStartEdit(template.id, template.text, template.icon)} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
-            Изменить
+            {t('edit')}
           </button>
           <button onClick={() => onDelete(template.id)} className="text-sm text-red-600 dark:text-red-400 hover:underline">
-            Удалить
+            {t('delete')}
           </button>
         </>
       )}
@@ -109,6 +111,7 @@ function SortableVerbItem({
 }
 
 export function VerbSettings() {
+  const { t } = useTranslation('verbs')
   const { templates, addVerb, updateVerb, deleteVerb, reorderVerbs, resetVerbs } = useVerbTemplates()
   const addToast = useToastStore(s => s.addToast)
   const [newText, setNewText] = useState('')
@@ -139,7 +142,7 @@ export function VerbSettings() {
     const icon = RANDOM_ICONS[Math.floor(Math.random() * RANDOM_ICONS.length)]!
     const result = await addVerb(text, icon)
     if (result.duplicate) {
-      addToast({ title: 'Дубликат', body: `Глагол «${text}» уже есть`, type: 'warning' })
+      addToast({ title: t('duplicateVerb'), body: t('verbAlreadyExists', { text }), type: 'warning' })
       return
     }
     setNewText('')
@@ -166,16 +169,16 @@ export function VerbSettings() {
 
   const handleReset = async () => {
     await resetVerbs()
-    addToast({ title: 'Готово', body: 'Глаголы сброшены по умолчанию', type: 'success' })
+    addToast({ title: t('duplicateVerb', { text: '' }).replace('«» ', '').trim() || '✓', body: t('verbsReset'), type: 'success' })
   }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-        Быстрые глаголы
+        {t('quickVerbs')}
       </h2>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Глаголы для быстрого добавления задач. На десктопе — чипы над полем ввода, на мобильном — кнопка ✏️. Перетаскивайте за ручку для изменения порядка.
+        {t('quickVerbsDescription')}
       </p>
 
       <div className="space-y-2 mb-4">
@@ -205,7 +208,7 @@ export function VerbSettings() {
           type="text"
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
-          placeholder="Новый глагол..."
+          placeholder={t('newVerb')}
           maxLength={30}
           onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -215,7 +218,7 @@ export function VerbSettings() {
           disabled={!newText.trim()}
           className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Добавить
+          {t('addVerb')}
         </button>
       </div>
 
@@ -223,7 +226,7 @@ export function VerbSettings() {
         onClick={handleReset}
         className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:underline"
       >
-        Сбросить по умолчанию
+        {t('resetDefaults')}
       </button>
     </div>
   )

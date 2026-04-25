@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useTasks, type Task, type UpdateTask } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { TaskEditModal } from '../components/TaskEditModal'
@@ -19,6 +20,7 @@ const taskCreateSchema = z.object({
 type TaskCreateFormData = z.infer<typeof taskCreateSchema>
 
 function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () => void }) {
+  const { t } = useTranslation('tasks')
   return (
     <span className="inline-flex items-center gap-1 ml-2 flex-shrink-0">
       {task.is_recurring && (
@@ -26,20 +28,22 @@ function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () =>
           type="button"
           onClick={onHistoryClick}
           className="text-sm hover:opacity-70 focus:outline-none"
-          title="Повторяющаяся задача — показать историю"
+          title={t('recurringTask')}
         >
           &#x1F504;
         </button>
       )}
       {(task.reminder_time || (task.reminder_offsets && task.reminder_offsets.length > 0)) && !task.reminder_fired && (
-        <span className="text-sm" title="Есть напоминание">&#x1F514;</span>
+        <span className="text-sm" title={t('hasReminder')}>&#x1F514;</span>
       )}
     </span>
   )
 }
 
 function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: () => void }) {
+  const { t, i18n } = useTranslation('tasks')
   const { recurrences, isLoading, error, fetchRecurrences } = useRecurrences()
+  const locale = i18n.language === 'en' ? 'en-US' : 'ru-RU'
 
   useEffect(() => {
     fetchRecurrences(taskId)
@@ -48,21 +52,21 @@ function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: 
   return (
     <div className="absolute z-50 left-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">История повторений</span>
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('recurrenceHistory')}</span>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs focus:outline-none">
           &#x2715;
         </button>
       </div>
-      {isLoading && <p className="text-xs text-gray-400">Загрузка...</p>}
+      {isLoading && <p className="text-xs text-gray-400">{t('loading', { ns: 'common' })}</p>}
       {error && <p className="text-xs text-red-500">{error}</p>}
       {!isLoading && !error && recurrences.length === 0 && (
-        <p className="text-xs text-gray-400">Нет повторений</p>
+        <p className="text-xs text-gray-400">{t('noRecurrences')}</p>
       )}
       {!isLoading && recurrences.length > 0 && (
         <ul className="space-y-1 max-h-40 overflow-y-auto">
           {recurrences.map((r) => (
             <li key={r.id} className="text-xs text-gray-600 dark:text-gray-400 flex justify-between">
-              <span>{r.due_date_of_generated_task ? new Date(r.due_date_of_generated_task).toLocaleDateString('ru-RU') : '—'}</span>
+              <span>{r.due_date_of_generated_task ? new Date(r.due_date_of_generated_task).toLocaleDateString(locale) : '—'}</span>
               <span className="text-gray-400">{r.status}</span>
             </li>
           ))}
@@ -73,6 +77,9 @@ function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: 
 }
 
 function TasksContent() {
+  const { t, i18n } = useTranslation('tasks')
+  const locale = i18n.language === 'en' ? 'en-US' : 'ru-RU'
+
   const {
     filters,
     searchInput,
@@ -143,7 +150,7 @@ function TasksContent() {
   }, [searchParams, isLoading, tasks, editingTask, setSearchParams])
 
   const formatDueDate = (dueDate: string | null): { text: string; overdue: boolean } => {
-    if (!dueDate) return { text: 'Без срока', overdue: false }
+    if (!dueDate) return { text: t('noDueDate'), overdue: false }
 
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -151,13 +158,13 @@ function TasksContent() {
     const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
     const diffMs = dueDay.getTime() - today.getTime()
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
-    const shortDate = due.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+    const shortDate = due.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
 
-    if (diffDays === 0) return { text: `Сегодня (${shortDate})`, overdue: false }
-    if (diffDays === 1) return { text: `Завтра (${shortDate})`, overdue: false }
-    if (diffDays === -1) return { text: `Вчера (${shortDate})`, overdue: true }
-    if (diffDays < -1) return { text: `Просрочен на ${Math.abs(diffDays)} дн. (${shortDate})`, overdue: true }
-    if (diffDays <= 7) return { text: `Через ${diffDays} дн. (${shortDate})`, overdue: false }
+    if (diffDays === 0) return { text: t('todayDate', { date: shortDate }), overdue: false }
+    if (diffDays === 1) return { text: t('tomorrowDate', { date: shortDate }), overdue: false }
+    if (diffDays === -1) return { text: t('yesterdayDate', { date: shortDate }), overdue: true }
+    if (diffDays < -1) return { text: t('overdueDays', { count: Math.abs(diffDays), date: shortDate }), overdue: true }
+    if (diffDays <= 7) return { text: t('inDays', { count: diffDays, date: shortDate }), overdue: false }
     return { text: shortDate, overdue: false }
   }
 
@@ -237,7 +244,7 @@ function TasksContent() {
               onClick={() => refetch()}
               className="ml-auto text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300"
             >
-              Retry
+              {t('retry', { ns: 'common' })}
             </button>
           </div>
         </div>
@@ -248,7 +255,7 @@ function TasksContent() {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Add a new task..."
+              placeholder={t('addTask')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isAdding || isSubmitting}
               {...titleField}
@@ -274,14 +281,14 @@ function TasksContent() {
             disabled={isAdding || isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isAdding || isSubmitting ? 'Adding...' : 'Add'}
+            {isAdding || isSubmitting ? t('adding') : t('addBtn')}
           </button>
         </div>
 
         {showDescription && (
           <div className="mt-3">
             <textarea
-              placeholder="Add a description (optional)"
+              placeholder={t('addDescription')}
               rows={2}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isAdding || isSubmitting}
@@ -296,14 +303,14 @@ function TasksContent() {
 
       {tasks.length === 0 && !isLoading && (
         <div className="text-center py-12">
-          <p className="text-gray-500 dark:text-gray-400 text-lg">No tasks yet.</p>
-          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Add your first task above!</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">{t('noTasks')}</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">{t('noTasksHint')}</p>
         </div>
       )}
 
       {activeTasks.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Active</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('activeHeading')}</h2>
           <div className="space-y-2">
             {activeTasks.map((task) => (
               <div
@@ -361,13 +368,13 @@ function TasksContent() {
                       onClick={() => handleEditTask(task)}
                       className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
                     >
-                      Edit
+                      {t('edit', { ns: 'common' })}
                     </button>
                     <button
                       onClick={() => handleDeleteTask(task.id)}
                       className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
                     >
-                      Delete
+                      {t('delete', { ns: 'common' })}
                     </button>
                   </div>
                 </div>
@@ -383,7 +390,7 @@ function TasksContent() {
             onClick={() => setIsCompletedCollapsed(!isCompletedCollapsed)}
             className="w-full flex items-center justify-between text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none focus:text-gray-700 dark:focus:text-gray-300 transition-colors"
           >
-            <span>Completed</span>
+            <span>{t('completed')}</span>
             <svg
               className={`h-5 w-5 transition-transform duration-200 ${
                 isCompletedCollapsed ? 'rotate-180' : ''
@@ -458,13 +465,13 @@ function TasksContent() {
                         onClick={() => handleEditTask(task)}
                         className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
                       >
-                        Edit
+                        {t('edit', { ns: 'common' })}
                       </button>
                       <button
                         onClick={() => handleDeleteTask(task.id)}
                         className="text-sm text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-300 focus:outline-none"
                       >
-                        Delete
+                        {t('delete', { ns: 'common' })}
                       </button>
                     </div>
                   </div>

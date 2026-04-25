@@ -1,18 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSyncStatus } from './SyncContext'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useAuthStore } from '../stores/authStore'
 
 type Status = 'online' | 'offline' | 'syncing' | 'error' | 'queued' | 'loading'
-
-const statusConfig: Record<Status, { color: string; label: string; animate: boolean }> = {
-  loading: { color: 'bg-gray-400', label: 'Проверка соединения...', animate: true },
-  online: { color: 'bg-green-500', label: 'Всё синхронизировано', animate: false },
-  offline: { color: 'bg-yellow-500', label: 'Офлайн', animate: false },
-  syncing: { color: 'bg-blue-500', label: 'Синхронизация...', animate: true },
-  error: { color: 'bg-red-500', label: 'Нет связи с сервером', animate: true },
-  queued: { color: 'bg-orange-500', label: 'Ожидает синхронизации', animate: true },
-}
 
 type Listener = (alive: boolean | null) => void
 
@@ -151,8 +143,29 @@ function useConnectionStatus(): Status {
 }
 
 export function StatusLight() {
+  const { t } = useTranslation('sync')
   const status = useConnectionStatus()
-  const { color, label, animate } = statusConfig[status]
+
+  const statusLabels: Record<Status, string> = {
+    loading: t('checkingConnection'),
+    online: t('allSynced'),
+    offline: t('offline'),
+    syncing: t('syncingLabel'),
+    error: t('noServerConnection'),
+    queued: t('pendingSync'),
+  }
+
+  const statusColors: Record<Status, { color: string; animate: boolean }> = {
+    loading: { color: 'bg-gray-400', animate: true },
+    online: { color: 'bg-green-500', animate: false },
+    offline: { color: 'bg-yellow-500', animate: false },
+    syncing: { color: 'bg-blue-500', animate: true },
+    error: { color: 'bg-red-500', animate: true },
+    queued: { color: 'bg-orange-500', animate: true },
+  }
+
+  const { color, animate } = statusColors[status]
+  const label = statusLabels[status]
 
   return (
     <span className="relative inline-flex items-center ml-1.5" title={label}>

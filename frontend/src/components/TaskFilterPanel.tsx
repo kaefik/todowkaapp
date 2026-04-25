@@ -1,27 +1,11 @@
 import { useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { TaskFilters as TaskFiltersType, GtdStatus } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useProjects } from '../hooks/useProjects'
 import { useTags } from '../hooks/useTags'
 import { useLocalStorage } from '../hooks/useLocalStorage'
-
-const GTD_OPTIONS: { value: GtdStatus; label: string }[] = [
-  { value: 'inbox', label: 'Inbox' },
-  { value: 'active', label: 'Active' },
-  { value: 'next', label: 'Next' },
-  { value: 'waiting', label: 'Waiting' },
-  { value: 'someday', label: 'Someday' },
-  { value: 'completed', label: 'Завершено' },
-  { value: 'trash', label: 'Корзина' },
-]
-
-const SORT_OPTIONS = [
-  { value: 'created_at', label: 'По дате создания' },
-  { value: 'title', label: 'По названию' },
-  { value: 'due_date', label: 'По дедлайну' },
-  { value: 'position', label: 'По позиции' },
-]
 
 interface TaskFilterPanelProps {
   filters: TaskFiltersType
@@ -46,6 +30,7 @@ export function TaskFilterPanel({
   hideGtdStatus,
   hideProject,
 }: TaskFilterPanelProps) {
+  const { t } = useTranslation('tasks')
   const { contexts } = useContexts()
   const { areas } = useAreas()
   const { projects } = useProjects()
@@ -68,6 +53,23 @@ export function TaskFilterPanel({
 
   const selectClass =
     'w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500'
+
+  const GTD_OPTIONS: { value: GtdStatus; labelKey: string }[] = [
+    { value: 'inbox', labelKey: 'gtdInbox' },
+    { value: 'active', labelKey: 'gtdActive' },
+    { value: 'next', labelKey: 'gtdNext' },
+    { value: 'waiting', labelKey: 'gtdWaiting' },
+    { value: 'someday', labelKey: 'gtdSomeday' },
+    { value: 'completed', labelKey: 'gtdCompleted' },
+    { value: 'trash', labelKey: 'gtdTrash' },
+  ]
+
+  const SORT_OPTIONS = [
+    { value: 'created_at', labelKey: 'sortCreated' },
+    { value: 'title', labelKey: 'sortName' },
+    { value: 'due_date', labelKey: 'sortDeadline' },
+    { value: 'position', labelKey: 'sortPosition' },
+  ]
 
   return (
     <div className="space-y-3">
@@ -92,7 +94,7 @@ export function TaskFilterPanel({
               type="text"
               value={searchInput}
               onChange={(e) => onSearchInput(e.target.value)}
-              placeholder="Поиск задач..."
+              placeholder={t('searchTasks')}
               className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button
@@ -114,7 +116,7 @@ export function TaskFilterPanel({
                   : 'text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
               }`}
             >
-              Фильтры
+              {t('filters')}
               {activeFilterCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                   {activeFilterCount}
@@ -126,9 +128,9 @@ export function TaskFilterPanel({
               <button
                 onClick={onClearFilters}
                 className="px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600 rounded-md bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                title="Сбросить все фильтры"
+                title={t('resetAllFilters')}
               >
-                Сбросить
+                {t('resetFilters')}
               </button>
             )}
 
@@ -139,7 +141,7 @@ export function TaskFilterPanel({
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {t(opt.labelKey)}
                 </option>
               ))}
             </select>
@@ -152,7 +154,7 @@ export function TaskFilterPanel({
                 )
               }
               className="px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600"
-              title={filters.sort_order === 'desc' ? 'По убыванию' : 'По возрастанию'}
+              title={filters.sort_order === 'desc' ? t('sortDesc') : t('sortAsc')}
             >
               {filters.sort_order === 'desc' ? '↓' : '↑'}
             </button>
@@ -178,9 +180,9 @@ export function TaskFilterPanel({
             <button
               onClick={onClearFilters}
               className="px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-600 rounded-md bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              title="Сбросить все фильтры"
+              title={t('resetAllFilters')}
             >
-              Сбросить
+              {t('resetFilters')}
             </button>
           )}
         </div>
@@ -192,17 +194,17 @@ export function TaskFilterPanel({
             {!hideGtdStatus && (
               <div>
                 <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  GTD-статус
+                  {t('filterGtdStatus')}
                 </label>
                 <select
                   value={filters.gtd_status || ''}
                   onChange={(e) => onUpdateFilter('gtd_status', (e.target.value || undefined) as GtdStatus)}
                   className={selectClass}
                 >
-                  <option value="">Все статусы</option>
+                  <option value="">{t('allStatuses')}</option>
                   {GTD_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </option>
                   ))}
                 </select>
@@ -211,14 +213,14 @@ export function TaskFilterPanel({
 
             <div>
               <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Контекст
+                {t('filterContext')}
               </label>
               <select
                 value={filters.context_id || ''}
                 onChange={(e) => onUpdateFilter('context_id', e.target.value || undefined)}
                 className={selectClass}
               >
-                <option value="">Все контексты</option>
+                <option value="">{t('allContexts')}</option>
                 {contexts.map((ctx) => (
                   <option key={ctx.id} value={ctx.id}>
                     {ctx.name}
@@ -229,14 +231,14 @@ export function TaskFilterPanel({
 
             <div>
               <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Область
+                {t('filterArea')}
               </label>
               <select
                 value={filters.area_id || ''}
                 onChange={(e) => onUpdateFilter('area_id', e.target.value || undefined)}
                 className={selectClass}
               >
-                <option value="">Все области</option>
+                <option value="">{t('allAreas')}</option>
                 {areas.map((area) => (
                   <option key={area.id} value={area.id}>
                     {area.name}
@@ -248,14 +250,14 @@ export function TaskFilterPanel({
             {!hideProject && (
               <div>
                 <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Проект
+                  {t('filterProject')}
                 </label>
                 <select
                   value={filters.project_id || ''}
                   onChange={(e) => onUpdateFilter('project_id', e.target.value || undefined)}
                   className={selectClass}
                 >
-                  <option value="">Все проекты</option>
+                  <option value="">{t('allProjects')}</option>
                   {projects.filter((p) => p.is_active).map((proj) => (
                     <option key={proj.id} value={proj.id}>
                       {proj.name}
@@ -267,14 +269,14 @@ export function TaskFilterPanel({
 
             <div>
               <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Тег
+                {t('filterTag')}
               </label>
               <select
                 value={filters.tag_id || ''}
                 onChange={(e) => onUpdateFilter('tag_id', e.target.value || undefined)}
                 className={selectClass}
               >
-                <option value="">Все теги</option>
+                <option value="">{t('allTags')}</option>
                 {tags.map((tag) => (
                   <option key={tag.id} value={tag.id}>
                     {tag.name}
@@ -285,7 +287,7 @@ export function TaskFilterPanel({
 
             <div>
               <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Дедлайн от
+                {t('filterDeadlineFrom')}
               </label>
               <input
                 type="date"
@@ -297,7 +299,7 @@ export function TaskFilterPanel({
 
             <div>
               <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                Дедлайн до
+                {t('filterDeadlineTo')}
               </label>
               <input
                 type="date"
@@ -314,7 +316,7 @@ export function TaskFilterPanel({
                 onClick={onClearFilters}
                 className="text-xs text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
               >
-                Сбросить все фильтры
+                {t('resetAllFilters')}
               </button>
             </div>
           )}

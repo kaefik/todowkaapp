@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
 import { useConfig } from '../hooks/useConfig'
 import { TimezoneSetupModal } from '../components/TimezoneSetupModal'
+import { useTranslation } from 'react-i18next'
 
 const registerSchema = z
   .object({
@@ -32,6 +33,7 @@ export function Register() {
   const navigate = useNavigate()
   const { registerAndLogin, isLoading, error, clearError } = useAuthStore()
   const { config, isLoading: configLoading } = useConfig()
+  const { t } = useTranslation('auth')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showTimezoneModal, setShowTimezoneModal] = useState(false)
 
@@ -194,7 +196,7 @@ export function Register() {
       {config && config.max_users && (
         <div className="rounded-md bg-blue-50 dark:bg-blue-900/20 p-4">
           <p className="text-sm text-blue-800 dark:text-blue-400">
-            Доступно мест для регистрации: {config.max_users - config.current_users} из {config.max_users}
+            {t('registrationAvailable', { current: config.max_users - config.current_users, max: config.max_users })}
           </p>
         </div>
       )}

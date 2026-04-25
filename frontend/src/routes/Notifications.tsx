@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNotificationStore } from '../stores/notificationStore'
 import { formatTime, typeIcon } from '../utils/notificationUtils.tsx'
 import { TaskDetailModal } from '../components/TaskDetailModal'
@@ -6,6 +7,7 @@ import { TaskDetailModal } from '../components/TaskDetailModal'
 type Filter = 'all' | 'unread'
 
 function NotificationsContent() {
+  const { t } = useTranslation('notifications')
   const [filter, setFilter] = useState<Filter>('all')
   const [offset, setOffset] = useState(0)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -59,7 +61,7 @@ function NotificationsContent() {
   }
 
   const handleDeleteRead = async () => {
-    if (!window.confirm('Удалить все прочитанные уведомления?')) return
+    if (!window.confirm(t('confirmClearRead'))) return
     await deleteReadNotifications()
   }
 
@@ -67,9 +69,9 @@ function NotificationsContent() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Уведомления</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">{t('notifications')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {unreadCount > 0 ? `${unreadCount} непрочитанных` : 'Все прочитано'}
+            {unreadCount > 0 ? t('unreadCount', { count: unreadCount }) : t('allRead')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -78,7 +80,7 @@ function NotificationsContent() {
               onClick={handleMarkAllRead}
               className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
             >
-              Прочитать все
+              {t('markAllRead')}
             </button>
           )}
           {readCount > 0 && (
@@ -86,7 +88,7 @@ function NotificationsContent() {
               onClick={handleDeleteRead}
               className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
             >
-              Очистить прочитанные
+              {t('clearRead')}
             </button>
           )}
         </div>
@@ -101,7 +103,7 @@ function NotificationsContent() {
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          Все
+          {t('all')}
         </button>
         <button
           onClick={() => setFilter('unread')}
@@ -111,7 +113,7 @@ function NotificationsContent() {
               : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
         >
-          Непрочитанные
+          {t('unread')}
           {unreadCount > 0 && (
             <span className="ml-1.5 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold bg-red-500 text-white rounded-full">
               {unreadCount}
@@ -137,7 +139,7 @@ function NotificationsContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             <p className="mt-4 text-gray-500 dark:text-gray-400">
-              {filter === 'unread' ? 'Нет непрочитанных уведомлений' : 'Нет уведомлений'}
+              {filter === 'unread' ? t('noUnread') : t('noNotifications')}
             </p>
           </div>
         ) : (
@@ -169,7 +171,7 @@ function NotificationsContent() {
                     <button
                       onClick={(e) => handleDelete(e, notification.id)}
                       className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                      title="Удалить"
+                      title={t('clearRead')}
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -187,7 +189,7 @@ function NotificationsContent() {
                   disabled={isLoading}
                   className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 disabled:opacity-50"
                 >
-                  {isLoading ? 'Загрузка...' : 'Загрузить ещё'}
+                  {isLoading ? '...' : t('loadMore')}
                 </button>
               </div>
             )}

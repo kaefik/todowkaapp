@@ -83,7 +83,7 @@ describe('DueDateTaskList — integration', () => {
     )
 
     await user.type(screen.getByPlaceholderText('Добавьте задачу...'), 'Test task')
-    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
 
     await waitFor(() => {
       expect(mockAddTask).toHaveBeenCalledTimes(1)
@@ -109,7 +109,7 @@ describe('DueDateTaskList — integration', () => {
     )
 
     await user.type(screen.getByPlaceholderText('Добавьте задачу...'), 'NY task')
-    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
 
     await waitFor(() => {
       expect(mockAddTask).toHaveBeenCalledTimes(1)
@@ -128,7 +128,7 @@ describe('DueDateTaskList — integration', () => {
     )
 
     await user.type(screen.getByPlaceholderText('Добавьте задачу...'), 'Tomorrow task')
-    await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.click(screen.getByRole('button', { name: 'Добавить' }))
 
     await waitFor(() => {
       expect(mockAddTask).toHaveBeenCalledTimes(1)

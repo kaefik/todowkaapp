@@ -1,0 +1,18 @@
+{
+  "notifications": "Notifications",
+  "unreadCount": "{{count}} unread",
+  "allRead": "All read",
+  "markAllRead": "Mark all as read",
+  "clearRead": "Clear read",
+  "confirmClearRead": "Delete all read notifications?",
+  "all": "All",
+  "unread": "Unread",
+  "noUnread": "No unread notifications",
+  "noNotifications": "No notifications",
+  "loadMore": "Load more",
+  "allNotifications": "All notifications",
+  "newVersionAvailable": "New version available",
+  "updateApp": "Update the app to get the latest version.",
+  "taskReminder": "Task reminder",
+  "reminder": "Reminder"
+}

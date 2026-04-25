@@ -1,29 +1,32 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usersApi } from '../api/users'
 import { useAuthStore } from '../stores/authStore'
-
-const POPULAR_TIMEZONES = [
-  { name: 'Москва (UTC+3)', value: 'Europe/Moscow' },
-  { name: 'Лондон (UTC+0)', value: 'Europe/London' },
-  { name: 'Нью-Йорк (UTC-5)', value: 'America/New_York' },
-  { name: 'Токио (UTC+9)', value: 'Asia/Tokyo' },
-  { name: 'Берлин (UTC+1)', value: 'Europe/Berlin' },
-  { name: 'Париж (UTC+1)', value: 'Europe/Paris' },
-  { name: 'Сидней (UTC+10)', value: 'Australia/Sydney' },
-  { name: 'Дубай (UTC+4)', value: 'Asia/Dubai' },
-  { name: 'Киев (UTC+2)', value: 'Europe/Kiev' },
-  { name: 'Санкт-Петербург (UTC+3)', value: 'Europe/Moscow' },
-  { name: 'Екатеринбург (UTC+5)', value: 'Asia/Yekaterinburg' },
-  { name: 'Новосибирск (UTC+7)', value: 'Asia/Novosibirsk' },
-  { name: 'Владивосток (UTC+10)', value: 'Asia/Vladivostok' },
-  { name: 'Калининград (UTC+2)', value: 'Europe/Kaliningrad' },
-]
 
 interface TimezoneSetupModalProps {
   onClose: () => void
 }
 
 export function TimezoneSetupModal({ onClose }: TimezoneSetupModalProps) {
+  const { t } = useTranslation('auth')
+
+  const POPULAR_TIMEZONES = [
+    { name: t('timezoneMoscow'), value: 'Europe/Moscow' },
+    { name: t('timezoneLondon'), value: 'Europe/London' },
+    { name: t('timezoneNewYork'), value: 'America/New_York' },
+    { name: t('timezoneTokyo'), value: 'Asia/Tokyo' },
+    { name: t('timezoneBerlin'), value: 'Europe/Berlin' },
+    { name: t('timezoneParis'), value: 'Europe/Paris' },
+    { name: t('timezoneSydney'), value: 'Australia/Sydney' },
+    { name: t('timezoneDubai'), value: 'Asia/Dubai' },
+    { name: t('timezoneKiev'), value: 'Europe/Kiev' },
+    { name: t('timezoneSpb'), value: 'Europe/Moscow' },
+    { name: t('timezoneEkb'), value: 'Asia/Yekaterinburg' },
+    { name: t('timezoneNovosibirsk'), value: 'Asia/Novosibirsk' },
+    { name: t('timezoneVladivostok'), value: 'Asia/Vladivostok' },
+    { name: t('timezoneKaliningrad'), value: 'Europe/Kaliningrad' },
+  ]
+
   const [timezone, setTimezone] = useState('Europe/Moscow')
   const [customTimezone, setCustomTimezone] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -52,10 +55,10 @@ export function TimezoneSetupModal({ onClose }: TimezoneSetupModalProps) {
         <div className="fixed inset-0 bg-black opacity-50" onClick={onClose} />
         <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Добро пожаловать!
+            {t('welcome')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Выберите ваш часовой пояс для корректного отображения напоминаний и дедлайнов
+            {t('selectTimezone')}
           </p>
 
           {error && (
@@ -67,7 +70,7 @@ export function TimezoneSetupModal({ onClose }: TimezoneSetupModalProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Часовой пояс
+                {t('timezone')}
               </label>
               <select
                 value={timezone}
@@ -84,7 +87,7 @@ export function TimezoneSetupModal({ onClose }: TimezoneSetupModalProps) {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Или введите свой часовой пояс (IANA формат)
+                {t('customTimezone')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -104,14 +107,14 @@ export function TimezoneSetupModal({ onClose }: TimezoneSetupModalProps) {
                   }}
                   className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
                 >
-                  Применить
+                  {t('apply', { ns: 'common' })}
                 </button>
               </div>
             </div>
 
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
               <p className="text-sm text-blue-700 dark:text-blue-400">
-                <strong>Выбранный часовой пояс:</strong> {timezone}
+                <strong>{t('selectedTimezone')}</strong> {timezone}
               </p>
             </div>
 
@@ -121,7 +124,7 @@ export function TimezoneSetupModal({ onClose }: TimezoneSetupModalProps) {
                 disabled={isLoading}
                 className="flex-1 px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Сохранение...' : 'Продолжить'}
+                {isLoading ? t('saving', { ns: 'common' }) : t('continue')}
               </button>
             </div>
           </form>

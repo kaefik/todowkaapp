@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { getDayBounds, useDueDateTasks } from '../hooks/useDueDateTasks'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { useAuthStore } from '../stores/authStore'
@@ -12,6 +13,7 @@ interface DueDateTaskListProps {
 }
 
 export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskListProps) {
+  const { t } = useTranslation('tasks')
   const user = useAuthStore(s => s.user)
   const { tasks, isLoading } = useDueDateTasks(dayOffset)
 
@@ -43,7 +45,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
 
   const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
   const subtaskWarning = pendingDeleteTask && pendingDeleteTask.subtasks_count > 0
-    ? ` У задачи есть ${pendingDeleteTask.subtasks_count} ${pendingDeleteTask.subtasks_count === 1 ? 'подзадача' : pendingDeleteTask.subtasks_count < 5 ? 'подзадачи' : 'подзадач'}. Все будут перемещены в корзину.`
+    ? ' ' + t('subtaskWarning', { count: pendingDeleteTask.subtasks_count })
     : ''
 
   const handleSaveTask = async (id: string, data: UpdateTask) => {
@@ -76,9 +78,9 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
 
       <ConfirmDialog
         open={!!pendingDeleteId}
-        title="Переместить в корзину?"
-        message={`Задача будет перемещена в корзину.${subtaskWarning}`}
-        confirmText="Удалить"
+        title={t('confirmTrash')}
+        message={`${t('confirmTrashBody')}.${subtaskWarning}`}
+        confirmText={t('delete', { ns: 'common' })}
         variant="danger"
         onConfirm={confirmDelete}
         onCancel={() => setPendingDeleteId(null)}

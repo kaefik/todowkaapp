@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ReminderEditorProps {
   reminderTime: string | null
@@ -17,14 +18,6 @@ function getDefaultReminderTime(): string {
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
-const REMINDER_PRESETS = [
-  { value: 0, label: 'Во время' },
-  { value: 5, label: 'За 5 минут' },
-  { value: 15, label: 'За 15 минут' },
-  { value: 60, label: 'За 1 час' },
-  { value: 1440, label: 'За 1 день' },
-]
-
 export function ReminderEditor({
   reminderTime,
   reminderOffsets,
@@ -32,12 +25,21 @@ export function ReminderEditor({
   dueDate,
   onChange,
 }: ReminderEditorProps) {
+  const { t } = useTranslation('tasks')
   const hasReminder = !!reminderTime || !!reminderOffsets?.length
   const [enabled, setEnabled] = useState(hasReminder && !reminderFired)
   const [useTime, setUseTime] = useState(!!reminderTime)
   const [time, setTime] = useState(reminderTime || getDefaultReminderTime())
   const [useOffsets, setUseOffsets] = useState(!!reminderOffsets?.length)
   const [selected, setSelected] = useState<number[]>(reminderOffsets || [])
+
+  const REMINDER_PRESETS = [
+    { value: 0, label: t('reminderAtTimePreset') },
+    { value: 5, label: t('reminder5min') },
+    { value: 15, label: t('reminder15min') },
+    { value: 60, label: t('reminder1hour') },
+    { value: 1440, label: t('reminder1day') },
+  ]
 
   const isReminderInPast = useTime && dueDate && time ? (() => {
     const now = new Date()
@@ -124,7 +126,7 @@ export function ReminderEditor({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span className="text-sm text-amber-700 dark:text-amber-300">
-            Напоминание для этой задачи уже отправлено. Вы можете изменить его или настроить новое.
+            {t('reminderFired')}
           </span>
         </div>
       )}
@@ -137,7 +139,7 @@ export function ReminderEditor({
           className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
         />
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Напоминание
+          {t('reminder')}
         </span>
       </label>
 
@@ -151,7 +153,7 @@ export function ReminderEditor({
               onChange={handleToggleUseTime}
               className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">В конкретное время</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t('reminderAtTime')}</span>
           </label>
           {useTime && (
             <div className="ml-6">
@@ -164,7 +166,7 @@ export function ReminderEditor({
               />
               {isReminderInPast && (
                 <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  ⚠️ Время напоминания в прошлом — напоминание не будет отправлено
+                  {t('reminderTimeInPast')}
                 </p>
               )}
             </div>
@@ -178,7 +180,7 @@ export function ReminderEditor({
               onChange={handleToggleUseOffsets}
               className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">За время до дедлайна</span>
+            <span className="text-sm text-gray-700 dark:text-gray-300">{t('reminderBeforeDeadline')}</span>
           </label>
           {useOffsets && (
             <div className="ml-6 space-y-2">

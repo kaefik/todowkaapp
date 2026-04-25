@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useProjects } from '../hooks/useProjects'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { useTaskFilter } from '../hooks/useTaskFilter'
@@ -20,6 +21,7 @@ function ProgressBar({ percent, color }: { percent: number; color: string | null
 }
 
 export function ProjectDetail() {
+  const { t } = useTranslation('projects')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { projects, isLoading: isLoadingProjects } = useProjects()
@@ -98,10 +100,10 @@ export function ProjectDetail() {
           onClick={() => navigate('/projects')}
           className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
         >
-          &larr; Назад к проектам
+          &larr; {t('backToProjects').replace('← ', '')}
         </button>
         <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-          <p className="text-sm text-red-800 dark:text-red-400">Проект не найден</p>
+          <p className="text-sm text-red-800 dark:text-red-400">{t('projectNotFound')}</p>
         </div>
       </div>
     )
@@ -113,7 +115,7 @@ export function ProjectDetail() {
         onClick={() => navigate('/projects')}
         className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
       >
-        &larr; Назад к проектам
+        &larr; {t('backToProjects').replace('← ', '')}
       </button>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
@@ -129,7 +131,7 @@ export function ProjectDetail() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{project.name}</h1>
           {!project.is_active && (
             <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-              Архив
+              {t('archive')}
             </span>
           )}
         </div>
@@ -141,7 +143,7 @@ export function ProjectDetail() {
         <div className="space-y-2">
           <ProgressBar percent={project.progress.progress_percent} color={project.color} />
           <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-            <span>{project.progress.tasks_completed} / {project.progress.tasks_total} задач</span>
+            <span>{t('tasksCount', { completed: project.progress.tasks_completed, total: project.progress.tasks_total })}</span>
             <span>{project.progress.progress_percent}%</span>
           </div>
         </div>
@@ -171,7 +173,7 @@ export function ProjectDetail() {
         onMoveTask={handleMoveTask}
         onSaveTask={handleSaveTask}
         onRefetch={() => refetch()}
-        emptyMessage="В проекте пока нет задач."
+        emptyMessage={t('noProjects')}
         showGtdStatus
       />
     </div>

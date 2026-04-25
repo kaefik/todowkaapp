@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useNotificationStore } from '../stores/notificationStore'
 import { useToastStore } from '../stores/toastStore'
@@ -11,6 +12,7 @@ interface NotificationProviderProps {
 let activeSSEUserId: string | null = null
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
+  const { t } = useTranslation('notifications')
   const { isAuthenticated, user } = useAuthStore()
   const store = useNotificationStore()
   const storeRef = useRef(store)
@@ -80,7 +82,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         return
       }
 
-      let taskTitle = 'Напоминание'
+      let taskTitle = t('reminder')
 
       if (notificationData?.message) {
         taskTitle = notificationData.message
@@ -107,7 +109,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           if (!ok) {
             console.log('[NotificationProvider] Browser notification failed, showing toast')
             addToast({
-              title: 'Напоминание о задаче',
+              title: t('taskReminder'),
               body: taskTitle,
               type: 'reminder',
               taskId,
@@ -118,7 +120,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         } else {
           console.log('[NotificationProvider] Browser notifications disabled or not supported, showing toast')
           addToast({
-            title: 'Напоминание о задаче',
+            title: t('taskReminder'),
             body: taskTitle,
             type: 'reminder',
             taskId,
@@ -127,7 +129,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       } catch (error) {
         console.error('[NotificationProvider] Error showing notification:', error)
         addToast({
-          title: 'Напоминание о задаче',
+          title: t('taskReminder'),
           body: taskTitle,
           type: 'reminder',
           taskId,
@@ -142,7 +144,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       console.log('[NotificationProvider] Cleaning up reminder handler')
       window.removeEventListener('task:reminder-fired', handler)
     }
-  }, [enabled, showReminder, addToast])
+  }, [enabled, showReminder, addToast, t])
 
   return <>{children}</>
 }

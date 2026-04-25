@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VerbTemplate } from '../hooks/useVerbTemplates'
 
 interface VerbFabProps {
@@ -11,6 +12,7 @@ interface VerbFabProps {
 }
 
 export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, onToggle }: VerbFabProps) {
+  const { t } = useTranslation('verbs')
   const [showAddInput, setShowAddInput] = useState(false)
   const [newVerbText, setNewVerbText] = useState('')
 
@@ -68,7 +70,7 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
           className="px-4 py-2 rounded-full text-sm font-medium shadow-md transition-colors flex items-center gap-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500"
         >
           <span>✏️</span>
-          <span>Без глагола</span>
+          <span>{t('noVerb')}</span>
         </button>
         {templates.map((template) => (
           <button
@@ -94,7 +96,7 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
               type="text"
               value={newVerbText}
               onChange={(e) => setNewVerbText(e.target.value)}
-              placeholder="глагол"
+              placeholder={t('verbPlaceholder')}
               maxLength={30}
               autoFocus
               className="w-24 px-2 py-2 text-sm bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none"
@@ -106,7 +108,7 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
             onClick={() => setShowAddInput(true)}
             className="px-4 py-2 rounded-full text-sm font-medium bg-indigo-600 dark:bg-indigo-500 text-white shadow-md hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors"
           >
-            + свой
+            {t('addCustom')}
           </button>
         )}
       </div>

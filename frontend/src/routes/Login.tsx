@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
 import { useConfig } from '../hooks/useConfig'
 import { TimezoneSetupModal } from '../components/TimezoneSetupModal'
+import { useTranslation } from 'react-i18next'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -19,6 +20,7 @@ export function Login() {
   const [searchParams] = useSearchParams()
   const { login, isLoading, error, clearError } = useAuthStore()
   const { config } = useConfig()
+  const { t } = useTranslation('auth')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
   const [showTimezoneModal, setShowTimezoneModal] = useState(false)
@@ -123,7 +125,7 @@ export function Login() {
 
           {sessionExpired && (
             <div className="rounded-md bg-yellow-50 dark:bg-yellow-900/20 p-4">
-              <p className="text-sm text-yellow-800 dark:text-yellow-400">Сессия истекла. Войдите снова.</p>
+              <p className="text-sm text-yellow-800 dark:text-yellow-400">{t('sessionExpired')}</p>
             </div>
           )}
 

@@ -140,7 +140,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       renderModal(task)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
       const dateInput = screen.getByLabelText('Дедлайн') as HTMLInputElement
@@ -157,7 +157,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       renderModal(task)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
       const dateInput = screen.getByLabelText('Дедлайн') as HTMLInputElement
@@ -174,7 +174,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       renderModal(task)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
       const dateInput = screen.getByLabelText('Дедлайн') as HTMLInputElement
@@ -189,7 +189,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       renderModal(task)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
       const dateInput = screen.getByLabelText('Дедлайн') as HTMLInputElement
@@ -216,7 +216,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       renderModal(task)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
       const todayCheckbox = screen.getByRole('checkbox', { name: 'Сегодня' })
@@ -236,7 +236,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       renderModal(task)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
       const todayCheckbox = screen.getByRole('checkbox', { name: 'Сегодня' })
@@ -254,7 +254,7 @@ describe('TaskEditModal — toLocalDateStr / todayLocalDateStr helpers', () => {
       }
       renderModal(task)
 
-      expect(screen.getByText('Edit Task')).toBeInTheDocument()
+      expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
 
       const todayCheckbox = screen.getByRole('checkbox', { name: 'Сегодня' })
       expect(todayCheckbox).toBeChecked()

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { VerbTemplate } from '../hooks/useVerbTemplates'
 
 interface VerbChipsProps {
@@ -9,6 +10,7 @@ interface VerbChipsProps {
 }
 
 export function VerbChips({ templates, activeVerb, onSelect, onAddCustom }: VerbChipsProps) {
+  const { t } = useTranslation('verbs')
   const [showAddInput, setShowAddInput] = useState(false)
   const [newVerbText, setNewVerbText] = useState('')
 
@@ -54,7 +56,7 @@ export function VerbChips({ templates, activeVerb, onSelect, onAddCustom }: Verb
             type="text"
             value={newVerbText}
             onChange={(e) => setNewVerbText(e.target.value)}
-            placeholder="глагол"
+            placeholder={t('verbPlaceholder')}
             maxLength={30}
             autoFocus
             onBlur={() => { if (!newVerbText.trim()) setShowAddInput(false) }}
@@ -67,7 +69,7 @@ export function VerbChips({ templates, activeVerb, onSelect, onAddCustom }: Verb
           onClick={() => setShowAddInput(true)}
           className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
         >
-          + ещё
+          {t('addMore')}
         </button>
       )}
     </div>

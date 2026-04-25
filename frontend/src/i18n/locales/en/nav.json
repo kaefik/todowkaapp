@@ -1,0 +1,22 @@
+{
+  "searchPlaceholder": "Search tasks...",
+  "groupGtd": "GTD",
+  "groupView": "View",
+  "groupManage": "Manage",
+  "settings": "Settings",
+  "logout": "Logout",
+  "inbox": "Inbox",
+  "active": "Active",
+  "today": "Today",
+  "tomorrow": "Tomorrow",
+  "nextActions": "Next Actions",
+  "waitingFor": "Waiting For",
+  "someday": "Someday / Maybe",
+  "completed": "Completed",
+  "trash": "Trash",
+  "projects": "Projects",
+  "contexts": "Contexts",
+  "areas": "Areas",
+  "tags": "Tags",
+  "profile": "Profile"
+}
