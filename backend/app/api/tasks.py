@@ -235,6 +235,21 @@ async def toggle_task(
     return task
 
 
+@tasks_router.delete("/completed/clear", status_code=status.HTTP_200_OK)
+async def clear_completed(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, int]:
+    service = TaskService(db)
+    deleted_count = await service.clear_completed(user_id=current_user.id)
+    await _publish_task_event(current_user.id, "all", "completed_cleared")
+
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{current_user.id}:notifications", "tasks_cleared", {})
+
+    return {"deleted": deleted_count}
+
+
 @tasks_router.delete("/trash/clear", status_code=status.HTTP_200_OK)
 async def clear_trash(
     current_user: Annotated[User, Depends(get_current_user)],

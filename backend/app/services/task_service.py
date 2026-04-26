@@ -336,6 +336,23 @@ class TaskService:
         await self.db.flush()
         return result.rowcount
 
+    async def clear_completed(self, user_id: UUID) -> int:
+        subtasks_stmt = delete(Task).where(
+            Task.user_id == user_id,
+            Task.gtd_status == GtdStatus.COMPLETED.value,
+            Task.parent_task_id.isnot(None),
+        )
+        await self.db.execute(subtasks_stmt)
+
+        stmt = delete(Task).where(
+            Task.user_id == user_id,
+            Task.gtd_status == GtdStatus.COMPLETED.value,
+            Task.parent_task_id.is_(None),
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount
+
     async def cleanup_old_trash(self, days: int = 30) -> int:
         cutoff = datetime.now() - timedelta(days=days)
 

@@ -179,6 +179,12 @@
   "clearTrashConfirm": "Clear trash?",
   "clearTrashMessage": "All tasks will be permanently deleted. This action cannot be undone.",
   "clearBtn": "Clear",
+  "clearCompleted": "Delete all completed",
+  "clearCompletedConfirm": "Delete all completed tasks?",
+  "clearCompletedMessage": "All completed tasks will be permanently deleted. This action cannot be undone.",
+  "clearCompletedConfirm2": "Are you really sure?",
+  "clearCompletedMessage2": "This is your last chance. All completed tasks will be permanently deleted and cannot be recovered.",
+  "clearCompletedFailed": "Failed to delete completed tasks",
   "subtaskWarning": "The task has {{count}} subtask(s). All will be moved to trash.",
   "activeHeading": "Active",
   "noTasksHint": "Add your first task above!"

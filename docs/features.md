@@ -85,6 +85,14 @@
   - Компонент: `frontend/src/components/ConfirmDialog.tsx`
   - Файлы: `frontend/src/routes/GtdTaskList.tsx`, `frontend/src/routes/Trash.tsx`
 - Очистка корзины одной кнопкой с подтверждением действия (DELETE /api/tasks/trash/clear)
+- Удаление всех завершённых задач одной кнопкой ✅ (Реализовано 26.04.2026)
+  - Кнопка «Удалить все завершённые» на странице Completed (/completed)
+  - Двойное подтверждение: первый диалог «Удалить все завершённые задачи?» → второй диалог «Вы действительно уверены?»
+  - Кнопка заблокирована если нет завершённых задач или идёт удаление
+  - Backend: `TaskService.clear_completed()` — удаление всех задач с `gtd_status=completed` (подзадачи первыми)
+  - API: `DELETE /api/tasks/completed/clear`
+  - Frontend: локальное удаление через Dexie (`_syncStatus: 'deleted'` + мутации) с синхронизацией
+  - Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/routes/Completed.tsx`
 - Восстановление задачи из корзины ✅ (Реализовано 24.04.2026)
   - Кнопка «Восстановить» на каждой задаче в корзине
   - Подтверждение через диалог: «Задача будет восстановлена во входящих. Дедлайн и напоминания будут сброшены.»
