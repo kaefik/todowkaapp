@@ -311,12 +311,12 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     let dueDateValue = data.due_date
 
     if (dueDateValue && data.due_time) {
-      const [year, month, day] = dueDateValue.split('-').map(Number)
-      const [hours, minutes] = data.due_time.split(':').map(Number)
+      const [year = 0, month = 1, day = 1] = dueDateValue.split('-').map(Number)
+      const [hours = 0, minutes = 0] = data.due_time.split(':').map(Number)
       const dt = new Date(year, month - 1, day, hours, minutes, 0, 0)
       dueDateValue = dt.toISOString()
     } else if (dueDateValue) {
-      const [year, month, day] = dueDateValue.split('-').map(Number)
+      const [year = 0, month = 1, day = 1] = dueDateValue.split('-').map(Number)
       const dt = new Date(year, month - 1, day, 23, 59, 59, 999)
       dueDateValue = dt.toISOString()
     }

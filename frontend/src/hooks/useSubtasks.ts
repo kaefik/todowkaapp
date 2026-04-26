@@ -58,6 +58,7 @@ export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
       reminderTime: null,
       reminderOffsets: null,
       reminderFired: false,
+      deadlineNotified: false,
       isRecurring: false,
       tagIds: [],
       trashedAt: null,

@@ -216,6 +216,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       reminderTime: null,
       reminderOffsets: null,
       reminderFired: false,
+      deadlineNotified: false,
       isRecurring: false,
       tagIds: data.tag_ids ?? [],
       trashedAt: null,

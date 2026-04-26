@@ -60,6 +60,6 @@ export const usersApi = {
     const response = await httpClient.post('/users/telegram/validate-token', {
       telegram_bot_token: token,
     })
-    return response.data
+    return response.data as { valid: boolean; bot_username?: string; bot_name?: string; error?: string }
   },
 }
