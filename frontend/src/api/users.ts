@@ -43,4 +43,13 @@ export const usersApi = {
     })
     return response.data
   },
+
+  deleteAccount: async (password: string): Promise<{ message: string }> => {
+    const response = await httpClient.request<{ message: string }>({
+      method: 'DELETE',
+      url: '/auth/delete-account',
+      data: { password },
+    })
+    return response.data
+  },
 }

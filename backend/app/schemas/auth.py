@@ -79,3 +79,7 @@ class ChangePasswordRequest(BaseModel):
         if _is_common_password(v):
             raise ValueError('This password is too common, please choose a different one')
         return v
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str = Field(min_length=1, max_length=128)

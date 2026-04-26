@@ -35,6 +35,16 @@
   - Refresh-токены, выпущенные до смены пароля, автоматически отзываются
   - API: POST /api/auth/change-password
   - Файлы: `backend/app/api/auth.py`, `backend/app/schemas/auth.py`, `backend/app/models/user.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`
+- Удаление аккаунта ✅ (Реализовано 26.04.2026)
+  - Полное и безвозвратное удаление аккаунта со всеми данными (задачи, проекты, области, контексты, теги, уведомления, глаголы)
+  - Требует ввода пароля для подтверждения
+  - Трёхшаговое подтверждение в модальном окне: ввод пароля → предупреждение о последствиях → ввод «УДАЛИТЬ»
+  - Каскадное удаление через cascade delete-orphan на модели User
+  - Отзыв refresh-токена при удалении
+  - Очистка локальной Dexie-БД на клиенте после удаления
+  - Редирект на страницу входа с уведомлением об удалении
+  - API: DELETE /api/auth/delete-account
+  - Файлы: `backend/app/api/auth.py`, `backend/app/schemas/auth.py`, `frontend/src/components/DeleteAccountModal.tsx`, `frontend/src/routes/Settings.tsx`, `frontend/src/stores/authStore.ts`, `frontend/src/api/users.ts`
 
 #### Управление задачами
 - Быстрые глаголы для добавления задач ✅ (Реализовано 24.04.2026)

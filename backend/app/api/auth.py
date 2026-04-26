@@ -13,7 +13,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.revoked_token import RevokedToken
 from app.models.user import User
-from app.schemas.auth import ChangePasswordRequest
+from app.schemas.auth import ChangePasswordRequest, DeleteAccountRequest
 from app.schemas.user import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
     clear_access_cookie,
@@ -321,3 +321,32 @@ async def change_password(
 @auth_router.get("/me", response_model=UserResponse)
 async def me(current_user: Annotated[User, Depends(get_current_user)]) -> User:
     return current_user
+
+
+@auth_router.delete("/delete-account")
+async def delete_account(
+    response: Response,
+    data: DeleteAccountRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    refresh_token: Annotated[str | None, Cookie()] = None,
+) -> dict[str, str]:
+    if not verify_password(data.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный пароль",
+        )
+
+    if refresh_token:
+        token_jti = get_token_jti(refresh_token)
+        if token_jti:
+            revoked = RevokedToken(token_jti=token_jti)
+            db.add(revoked)
+
+    await db.delete(current_user)
+    await db.commit()
+
+    clear_refresh_cookie(response)
+    clear_access_cookie(response)
+
+    return {"message": "Аккаунт удалён"}

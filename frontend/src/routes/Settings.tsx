@@ -7,6 +7,7 @@ import { useToastStore } from '../stores/toastStore'
 import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 import { VerbSettings } from '../components/VerbSettings'
+import { DeleteAccountModal } from '../components/DeleteAccountModal'
 
 type Theme = 'light' | 'dark'
 type Tab = 'general' | 'profile' | 'security' | 'verbs' | 'users'
@@ -535,6 +536,7 @@ function SecurityTab() {
   const [showCurrent, setShowCurrent] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const validate = (): string | null => {
     if (!currentPassword) return t('enterCurrentPassword')
@@ -584,115 +586,130 @@ function SecurityTab() {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('changePassword')}</h2>
+    <>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('changePassword')}</h2>
 
-      {error && (
-        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('currentPassword')}
-          </label>
-          <div className="relative">
-            <input
-              type={showCurrent ? 'text' : 'password'}
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('currentPassword')}
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                required
+              />
+              <button
+                type="button"
+                onMouseDown={() => setShowCurrent(true)}
+                onMouseUp={() => setShowCurrent(false)}
+                onMouseLeave={() => setShowCurrent(false)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                tabIndex={-1}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('newPassword')}
+            </label>
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onMouseDown={() => setShowNew(true)}
+                onMouseUp={() => setShowNew(false)}
+                onMouseLeave={() => setShowNew(false)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                tabIndex={-1}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t('passwordRequirements')}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('confirmNewPassword')}
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                required
+              />
+              <button
+                type="button"
+                onMouseDown={() => setShowConfirm(true)}
+                onMouseUp={() => setShowConfirm(false)}
+                onMouseLeave={() => setShowConfirm(false)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                tabIndex={-1}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
             <button
-              type="button"
-              onMouseDown={() => setShowCurrent(true)}
-              onMouseUp={() => setShowCurrent(false)}
-              onMouseLeave={() => setShowCurrent(false)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              tabIndex={-1}
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
+              {loading ? t('saving') : t('changePasswordBtn')}
             </button>
           </div>
-        </div>
+        </form>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('newPassword')}
-          </label>
-          <div className="relative">
-            <input
-              type={showNew ? 'text' : 'password'}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              required
-              minLength={8}
-            />
-            <button
-              type="button"
-              onMouseDown={() => setShowNew(true)}
-              onMouseUp={() => setShowNew(false)}
-              onMouseLeave={() => setShowNew(false)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              tabIndex={-1}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {t('passwordRequirements')}
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('confirmNewPassword')}
-          </label>
-          <div className="relative">
-            <input
-              type={showConfirm ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              required
-            />
-            <button
-              type="button"
-              onMouseDown={() => setShowConfirm(true)}
-              onMouseUp={() => setShowConfirm(false)}
-              onMouseLeave={() => setShowConfirm(false)}
-              className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              tabIndex={-1}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-indigo-600 dark:bg-indigo-700 text-white text-sm font-medium rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? t('saving') : t('changePasswordBtn')}
-          </button>
-        </div>
-      </form>
-    </div>
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border border-red-200 dark:border-red-800">
+        <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">{t('deleteAccount')}</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t('deleteAccountDescription')}</p>
+        <button
+          type="button"
+          onClick={() => setShowDeleteModal(true)}
+          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
+        >
+          {t('deleteAccountBtn')}
+        </button>
+        <DeleteAccountModal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} />
+      </div>
+    </>
   )
 }
 

@@ -27,6 +27,7 @@ interface AuthState {
   clearError: () => void
   fetchCurrentUser: () => Promise<void>
   setCurrentUser: (user: User) => void
+  deleteAccount: (password: string) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -283,6 +284,35 @@ export const useAuthStore = create<AuthState>()(
       localStorage.setItem('default-section', user.default_section)
     }
     set({ user })
+  },
+
+  deleteAccount: async (password) => {
+    const userId = useAuthStore.getState().user?.id
+    const response = await fetch('/api/auth/delete-account', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Failed to delete account')
+    }
+
+    if (userId) {
+      clearLocalData(userId).catch((err) => {
+        if (import.meta.env.DEV) {
+          console.error('[Auth] Failed to clear local data after account deletion:', err)
+        }
+      })
+    }
+
+    set({
+      user: null,
+      isAuthenticated: false,
+      error: null,
+    })
   },
 }),
     {
