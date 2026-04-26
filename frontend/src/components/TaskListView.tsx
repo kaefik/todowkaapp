@@ -532,13 +532,13 @@ export function TaskListView({
                     onClick={() => setEditingTask(task)}
                     className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
                   >
-                    {t('editBtn', { ns: 'common' })}
+                    {t('editBtn')}
                   </button>
                   <button
                     onClick={() => onDeleteTask(task.id)}
                     className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
                   >
-                    {t('deleteBtn', { ns: 'common' })}
+                    {t('deleteBtn')}
                   </button>
                 </div>
               </div>
@@ -691,13 +691,13 @@ export function TaskListView({
                         onClick={() => setEditingTask(task)}
                         className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
                       >
-                        {t('editBtn', { ns: 'common' })}
+                        {t('editBtn')}
                       </button>
                       <button
                         onClick={() => onDeleteTask(task.id)}
                         className="text-sm text-red-400 dark:text-red-500 hover:text-red-600 dark:hover:text-red-300 focus:outline-none"
                       >
-                        {t('deleteBtn', { ns: 'common' })}
+                        {t('deleteBtn')}
                       </button>
                     </div>
                   </div>

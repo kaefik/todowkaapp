@@ -160,7 +160,6 @@
   "statusCompleted": "Completed",
   "statusTrash": "Trash",
   "deletePermanently": "Delete permanently",
-  "deleteBtn": "Delete",
   "subtaskCount_one": "Task has {{count}} subtask",
   "subtaskCount_few": "Task has {{count}} subtasks",
   "subtaskCount_many": "Task has {{count}} subtasks",

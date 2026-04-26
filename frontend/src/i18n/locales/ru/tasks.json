@@ -160,7 +160,6 @@
   "statusCompleted": "Выполнено",
   "statusTrash": "Корзина",
   "deletePermanently": "Удалить навсегда",
-  "deleteBtn": "Удалить",
   "subtaskCount_one": "У задачи есть {{count}} подзадача",
   "subtaskCount_few": "У задачи есть {{count}} подзадачи",
   "subtaskCount_many": "У задачи есть {{count}} подзадач",
