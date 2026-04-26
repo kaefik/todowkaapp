@@ -163,6 +163,7 @@ async function mergeAndPut(
 
     const serverRecord = transform(item, userId)
     const localRecord = await table.get(id)
+    if (localRecord && (localRecord as Record<string, unknown> & { _syncStatus: SyncStatus })._syncStatus === 'deleted') continue
     const merged = mergeRecord(localRecord as Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null } | undefined, serverRecord)
     mergedRecords.push(merged)
   }
@@ -477,10 +478,14 @@ async function executeMutationGroup(
     if (success) {
       await db.mutations.delete(mutation.id)
       const table = getTableForType(mutation.entityType)
-      await table.update(mutation.entityId, {
-        _syncStatus: 'synced',
-        _lastSyncedAt: new Date().toISOString(),
-      }).catch(() => {})
+      if (mutation.action === 'delete') {
+        await table.delete(mutation.entityId).catch(() => {})
+      } else {
+        await table.update(mutation.entityId, {
+          _syncStatus: 'synced',
+          _lastSyncedAt: new Date().toISOString(),
+        }).catch(() => {})
+      }
     }
   }
 }
