@@ -111,7 +111,7 @@ describe('Projects page', () => {
 
     it('renders tasks completed/total count', () => {
       renderProjects()
-      expect(screen.getByText('2 / 5 задач')).toBeInTheDocument()
+      expect(screen.getByText('2/5 задач')).toBeInTheDocument()
     })
 
     it('renders progress bar element', () => {

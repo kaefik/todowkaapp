@@ -64,14 +64,14 @@ describe('Tasks', () => {
     it('renders task list page', () => {
       renderTasks()
 
-      expect(screen.getByPlaceholderText('Add a new task...')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Добавьте задачу...')).toBeInTheDocument()
     })
 
     it('shows empty state when no tasks', () => {
       renderTasks()
 
-      expect(screen.getByText('No tasks yet.')).toBeInTheDocument()
-      expect(screen.getByText('Add your first task above!')).toBeInTheDocument()
+      expect(screen.getByText('Нет задач.')).toBeInTheDocument()
+      expect(screen.getByText('Добавьте первую задачу выше!')).toBeInTheDocument()
     })
 
     it('shows loading state', () => {
@@ -89,7 +89,7 @@ describe('Tasks', () => {
 
       renderTasks()
 
-      expect(screen.queryByText('No tasks yet.')).not.toBeInTheDocument()
+      expect(screen.queryByText('Нет задач.')).not.toBeInTheDocument()
       expect(screen.getAllByRole('generic')).length > 0 // eslint-disable-line @typescript-eslint/no-unused-expressions
     })
 
@@ -110,7 +110,7 @@ describe('Tasks', () => {
       renderTasks()
 
       expect(screen.getByText(errorMessage)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Повторить' })).toBeInTheDocument()
     })
 
     it('separates active and completed tasks', () => {
@@ -131,8 +131,8 @@ describe('Tasks', () => {
 
       renderTasks()
 
-      expect(screen.getByText('Active')).toBeInTheDocument()
-      expect(screen.getByText('Completed')).toBeInTheDocument()
+      expect(screen.getByText('Активные')).toBeInTheDocument()
+      expect(screen.getByText('Выполненные')).toBeInTheDocument()
       expect(screen.getByText('Active Task')).toBeInTheDocument()
       expect(screen.getByText('Completed Task')).toBeInTheDocument()
     })
@@ -143,8 +143,8 @@ describe('Tasks', () => {
       const user = userEvent.setup()
       renderTasks()
 
-      const input = screen.getByPlaceholderText('Add a new task...')
-      const button = screen.getByRole('button', { name: 'Add' })
+      const input = screen.getByPlaceholderText('Добавьте задачу...')
+      const button = screen.getByRole('button', { name: 'Добавить' })
 
       await user.type(input, 'New Task')
       await user.click(button)
@@ -161,14 +161,14 @@ describe('Tasks', () => {
       const user = userEvent.setup()
       renderTasks()
 
-      const input = screen.getByPlaceholderText('Add a new task...')
+      const input = screen.getByPlaceholderText('Добавьте задачу...')
       const descriptionButton = screen.getByRole('button', { name: '+' })
-      const addButton = screen.getByRole('button', { name: 'Add' })
+      const addButton = screen.getByRole('button', { name: 'Добавить' })
 
       await user.type(input, 'New Task')
       await user.click(descriptionButton)
 
-      const descriptionInput = screen.getByPlaceholderText('Add a description (optional)')
+      const descriptionInput = screen.getByPlaceholderText('Описание (необязательно)')
       await user.type(descriptionInput, 'Task description')
       await user.click(addButton)
 
@@ -185,7 +185,7 @@ describe('Tasks', () => {
       const user = userEvent.setup()
       renderTasks()
 
-      const button = screen.getByRole('button', { name: 'Add' })
+      const button = screen.getByRole('button', { name: 'Добавить' })
       await user.click(button)
 
       await waitFor(() => {
@@ -239,7 +239,7 @@ describe('Tasks', () => {
 
       renderTasks()
 
-      const deleteButton = screen.getByRole('button', { name: 'Delete' })
+      const deleteButton = screen.getByRole('button', { name: 'Удалить' })
       await user.click(deleteButton)
 
       expect(mockMoveTask).toHaveBeenCalledWith('1', 'trash')
@@ -263,7 +263,7 @@ describe('Tasks', () => {
 
       renderTasks()
 
-      const deleteButton = screen.getByRole('button', { name: 'Delete' })
+      const deleteButton = screen.getByRole('button', { name: 'Удалить' })
       await user.click(deleteButton)
 
       expect(mockDeleteTask).not.toHaveBeenCalled()
@@ -287,7 +287,7 @@ describe('Tasks', () => {
 
       renderTasks()
 
-      const retryButton = screen.getByRole('button', { name: 'Retry' })
+      const retryButton = screen.getByRole('button', { name: 'Повторить' })
       await user.click(retryButton)
 
       expect(mockRefetch).toHaveBeenCalled()
@@ -320,7 +320,7 @@ describe('Tasks', () => {
         vi.advanceTimersByTime(100)
       })
 
-      expect(screen.getByPlaceholderText('Add a new task...')).toHaveFocus()
+      expect(screen.getByPlaceholderText('Добавьте задачу...')).toHaveFocus()
 
       vi.useRealTimers()
     })
@@ -331,13 +331,13 @@ describe('Tasks', () => {
       const user = userEvent.setup()
       renderTasks()
 
-      const input = screen.getByPlaceholderText('Add a new task...')
+      const input = screen.getByPlaceholderText('Добавьте задачу...')
       await user.type(input, 'New Task')
 
       input.blur()
       expect(input).not.toHaveFocus()
 
-      const addButton = screen.getByRole('button', { name: 'Add' })
+      const addButton = screen.getByRole('button', { name: 'Добавить' })
       await user.click(addButton)
 
       await waitFor(() => {
@@ -345,7 +345,7 @@ describe('Tasks', () => {
       })
 
       await waitFor(() => {
-        expect(screen.getByPlaceholderText('Add a new task...')).toHaveFocus()
+        expect(screen.getByPlaceholderText('Добавьте задачу...')).toHaveFocus()
       })
     })
   })

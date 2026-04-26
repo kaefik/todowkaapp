@@ -138,14 +138,14 @@ describe('TaskEditModal', () => {
     it('does not render when isOpen is false', () => {
       renderModal(false)
 
-      expect(screen.queryByText('Edit Task')).not.toBeInTheDocument()
+      expect(screen.queryByText('Редактирование задачи')).not.toBeInTheDocument()
     })
 
     it('renders modal when isOpen is true with task', async () => {
       renderModal(true, mockTask)
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
     })
 
@@ -153,7 +153,7 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
     })
 
@@ -162,7 +162,7 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
     })
   })
@@ -172,7 +172,7 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        const titleInput = screen.getByLabelText('Title')
+        const titleInput = screen.getByLabelText('Название задачи')
         expect(titleInput).toBeInTheDocument()
         expect(titleInput).toHaveValue('Test Task')
       })
@@ -182,7 +182,7 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        const descriptionInput = screen.getByLabelText('Description')
+        const descriptionInput = screen.getByLabelText('Описание задачи (необязательно)')
         expect(descriptionInput).toBeInTheDocument()
         expect(descriptionInput).toHaveValue('Test description')
       })
@@ -195,10 +195,10 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
-      const modalOverlay = screen.getByText('Edit Task').closest('[class*="fixed"]')
+      const modalOverlay = screen.getByText('Редактирование задачи').closest('[class*="fixed"]')
       expect(modalOverlay).toBeInTheDocument()
 
       if (modalOverlay) {
@@ -215,11 +215,11 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+        const cancelButton = screen.getByRole('button', { name: 'Отмена' })
         expect(cancelButton).toBeInTheDocument()
       })
 
-      const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+      const cancelButton = screen.getByRole('button', { name: 'Отмена' })
       await user.click(cancelButton)
 
       await waitFor(() => {
@@ -232,11 +232,11 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+        const cancelButton = screen.getByRole('button', { name: 'Отмена' })
         expect(cancelButton).toBeInTheDocument()
       })
 
-      const cancelButton = screen.getByRole('button', { name: 'Cancel' })
+      const cancelButton = screen.getByRole('button', { name: 'Отмена' })
       await user.click(cancelButton)
 
       await waitFor(() => {
@@ -251,10 +251,10 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Title')).toBeInTheDocument()
+        expect(screen.getByLabelText('Название задачи')).toBeInTheDocument()
       })
 
-      const titleInput = screen.getByLabelText('Title')
+      const titleInput = screen.getByLabelText('Название задачи')
       await user.clear(titleInput)
       await user.type(titleInput, 'Updated Title')
 
@@ -266,10 +266,10 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Description')).toBeInTheDocument()
+        expect(screen.getByLabelText('Описание задачи (необязательно)')).toBeInTheDocument()
       })
 
-      const descriptionInput = screen.getByLabelText('Description')
+      const descriptionInput = screen.getByLabelText('Описание задачи (необязательно)')
       await user.clear(descriptionInput)
       await user.type(descriptionInput, 'Updated description')
 
@@ -283,18 +283,18 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Title')).toBeInTheDocument()
+        expect(screen.getByLabelText('Название задачи')).toBeInTheDocument()
       })
 
-      const titleInput = screen.getByLabelText('Title')
-      const descriptionInput = screen.getByLabelText('Description')
+      const titleInput = screen.getByLabelText('Название задачи')
+      const descriptionInput = screen.getByLabelText('Описание задачи (необязательно)')
 
       await user.clear(titleInput)
       await user.type(titleInput, 'Updated Title')
       await user.clear(descriptionInput)
       await user.type(descriptionInput, 'Updated description')
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Сохранить' })
       await user.click(saveButton)
 
       await waitFor(() => {
@@ -322,14 +322,14 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Title')).toBeInTheDocument()
+        expect(screen.getByLabelText('Название задачи')).toBeInTheDocument()
       })
 
-      const titleInput = screen.getByLabelText('Title')
+      const titleInput = screen.getByLabelText('Название задачи')
       await user.clear(titleInput)
       await user.type(titleInput, 'Updated Title')
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Сохранить' })
       await user.click(saveButton)
 
       await waitFor(() => {
@@ -357,10 +357,10 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Title')).toBeInTheDocument()
+        expect(screen.getByLabelText('Название задачи')).toBeInTheDocument()
       })
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Сохранить' })
       await user.click(saveButton)
 
       await waitFor(() => {
@@ -373,13 +373,13 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Title')).toBeInTheDocument()
+        expect(screen.getByLabelText('Название задачи')).toBeInTheDocument()
       })
 
-      const titleInput = screen.getByLabelText('Title')
+      const titleInput = screen.getByLabelText('Название задачи')
       await user.clear(titleInput)
 
-      const saveButton = screen.getByRole('button', { name: 'Save' })
+      const saveButton = screen.getByRole('button', { name: 'Сохранить' })
       await user.click(saveButton)
 
       await waitFor(() => {
@@ -400,7 +400,7 @@ describe('TaskEditModal', () => {
       renderModal(true, taskWithNullDescription)
 
       await waitFor(() => {
-        const descriptionInput = screen.getByLabelText('Description')
+        const descriptionInput = screen.getByLabelText('Описание задачи (необязательно)')
         expect(descriptionInput).toHaveValue('')
       })
     })
@@ -416,7 +416,7 @@ describe('TaskEditModal', () => {
       renderModal(true, taskWithEmptyDescription)
 
       await waitFor(() => {
-        const descriptionInput = screen.getByLabelText('Description')
+        const descriptionInput = screen.getByLabelText('Описание задачи (необязательно)')
         expect(descriptionInput).toHaveValue('')
       })
     })
@@ -426,10 +426,10 @@ describe('TaskEditModal', () => {
       renderModal()
 
       await waitFor(() => {
-        expect(screen.getByText('Edit Task')).toBeInTheDocument()
+        expect(screen.getByText('Редактирование задачи')).toBeInTheDocument()
       })
 
-      const modalContent = screen.getByText('Edit Task').closest('[class*="bg-white"]')
+      const modalContent = screen.getByText('Редактирование задачи').closest('[class*="bg-white"]')
       expect(modalContent).toBeInTheDocument()
 
       if (modalContent) {

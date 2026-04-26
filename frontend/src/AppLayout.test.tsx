@@ -68,12 +68,12 @@ describe('AppLayout / Sidebar', () => {
 
     it('renders all GTD navigation items', () => {
       renderWithRouter()
-      expect(screen.getByText('Inbox')).toBeInTheDocument()
+      expect(screen.getByText('Входящие')).toBeInTheDocument()
       expect(screen.getByText('Сегодня')).toBeInTheDocument()
       expect(screen.getByText('Завтра')).toBeInTheDocument()
       expect(screen.getByText('Next Actions')).toBeInTheDocument()
-      expect(screen.getByText('Waiting For')).toBeInTheDocument()
-      expect(screen.getByText('Someday / Maybe')).toBeInTheDocument()
+      expect(screen.getByText('Ожидание')).toBeInTheDocument()
+      expect(screen.getByText('Когда-нибудь')).toBeInTheDocument()
     })
 
     it('renders management section header', () => {
@@ -91,15 +91,15 @@ describe('AppLayout / Sidebar', () => {
 
     it('renders Completed and Trash links', () => {
       renderWithRouter()
-      expect(screen.getByText('Completed')).toBeInTheDocument()
-      expect(screen.getByText('Trash')).toBeInTheDocument()
+      expect(screen.getByText('Завершённые')).toBeInTheDocument()
+      expect(screen.getByText('Корзина')).toBeInTheDocument()
     })
   })
 
   describe('counters / badges', () => {
     it('shows inbox count badge', () => {
       renderWithRouter()
-      const inboxLink = screen.getByText('Inbox').closest('a')
+      const inboxLink = screen.getByText('Входящие').closest('a')
       expect(inboxLink).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
     })
@@ -121,7 +121,7 @@ describe('AppLayout / Sidebar', () => {
 
     it('does not show badge when count is 0', () => {
       renderWithRouter()
-      const waitingLink = screen.getByText('Waiting For').closest('a')
+      const waitingLink = screen.getByText('Ожидание').closest('a')
       expect(waitingLink?.textContent).not.toMatch(/\d/)
     })
   })

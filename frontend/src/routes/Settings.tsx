@@ -357,7 +357,10 @@ function SettingsContent() {
               </p>
               <select
                 value={i18n.language}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
+                onChange={(e) => {
+                    localStorage.setItem('i18nextLng', e.target.value)
+                    i18n.changeLanguage(e.target.value)
+                  }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               >
                 <option value="ru">Русский</option>

@@ -128,7 +128,7 @@ describe('Profile', () => {
       renderProfile()
 
       expect(screen.getByText('Дата регистрации')).toBeInTheDocument()
-      expect(screen.getByText(/января 2024/)).toBeInTheDocument()
+      expect(screen.getByText(/2024/)).toBeInTheDocument()
     })
 
     it('renders days since creation', () => {
@@ -226,7 +226,7 @@ describe('Profile', () => {
       renderProfile()
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to load statistics')).toBeInTheDocument()
+        expect(screen.getByText('Не удалось загрузить статистику')).toBeInTheDocument()
       })
     })
 

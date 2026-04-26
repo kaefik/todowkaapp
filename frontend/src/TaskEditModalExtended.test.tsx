@@ -285,8 +285,8 @@ describe('TaskEditModal — новые поля', () => {
     it('calls onSave with tag_ids', async () => {
       const user = userEvent.setup()
       renderModal()
-      await waitFor(() => expect(screen.getByLabelText('Title')).toBeInTheDocument())
-      await user.click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(screen.getByLabelText('Название задачи')).toBeInTheDocument())
+      await user.click(screen.getByRole('button', { name: 'Сохранить' }))
       await waitFor(() => {
         expect(mockOnSave).toHaveBeenCalledWith('1', expect.objectContaining({
           tag_ids: ['tag1'],
@@ -296,8 +296,8 @@ describe('TaskEditModal — новые поля', () => {
 
     it('calls onSave with all new fields', async () => {
       renderModal()
-      await waitFor(() => expect(screen.getByLabelText('Title')).toBeInTheDocument())
-      await userEvent.setup().click(screen.getByRole('button', { name: 'Save' }))
+      await waitFor(() => expect(screen.getByLabelText('Название задачи')).toBeInTheDocument())
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Сохранить' }))
       await waitFor(() => {
         expect(mockOnSave).toHaveBeenCalledWith('1', expect.objectContaining({
           context_id: 'ctx1',
