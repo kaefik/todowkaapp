@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -125,6 +126,12 @@ async def update_current_user(
 ) -> User:
     update_data = data.model_dump(exclude_unset=True)
 
+    if 'telegram_bot_token' in update_data:
+        new_token = update_data['telegram_bot_token']
+        if new_token != (current_user.telegram_bot_token or ''):
+            update_data['telegram_chat_id'] = None
+            update_data['telegram_notifications_enabled'] = False
+
     if data.password:
         from app.security import hash_password
         update_data['password_hash'] = hash_password(data.password)
@@ -141,3 +148,34 @@ async def update_current_user(
         await db.refresh(current_user)
 
     return current_user
+
+
+class TelegramTokenRequest(BaseModel):
+    telegram_bot_token: str
+
+
+class TelegramTokenResponse(BaseModel):
+    valid: bool
+    bot_username: str | None = None
+    bot_name: str | None = None
+    error: str | None = None
+
+
+@users_router.post("/telegram/validate-token", response_model=TelegramTokenResponse)
+async def validate_telegram_token(
+    data: TelegramTokenRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> TelegramTokenResponse:
+    from app.services.telegram_notifier import TelegramNotifierService
+
+    if not data.telegram_bot_token or not data.telegram_bot_token.strip():
+        return TelegramTokenResponse(valid=False, error="Token is empty")
+
+    result = await TelegramNotifierService.validate_token(data.telegram_bot_token.strip())
+    if result:
+        return TelegramTokenResponse(
+            valid=True,
+            bot_username=result["bot_username"],
+            bot_name=result["bot_name"],
+        )
+    return TelegramTokenResponse(valid=False, error="Invalid token or Telegram API unreachable")

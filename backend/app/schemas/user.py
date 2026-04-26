@@ -3,7 +3,7 @@ import unicodedata
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 def _has_uppercase(s: str) -> bool:
@@ -28,11 +28,20 @@ class UserResponse(BaseModel):
     is_admin: bool
     timezone: str | None = None
     default_section: str = 'inbox'
+    telegram_bot_token: str | None = None
+    telegram_chat_id: str | None = None
+    telegram_notifications_enabled: bool = False
     created_at: datetime
 
     model_config = {
         'from_attributes': True
     }
+
+    @model_validator(mode='after')
+    def mask_telegram_token(self) -> 'UserResponse':
+        if self.telegram_bot_token and len(self.telegram_bot_token) > 5:
+            self.telegram_bot_token = '*****' + self.telegram_bot_token[-5:]
+        return self
 
 
 class UserUpdate(BaseModel):
@@ -41,6 +50,8 @@ class UserUpdate(BaseModel):
     timezone: str | None = Field(default=None, max_length=50)
     default_section: str | None = Field(default=None, max_length=30)
     password: str | None = None
+    telegram_bot_token: str | None = None
+    telegram_notifications_enabled: bool | None = None
 
     @field_validator('default_section')
     @classmethod

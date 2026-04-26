@@ -8,6 +8,9 @@ export interface User {
   is_admin: boolean
   timezone: string | null
   default_section: string
+  telegram_bot_token: string | null
+  telegram_chat_id: string | null
+  telegram_notifications_enabled: boolean
   created_at: string
 }
 
@@ -17,7 +20,7 @@ export const usersApi = {
     return response.data
   },
 
-  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section'>>): Promise<User> => {
+  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'telegram_bot_token' | 'telegram_notifications_enabled'>>): Promise<User> => {
     const response = await httpClient.patch<User>('/users/me', data)
     return response.data
   },
@@ -49,6 +52,13 @@ export const usersApi = {
       method: 'DELETE',
       url: '/auth/delete-account',
       data: { password },
+    })
+    return response.data
+  },
+
+  validateTelegramToken: async (token: string): Promise<{ valid: boolean; bot_username?: string; bot_name?: string; error?: string }> => {
+    const response = await httpClient.post('/users/telegram/validate-token', {
+      telegram_bot_token: token,
     })
     return response.data
   },

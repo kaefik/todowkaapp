@@ -8,6 +8,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.task import Task
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,15 @@ class TaskScheduler:
                 max_instances=1,
             )
 
+            self.scheduler.add_job(
+                _job_poll_telegram_bots,
+                'interval',
+                seconds=5,
+                id='poll_telegram_bots',
+                replace_existing=True,
+                max_instances=1,
+            )
+
             self.scheduler.start()
             logger.info("Scheduler started")
 
@@ -122,6 +132,25 @@ class TaskScheduler:
                                     }
                                 }
                             )
+
+                            if (
+                                task.user.telegram_notifications_enabled
+                                and task.user.telegram_chat_id
+                                and task.user.telegram_bot_token
+                            ):
+                                try:
+                                    from app.services.telegram_notifier import (
+                                        TelegramNotifierService,
+                                    )
+
+                                    await TelegramNotifierService.send_reminder(
+                                        task.user, task
+                                    )
+                                except Exception as tg_err:
+                                    logger.error(
+                                        f"Telegram send failed for user {task.user.username}: {tg_err}"
+                                    )
+
                             sent_count += 1
                     except Exception as e:
                         logger.error(f"Recovery error for task '{task.title}': {e}")
@@ -201,6 +230,22 @@ class TaskScheduler:
                                     "due_date": task.due_date.isoformat() if task.due_date else None
                                 }
                             })
+
+                            if (
+                                user.telegram_notifications_enabled
+                                and user.telegram_chat_id
+                                and user.telegram_bot_token
+                            ):
+                                try:
+                                    from app.services.telegram_notifier import (
+                                        TelegramNotifierService,
+                                    )
+
+                                    await TelegramNotifierService.send_reminder(user, task)
+                                except Exception as tg_err:
+                                    logger.error(
+                                        f"Telegram send failed for user {user.username}: {tg_err}"
+                                    )
                     except Exception as e:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()
@@ -275,3 +320,57 @@ class TaskScheduler:
 
 
 task_scheduler = TaskScheduler()
+
+_telegram_poll_offsets: dict[str, int] = {}
+
+
+async def _job_poll_telegram_bots():
+    logger.info("Running job: poll_telegram_bots")
+
+    try:
+        from app.services.telegram_notifier import TelegramNotifierService
+
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(User).where(
+                    User.telegram_bot_token.isnot(None),
+                    User.telegram_bot_token != '',
+                    User.telegram_chat_id.is_(None),
+                )
+            )
+            users = list(result.scalars().all())
+
+            for user in users:
+                try:
+                    offset = _telegram_poll_offsets.get(str(user.id))
+                    updates, new_offset = await TelegramNotifierService.poll_updates(
+                        user.telegram_bot_token, offset
+                    )
+                    if new_offset is not None:
+                        _telegram_poll_offsets[str(user.id)] = new_offset
+
+                    for upd in updates:
+                        message = upd.get("message", {})
+                        text = message.get("text", "").strip()
+                        chat_id = str(message.get("chat", {}).get("id", ""))
+
+                        if text == "/start" and chat_id:
+                            user.telegram_chat_id = chat_id
+                            user.telegram_notifications_enabled = True
+                            await session.commit()
+                            logger.info(
+                                f"Telegram chat_id {chat_id} linked for user {user.username}"
+                            )
+
+                            await TelegramNotifierService.send_message(
+                                user.telegram_bot_token,
+                                chat_id,
+                                "\u2705 Бот Todowka подключён! Теперь вы будете получать напоминания о задачах.",
+                            )
+                            break
+
+                except Exception as e:
+                    logger.error(f"Error polling bot for user {user.id}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error in poll_telegram_bots: {e}")

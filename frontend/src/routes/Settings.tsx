@@ -63,6 +63,11 @@ function SettingsContent() {
   const [customTimezone, setCustomTimezone] = useState('')
   const [defaultSection, setDefaultSection] = useState(user?.default_section || 'inbox')
   const [sectionSaving, setSectionSaving] = useState(false)
+  const [telegramToken, setTelegramToken] = useState('')
+  const [telegramValidating, setTelegramValidating] = useState(false)
+  const [telegramValidationResult, setTelegramValidationResult] = useState<{ valid: boolean; bot_username?: string; bot_name?: string } | null>(null)
+  const [telegramSaving, setTelegramSaving] = useState(false)
+  const [telegramMessage, setTelegramMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
@@ -344,6 +349,146 @@ function SettingsContent() {
                     </button>
                   )}
                 </div>
+            )}
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('telegramTitle')}</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{t('telegramDescription')}</p>
+
+            {telegramMessage && (
+              <div className={`mb-3 p-3 rounded-lg text-sm ${
+                telegramMessage.includes('Ошибка') || telegramMessage.includes('Error')
+                  ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'
+                  : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+              }`}>
+                {telegramMessage}
+              </div>
+            )}
+
+            {!user?.telegram_chat_id ? (
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    value={telegramToken}
+                    onChange={(e) => { setTelegramToken(e.target.value); setTelegramValidationResult(null) }}
+                    placeholder={t('telegramBotTokenPlaceholder')}
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!telegramToken.trim()) return
+                      setTelegramValidating(true)
+                      try {
+                        const result = await usersApi.validateTelegramToken(telegramToken.trim())
+                        setTelegramValidationResult(result)
+                        if (!result.valid) setTelegramToken('')
+                      } catch { setTelegramValidationResult({ valid: false }) }
+                      finally { setTelegramValidating(false) }
+                    }}
+                    disabled={telegramValidating || !telegramToken.trim()}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-200 dark:hover:bg-gray-500 disabled:opacity-50"
+                  >
+                    {telegramValidating ? t('telegramValidating') : t('telegramValidateBtn')}
+                  </button>
+                </div>
+
+                {telegramValidationResult?.valid && (
+                  <p className="text-sm text-green-600 dark:text-green-400">
+                    {t('telegramValid', { name: telegramValidationResult.bot_name || '', username: telegramValidationResult.bot_username || '' })}
+                  </p>
+                )}
+                {telegramValidationResult && !telegramValidationResult.valid && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{t('telegramInvalid')}</p>
+                )}
+
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('telegramBotTokenHint')}</p>
+
+                {telegramValidationResult?.valid && (
+                  <button
+                    onClick={async () => {
+                      setTelegramSaving(true)
+                      setTelegramMessage(null)
+                      try {
+                        const updated = await usersApi.updateCurrentUser({ telegram_bot_token: telegramToken.trim() })
+                        setCurrentUser(updated)
+                        setTelegramMessage(t('telegramTokenSaved'))
+                        setTelegramValidationResult(null)
+                      } catch { setTelegramMessage(t('telegramErrorSaving')) }
+                      finally { setTelegramSaving(false) }
+                    }}
+                    disabled={telegramSaving}
+                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50"
+                  >
+                    {telegramSaving ? '...' : t('telegramSaveToken')}
+                  </button>
+                )}
+
+                {user?.telegram_bot_token && !user.telegram_chat_id && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">{t('telegramStatusWaiting')}</p>
+                )}
+
+                {!user?.telegram_bot_token && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{t('telegramStatusNotConnected')}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-green-600 dark:text-green-400">{t('telegramStatusConnected')}</p>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {t('telegramEnableNotifications')}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user.telegram_notifications_enabled
+                        ? t('telegramNotificationsEnabled')
+                        : t('telegramNotificationsDisabled')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const updated = await usersApi.updateCurrentUser({
+                          telegram_notifications_enabled: !user.telegram_notifications_enabled,
+                        })
+                        setCurrentUser(updated)
+                      } catch { setTelegramMessage(t('telegramErrorSaving')) }
+                    }}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      user.telegram_notifications_enabled
+                        ? 'bg-indigo-600 dark:bg-indigo-500'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={user.telegram_notifications_enabled}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      user.telegram_notifications_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    setTelegramSaving(true)
+                    setTelegramMessage(null)
+                    try {
+                      const updated = await usersApi.updateCurrentUser({ telegram_bot_token: '' })
+                      setCurrentUser(updated)
+                      setTelegramToken('')
+                      setTelegramMessage(t('telegramTokenRemoved'))
+                    } catch { setTelegramMessage(t('telegramErrorSaving')) }
+                    finally { setTelegramSaving(false) }
+                  }}
+                  disabled={telegramSaving}
+                  className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                >
+                  {t('telegramRemoveToken')}
+                </button>
+              </div>
             )}
           </div>
 
