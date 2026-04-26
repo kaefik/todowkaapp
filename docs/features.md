@@ -68,6 +68,18 @@
   - Компоненты: `frontend/src/routes/Today.tsx`, `frontend/src/routes/Tomorrow.tsx`, `frontend/src/routes/DueDateTaskList.tsx`
   - Хук: `frontend/src/hooks/useDueDateTasks.ts`
   - Без изменений бэкенда
+- Время дедлайна (опционально) ✅ (Реализовано 26.04.2026)
+  - Опциональное поле времени рядом с датой дедлайна в TaskEditModal
+  - Если время не указано — due_date сохраняется как конец дня (23:59:59.999), как раньше
+  - Если время указано — due_date сохраняется как точный datetime в UTC
+  - Время отображается в списках задач (TaskListView, Tasks), деталях (TaskDetailModal) и карточках
+  - Обратная совместимость: старые задачи без времени продолжают работать
+  - Автоматическое уведомление «Дедлайн наступил» при наступлении времени дедлайна
+  - Флаг `deadline_notified` в модели Task (сбрасывается при изменении due_date)
+  - Scheduler job `_job_send_deadline_notifications` (каждую 1 минуту)
+  - Telegram-оповещение при наступлении дедлайна
+  - Миграция: `alembic/versions/20260426_*_add_deadline_notified_to_task_*.py`
+  - Файлы: `frontend/src/components/TaskEditModal.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/components/TaskDetailModal.tsx`, `backend/app/models/task.py`, `backend/app/scheduler.py`, `backend/app/services/reminder_service.py`, `backend/app/services/task_service.py`, `frontend/src/db/database.ts`, `frontend/src/db/mappers.ts`
 - Просмотр деталей задачи по клику на карточку (TaskDetailModal)
   - Клик по задаче открывает модальное окно с полной информацией: заголовок, описание, статус, контекст, проект, область, дедлайн, напоминания, теги, подзадачи
   - Кнопка «Редактировать» в модалке просмотра переходит к редактированию задачи

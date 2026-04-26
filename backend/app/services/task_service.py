@@ -183,6 +183,9 @@ class TaskService:
             val = update_data.pop('gtd_status')
             update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val
 
+        if 'due_date' in update_data:
+            task.deadline_notified = False
+
         if 'due_date' in update_data and update_data['due_date'] is not None:
             current_status = update_data.get('gtd_status', task.gtd_status)
             if current_status == GtdStatus.INBOX.value or current_status == GtdStatus.INBOX:

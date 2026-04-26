@@ -160,12 +160,19 @@ function TasksContent() {
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
     const shortDate = due.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
 
-    if (diffDays === 0) return { text: t('todayDate', { date: shortDate }), overdue: false }
-    if (diffDays === 1) return { text: t('tomorrowDate', { date: shortDate }), overdue: false }
-    if (diffDays === -1) return { text: t('yesterdayDate', { date: shortDate }), overdue: true }
-    if (diffDays < -1) return { text: t('overdueDays', { count: Math.abs(diffDays), date: shortDate }), overdue: true }
-    if (diffDays <= 7) return { text: t('inDays', { count: diffDays, date: shortDate }), overdue: false }
-    return { text: shortDate, overdue: false }
+    const hours = due.getHours()
+    const minutes = due.getMinutes()
+    const seconds = due.getSeconds()
+    const ms = due.getMilliseconds()
+    const hasTime = !(hours === 23 && minutes === 59 && seconds === 59 && ms >= 999)
+    const timeSuffix = hasTime ? `, ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : ''
+
+    if (diffDays === 0) return { text: t('todayDate', { date: shortDate }) + timeSuffix, overdue: false }
+    if (diffDays === 1) return { text: t('tomorrowDate', { date: shortDate }) + timeSuffix, overdue: false }
+    if (diffDays === -1) return { text: t('yesterdayDate', { date: shortDate }) + timeSuffix, overdue: true }
+    if (diffDays < -1) return { text: t('overdueDays', { count: Math.abs(diffDays), date: shortDate }) + timeSuffix, overdue: true }
+    if (diffDays <= 7) return { text: t('inDays', { count: diffDays, date: shortDate }) + timeSuffix, overdue: false }
+    return { text: shortDate + timeSuffix, overdue: false }
   }
 
   const handleAddTask = async (data: TaskCreateFormData) => {

@@ -304,7 +304,7 @@ describe('TaskEditModal — новые поля', () => {
           area_id: 'area1',
           project_id: 'proj1',
           gtd_status: 'active',
-          due_date: '2026-04-15',
+          due_date: new Date(2026, 3, 15, 0, 0, 0, 0).toISOString(),
           notes: 'Some notes',
         }))
       })

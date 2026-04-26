@@ -45,6 +45,15 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
+                self._job_send_deadline_notifications,
+                'interval',
+                minutes=1,
+                id='send_deadline_notifications',
+                replace_existing=True,
+                max_instances=1
+            )
+
+            self.scheduler.add_job(
                 self._job_cleanup_old_notifications,
                 'interval',
                 days=1,
@@ -254,6 +263,72 @@ class TaskScheduler:
 
         except Exception as e:
             logger.error(f"Error in job_send_due_reminders: {e}")
+
+    @staticmethod
+    async def _job_send_deadline_notifications():
+        logger.info("Running job: send_deadline_notifications")
+
+        try:
+            from app.services.reminder_service import ReminderService
+
+            async with AsyncSessionLocal() as session:
+                reminder_service = ReminderService(session)
+
+                tasks = await reminder_service.find_deadline_arrived_tasks()
+                logger.info(f"Found {len(tasks)} tasks with arrived deadlines")
+
+                for task in tasks:
+                    try:
+                        user = task.user
+                        if not user:
+                            continue
+
+                        rs = ReminderService(session)
+                        message = f'Дедлайн задачи "{task.title}" наступил'
+                        notification = await rs.create_notification(
+                            user=user,
+                            task=task,
+                            type='deadline_arrived',
+                            message=message
+                        )
+                        task.deadline_notified = True
+                        await session.commit()
+
+                        from app.event_bus import event_bus
+                        await event_bus.publish(f"{user.id}:notifications", "notification_created", {
+                            "notification_id": str(notification.id),
+                            "type": notification.type,
+                            "message": notification.message,
+                            "task_id": str(task.id) if task.id else None,
+                            "notification_data": {
+                                "id": str(notification.id),
+                                "message": notification.message,
+                                "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                                "due_date": task.due_date.isoformat() if task.due_date else None
+                            }
+                        })
+
+                        if (
+                            user.telegram_notifications_enabled
+                            and user.telegram_chat_id
+                            and user.telegram_bot_token
+                        ):
+                            try:
+                                from app.services.telegram_notifier import TelegramNotifierService
+                                await TelegramNotifierService.send_message(
+                                    user.telegram_bot_token,
+                                    user.telegram_chat_id,
+                                    f'⏰ Дедлайн задачи "{task.title}" наступил!',
+                                )
+                            except Exception as tg_err:
+                                logger.error(f"Telegram deadline send failed for user {user.username}: {tg_err}")
+
+                    except Exception as e:
+                        logger.error(f"Error sending deadline notification for task '{task.title}': {e}")
+                        await session.rollback()
+
+        except Exception as e:
+            logger.error(f"Error in job_send_deadline_notifications: {e}")
 
     @staticmethod
     async def _job_cleanup_old_notifications():

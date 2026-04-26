@@ -52,6 +52,7 @@ class Task(Base):
     reminder_offsets: Mapped[list | None] = mapped_column(JSON, nullable=True)
     sent_reminder_offsets: Mapped[list | None] = mapped_column(JSON, nullable=True, default=list)
     reminder_fired: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deadline_notified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default='0')
     last_reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     trashed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

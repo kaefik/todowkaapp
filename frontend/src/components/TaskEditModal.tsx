@@ -10,6 +10,17 @@ function toLocalDateStr(isoString: string | null | undefined): string | null {
   return `${y}-${m}-${day}`
 }
 
+function toLocalTimeStr(isoString: string | null | undefined): string | null {
+  if (!isoString) return null
+  const d = new Date(isoString)
+  const hours = d.getHours()
+  const minutes = d.getMinutes()
+  const seconds = d.getSeconds()
+  const ms = d.getMilliseconds()
+  if (hours === 23 && minutes === 59 && seconds === 59 && ms >= 999) return null
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
 function todayLocalDateStr(): string {
   const d = new Date()
   const y = d.getFullYear()
@@ -79,6 +90,7 @@ const editTaskSchema = z.object({
   project_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   gtd_status: z.string().optional(),
   due_date: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  due_time: z.string().nullable().optional().transform(v => v === '' ? null : v),
   notes: z.string().nullable().optional(),
 })
 
@@ -173,6 +185,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       project_id: task.project_id ?? null,
       gtd_status: task.gtd_status,
       due_date: toLocalDateStr(task.due_date),
+      due_time: toLocalTimeStr(task.due_date),
       notes: task.notes ?? null,
     }
   }, [task])
@@ -185,12 +198,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema) as unknown as never,
-    defaultValues: defaultValues ?? { title: '', context_id: null, area_id: null, project_id: null, due_date: null },
+    defaultValues: defaultValues ?? { title: '', context_id: null, area_id: null, project_id: null, due_date: null, due_time: null },
   })
 
   useEffect(() => {
     if (task && isOpen) {
       const dueDateStr = toLocalDateStr(task.due_date)
+      const dueTimeStr = toLocalTimeStr(task.due_date)
       const today = todayLocalDateStr()
 
       reset({
@@ -201,6 +215,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         project_id: task.project_id ?? null,
         gtd_status: task.gtd_status,
         due_date: dueDateStr,
+        due_time: dueTimeStr,
         notes: task.notes ?? null,
       })
       setSelectedTagIds(task.tags.map((t: Tag) => t.id))
@@ -293,12 +308,31 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const onSubmit = async (data: EditTaskFormData) => {
     if (!task) return
     let gtdStatus = data.gtd_status as GtdStatus | undefined
-    if (data.due_date && task.gtd_status === 'inbox' && (!gtdStatus || gtdStatus === 'inbox')) {
+    let dueDateValue = data.due_date
+
+    if (dueDateValue && data.due_time) {
+      const [year, month, day] = dueDateValue.split('-').map(Number)
+      const [hours, minutes] = data.due_time.split(':').map(Number)
+      const dt = new Date(year, month - 1, day, hours, minutes, 0, 0)
+      dueDateValue = dt.toISOString()
+    } else if (dueDateValue) {
+      const [year, month, day] = dueDateValue.split('-').map(Number)
+      const dt = new Date(year, month - 1, day, 23, 59, 59, 999)
+      dueDateValue = dt.toISOString()
+    }
+
+    if (dueDateValue && task.gtd_status === 'inbox' && (!gtdStatus || gtdStatus === 'inbox')) {
       gtdStatus = 'active'
     }
     await onSave(task.id, {
-      ...data,
+      title: data.title,
+      description: data.description,
       gtd_status: gtdStatus,
+      context_id: data.context_id,
+      area_id: data.area_id,
+      project_id: data.project_id,
+      due_date: dueDateValue,
+      notes: data.notes,
       tag_ids: selectedTagIds,
       recurrence_type: recurrenceData.recurrence_type,
       recurrence_config: recurrenceData.recurrence_config,
@@ -497,6 +531,19 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 id="due_date"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               />
+              {watch('due_date') && (
+                <div className="mt-2">
+                  <label htmlFor="due_time" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('deadlineTime')}
+                  </label>
+                  <input
+                    {...register('due_time')}
+                    type="time"
+                    id="due_time"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">

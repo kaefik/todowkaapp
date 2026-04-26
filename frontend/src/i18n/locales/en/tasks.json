@@ -187,5 +187,6 @@
   "clearCompletedFailed": "Failed to delete completed tasks",
   "subtaskWarning": "The task has {{count}} subtask(s). All will be moved to trash.",
   "activeHeading": "Active",
-  "noTasksHint": "Add your first task above!"
+  "noTasksHint": "Add your first task above!",
+  "deadlineTime": "Time (optional)"
 }

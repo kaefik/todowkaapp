@@ -73,6 +73,22 @@ class ReminderService:
 
         return due_tasks
 
+    async def find_deadline_arrived_tasks(self) -> list[Task]:
+        now_utc = datetime.now(ZoneInfo('UTC'))
+
+        result = await self.db.execute(
+            select(Task)
+            .options(selectinload(Task.user))
+            .where(
+                Task.due_date.isnot(None),
+                Task.is_completed.is_(False),
+                Task.deadline_notified.is_(False),
+                Task.due_date <= now_utc,
+                Task.gtd_status != 'trash',
+            )
+        )
+        return list(result.scalars().all())
+
     async def send_reminder(self, task: Task, user: User, offset_minutes: int | None = None) -> Notification:
         due_date = task.due_date
         if due_date.tzinfo is None:

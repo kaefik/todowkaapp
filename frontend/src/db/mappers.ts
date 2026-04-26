@@ -22,6 +22,7 @@ export interface UiTask {
   reminder_time: string | null
   reminder_offsets: number[] | null
   reminder_fired: boolean
+  deadline_notified: boolean
   is_recurring: boolean
   tags: Tag[]
   subtasks_count: number
@@ -85,6 +86,7 @@ export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
     reminder_time: task.reminderTime,
     reminder_offsets: task.reminderOffsets ? JSON.parse(task.reminderOffsets) : null,
     reminder_fired: task.reminderFired,
+    deadline_notified: task.deadlineNotified,
     is_recurring: task.isRecurring,
     tags,
     subtasks_count: subtasksCount,
@@ -121,6 +123,7 @@ export function apiTaskToDb(
     reminderTime: (apiTask.reminder_time as string | null) ?? null,
     reminderOffsets: apiTask.reminder_offsets ? JSON.stringify(apiTask.reminder_offsets) : null,
     reminderFired: (apiTask.reminder_fired as boolean) ?? false,
+    deadlineNotified: (apiTask.deadline_notified as boolean) ?? false,
     isRecurring: (apiTask.is_recurring as boolean) ?? false,
     tagIds,
     trashedAt: null,

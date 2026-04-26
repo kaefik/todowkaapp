@@ -23,6 +23,7 @@ export interface DbTask {
   reminderTime: string | null
   reminderOffsets: string | null
   reminderFired: boolean
+  deadlineNotified: boolean
   isRecurring: boolean
   tagIds: string[]
   trashedAt: string | null
@@ -148,6 +149,19 @@ export class TodowkaDB extends Dexie {
 
     this.version(3).stores({
       verbTemplates: 'id, userId, _syncStatus, updatedAt, position',
+    })
+
+    this.version(4).stores({
+      tasks: [
+        'id', 'userId', 'gtdStatus', 'projectId', 'contextId',
+        'areaId', 'parentTaskId', 'isCompleted', '_syncStatus',
+        '[userId+gtdStatus]', '[userId+projectId]',
+        '[userId+contextId]', '[userId+areaId]', 'updatedAt',
+      ].join(','),
+    }).upgrade(tx => {
+      return tx.table('tasks').toCollection().modify(task => {
+        task.deadlineNotified = false
+      })
     })
   }
 }

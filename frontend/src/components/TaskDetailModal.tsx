@@ -17,14 +17,31 @@ interface TaskDetailModalProps {
   onEdit?: (task: Task) => void
 }
 
-function formatDate(dateStr: string | null, timezone: string | null, locale: string): string {
+function formatDueDateWithTime(dateStr: string | null, timezone: string | null, locale: string): string {
   if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString(locale, {
+  const d = new Date(dateStr)
+  const hours = d.getHours()
+  const minutes = d.getMinutes()
+  const seconds = d.getSeconds()
+  const ms = d.getMilliseconds()
+  const hasTime = !(hours === 23 && minutes === 59 && seconds === 59 && ms >= 999)
+
+  const datePart = d.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
     timeZone: timezone || undefined,
   })
+
+  if (!hasTime) return datePart
+
+  const timePart = d.toLocaleTimeString(locale, {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: timezone || undefined,
+  })
+
+  return `${datePart}, ${timePart}`
 }
 
 function formatDateTime(dateStr: string, timezone: string | null, locale: string): string {
@@ -221,7 +238,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
                 {task.due_date && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('deadline')}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDate(task.due_date, user?.timezone ?? null, locale)}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{formatDueDateWithTime(task.due_date, user?.timezone ?? null, locale)}</p>
                   </div>
                 )}
 

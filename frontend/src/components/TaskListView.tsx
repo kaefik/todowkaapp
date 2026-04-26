@@ -66,6 +66,7 @@ interface DueDateResult {
   date?: string
   count?: number
   isPlain?: boolean
+  time?: string
 }
 
 function formatDueDate(dueDate: string | null, locale: string): DueDateResult {
@@ -79,12 +80,19 @@ function formatDueDate(dueDate: string | null, locale: string): DueDateResult {
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
   const shortDate = formatShortDate(due, locale)
 
-  if (diffDays === 0) return { text: 'todayDate', overdue: false, date: shortDate }
-  if (diffDays === 1) return { text: 'tomorrowDate', overdue: false, date: shortDate }
-  if (diffDays === -1) return { text: 'yesterdayDate', overdue: true, date: shortDate }
-  if (diffDays < -1) return { text: 'overdueDays', overdue: true, date: shortDate, count: Math.abs(diffDays) }
-  if (diffDays <= 7) return { text: 'inDays', overdue: false, date: shortDate, count: diffDays }
-  return { text: shortDate, overdue: false, isPlain: true }
+  const hours = due.getHours()
+  const minutes = due.getMinutes()
+  const seconds = due.getSeconds()
+  const ms = due.getMilliseconds()
+  const hasTime = !(hours === 23 && minutes === 59 && seconds === 59 && ms >= 999)
+  const timeStr = hasTime ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}` : undefined
+
+  if (diffDays === 0) return { text: 'todayDate', overdue: false, date: shortDate, time: timeStr }
+  if (diffDays === 1) return { text: 'tomorrowDate', overdue: false, date: shortDate, time: timeStr }
+  if (diffDays === -1) return { text: 'yesterdayDate', overdue: true, date: shortDate, time: timeStr }
+  if (diffDays < -1) return { text: 'overdueDays', overdue: true, date: shortDate, count: Math.abs(diffDays), time: timeStr }
+  if (diffDays <= 7) return { text: 'inDays', overdue: false, date: shortDate, count: diffDays, time: timeStr }
+  return { text: shortDate, overdue: false, isPlain: true, time: timeStr }
 }
 
 function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () => void }) {
@@ -491,8 +499,8 @@ export function TaskListView({
                       const dueText = !task.due_date
                         ? t('noDueDate')
                         : result.isPlain
-                          ? result.text
-                          : t(result.text, { date: result.date, count: result.count })
+                          ? result.text + (result.time ? `, ${result.time}` : '')
+                          : t(result.text, { date: result.date, count: result.count }) + (result.time ? `, ${result.time}` : '')
                       return (
                         <p className={`text-xs ${isOverdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
                           {dueText}
@@ -650,8 +658,8 @@ export function TaskListView({
                           const dueText = !task.due_date
                             ? t('noDueDate')
                             : result.isPlain
-                              ? result.text
-                              : t(result.text, { date: result.date, count: result.count })
+                              ? result.text + (result.time ? `, ${result.time}` : '')
+                              : t(result.text, { date: result.date, count: result.count }) + (result.time ? `, ${result.time}` : '')
                           return (
                             <p className={`text-xs ${isOverdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
                               {dueText}
