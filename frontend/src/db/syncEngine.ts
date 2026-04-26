@@ -163,7 +163,7 @@ async function mergeAndPut(
 
     const serverRecord = transform(item, userId)
     const localRecord = await table.get(id)
-    if (localRecord && (localRecord as Record<string, unknown> & { _syncStatus: SyncStatus })._syncStatus === 'deleted') continue
+    if (localRecord && (localRecord as unknown as { _syncStatus: SyncStatus })._syncStatus === 'deleted') continue
     const merged = mergeRecord(localRecord as Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null } | undefined, serverRecord)
     mergedRecords.push(merged)
   }
