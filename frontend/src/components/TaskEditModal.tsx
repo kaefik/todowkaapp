@@ -324,7 +324,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     if (dueDateValue && task.gtd_status === 'inbox' && (!gtdStatus || gtdStatus === 'inbox')) {
       gtdStatus = 'active'
     }
-    await onSave(task.id, {
+    const updateData: Record<string, unknown> = {
       title: data.title,
       description: data.description,
       gtd_status: gtdStatus,
@@ -339,7 +339,13 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       recurrence_end_date: recurrenceData.recurrence_end_date,
       reminder_time: reminderData.reminder_time,
       reminder_offsets: reminderData.reminder_offsets,
-    })
+    }
+    if (gtdStatus === 'completed') {
+      updateData.completed = true
+    } else if (task.gtd_status === 'completed' && gtdStatus !== 'completed') {
+      updateData.completed = false
+    }
+    await onSave(task.id, updateData as Parameters<typeof onSave>[1])
     onClose()
   }
 

@@ -275,7 +275,7 @@ describe('Login', () => {
       await user.click(button)
 
       await waitFor(() => {
-        expect(mockedNavigate).toHaveBeenCalledWith('/tasks')
+        expect(mockedNavigate).toHaveBeenCalledWith('/onboarding')
       })
     })
   })

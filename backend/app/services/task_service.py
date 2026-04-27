@@ -181,7 +181,20 @@ class TaskService:
 
         if 'gtd_status' in update_data:
             val = update_data.pop('gtd_status')
-            update_data['gtd_status'] = val.value if isinstance(val, GtdStatus) else val
+            new_status = val.value if isinstance(val, GtdStatus) else val
+            update_data['gtd_status'] = new_status
+            if new_status == GtdStatus.COMPLETED.value:
+                update_data['is_completed'] = True
+                update_data['completed_at'] = datetime.now(UTC)
+            elif 'is_completed' not in update_data:
+                update_data['is_completed'] = False
+                update_data['completed_at'] = None
+
+        if 'is_completed' in update_data and 'gtd_status' not in update_data:
+            if update_data['is_completed'] and task.gtd_status != GtdStatus.COMPLETED.value:
+                update_data['gtd_status'] = GtdStatus.COMPLETED.value
+            elif not update_data['is_completed'] and task.gtd_status == GtdStatus.COMPLETED.value:
+                update_data['gtd_status'] = GtdStatus.INBOX.value
 
         if 'due_date' in update_data:
             task.deadline_notified = False

@@ -130,12 +130,12 @@ describe('TaskEditModal — новые поля', () => {
     it('shows all GTD status options', async () => {
       renderModal()
       await waitFor(() => expect(screen.getByLabelText('GTD-статус')).toBeInTheDocument())
-      expect(screen.getByText('Inbox')).toBeInTheDocument()
-      expect(screen.getByText('Next Action')).toBeInTheDocument()
-      expect(screen.getByText('Waiting For')).toBeInTheDocument()
-      expect(screen.getByText('Someday / Maybe')).toBeInTheDocument()
-      expect(screen.getByText('Completed')).toBeInTheDocument()
-      expect(screen.getByText('Trash')).toBeInTheDocument()
+      expect(screen.getByText('Входящие')).toBeInTheDocument()
+      expect(screen.getByText('Следующее действие')).toBeInTheDocument()
+      expect(screen.getByText('Ожидание')).toBeInTheDocument()
+      expect(screen.getByText('Когда-нибудь')).toBeInTheDocument()
+      expect(screen.getByText('Выполнено')).toBeInTheDocument()
+      expect(screen.getByText('Корзина')).toBeInTheDocument()
     })
 
     it('has current GTD status selected', async () => {
