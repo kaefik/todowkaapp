@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useAreas, type Area } from '../hooks/useAreas'
 import { ColorPickerField } from '../components/ColorPickerField'
 
@@ -32,8 +33,12 @@ function AreaItem({
   onDelete: (id: string) => void
 }) {
   const { t } = useTranslation('projects')
+  const navigate = useNavigate()
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow">
+    <div
+      onClick={() => navigate(`/areas/${area.id}`)}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {area.color && (
@@ -56,7 +61,7 @@ function AreaItem({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => onEdit(area)}
             className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"

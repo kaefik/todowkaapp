@@ -17,6 +17,7 @@ interface TaskFilterPanelProps {
   activeFilterCount: number
   hideGtdStatus?: boolean
   hideProject?: boolean
+  hideArea?: boolean
 }
 
 export function TaskFilterPanel({
@@ -29,6 +30,7 @@ export function TaskFilterPanel({
   activeFilterCount,
   hideGtdStatus,
   hideProject,
+  hideArea,
 }: TaskFilterPanelProps) {
   const { t } = useTranslation('tasks')
   const { contexts } = useContexts()
@@ -229,23 +231,25 @@ export function TaskFilterPanel({
               </select>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
-                {t('filterArea')}
-              </label>
-              <select
-                value={filters.area_id || ''}
-                onChange={(e) => onUpdateFilter('area_id', e.target.value || undefined)}
-                className={selectClass}
-              >
-                <option value="">{t('allAreas')}</option>
-                {areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!hideArea && (
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  {t('filterArea')}
+                </label>
+                <select
+                  value={filters.area_id || ''}
+                  onChange={(e) => onUpdateFilter('area_id', e.target.value || undefined)}
+                  className={selectClass}
+                >
+                  <option value="">{t('allAreas')}</option>
+                  {areas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {!hideProject && (
               <div>

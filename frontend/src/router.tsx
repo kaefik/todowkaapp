@@ -18,6 +18,7 @@ import { Areas } from './routes/Areas'
 import { Tags } from './routes/Tags'
 import { Projects } from './routes/Projects'
 import { ProjectDetail } from './routes/ProjectDetail'
+import { AreaDetail } from './routes/AreaDetail'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 import { Notifications } from './routes/Notifications'
@@ -114,6 +115,10 @@ const routes: RouteObject[] = [
       {
         path: 'areas',
         element: <Areas />,
+      },
+      {
+        path: 'areas/:id',
+        element: <AreaDetail />,
       },
       {
         path: 'tags',

@@ -43,6 +43,7 @@ export interface TaskListViewProps {
   showAddForm?: boolean
   defaultGtdStatus?: GtdStatus
   defaultProjectId?: string
+  defaultAreaId?: string
   onToggleTask: (id: string) => void
   onDeleteTask: (id: string) => Promise<void>
   onMoveTask: (id: string, status: GtdStatus) => Promise<void>

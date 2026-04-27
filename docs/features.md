@@ -797,13 +797,22 @@
 - Цвет и иконка для каждого контекста
 - Проверка уникальности имени
 
-#### Области ответственности ✅ (Реализовано 10.04.2026)
+#### Области ответственности ✅ (Реализовано 10.04.2026, обновлено 27.04.2026)
 - CRUD для областей (Здоровье, Финансы, Карьера и т.д.)
 - Привязка задач и проектов к области (area_id)
 - Проверка уникальности имени области для каждого пользователя
 - Описание и цвет для каждой области
 - Dropdown выбора области в форме редактирования задачи
 - Страница управления областями (/areas)
+- Просмотр задач области с переходом по клику на карточку (как в проектах) ✅ (Добавлено 27.04.2026)
+  - Кликабельные карточки областей — переход на `/areas/:id`
+  - Страница AreaDetail с заголовком (цвет + название + описание) и списком задач
+  - Фильтры, поиск, добавление задач прямо из области (с предустановленным area_id)
+  - Кнопка «← Назад к областям»
+  - Скрытие фильтра по области на странице AreaDetail (hideArea)
+  - Компонент: `frontend/src/routes/AreaDetail.tsx`
+  - Роут: `/areas/:id`
+  - Файлы: `frontend/src/routes/AreaDetail.tsx`, `frontend/src/routes/Areas.tsx`, `frontend/src/router.tsx`, `frontend/src/components/TaskFilterPanel.tsx`
 - API: GET/POST /api/areas, GET/PUT/DELETE /api/areas/{id}
 - Файлы: `backend/app/schemas/area.py`, `backend/app/services/area_service.py`, `backend/app/api/areas.py`, `frontend/src/hooks/useAreas.ts`, `frontend/src/routes/Areas.tsx`
 - Тесты: `backend/tests/test_areas.py` (21 тест)
