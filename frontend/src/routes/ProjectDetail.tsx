@@ -138,7 +138,7 @@ export function ProjectDetail() {
               <span className="w-5 h-5 rounded-full flex-shrink-0 bg-gray-300 dark:bg-gray-600 border-2 border-dashed border-gray-400 dark:border-gray-500" />
               <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('noProject')}</h1>
             </>
-          ) : (
+          ) : project ? (
             <>
               {project.color ? (
                 <span
@@ -155,12 +155,12 @@ export function ProjectDetail() {
                 </span>
               )}
             </>
-          )}
+          ) : null}
         </div>
 
         {isNoProject ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">{t('noProjectDescription')}</p>
-        ) : (
+        ) : project ? (
           <>
             {project.description && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{project.description}</p>
@@ -173,7 +173,7 @@ export function ProjectDetail() {
               </div>
             </div>
           </>
-        )}
+        ) : null}
       </div>
 
       <TaskFilterPanel
