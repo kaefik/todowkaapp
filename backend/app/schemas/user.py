@@ -30,6 +30,7 @@ class UserResponse(BaseResponseSchema):
     is_admin: bool
     timezone: str | None = None
     default_section: str = 'inbox'
+    language: str | None = None
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
     telegram_notifications_enabled: bool = False
@@ -51,6 +52,7 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     timezone: str | None = Field(default=None, max_length=50)
     default_section: str | None = Field(default=None, max_length=30)
+    language: str | None = Field(default=None, max_length=10)
     password: str | None = None
     telegram_bot_token: str | None = None
     telegram_notifications_enabled: bool | None = None

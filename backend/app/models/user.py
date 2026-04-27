@@ -18,6 +18,7 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     timezone: Mapped[str | None] = mapped_column(String(50), default='Europe/Moscow', nullable=True)
     default_section: Mapped[str] = mapped_column(String(30), default='inbox', nullable=False)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=text('0'), nullable=False)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
