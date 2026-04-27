@@ -16,14 +16,19 @@
 - Автоматическое ограничение регистрации при достижении лимита пользователей (max_users)
 - Скрытие ссылки на регистрацию на странице входа при исчерпании лимита пользователей
 - Проверка блокировки пользователя при входе и обновлении токена
-- Выбор часового пояса при первой авторизации
-  - Модальное окно предлагается при первом входе, если timezone не установлен
-  - Список популярных часовых поясов для быстрого выбора
-  - Возможность ввести любой IANA часовой пояс
-  - Автоматическое сохранение выбранного часового пояса в профиле пользователя
-  - Перенаправление на главную страницу после выбора часового пояса
-  - Компонент: `frontend/src/components/TimezoneSetupModal.tsx`
-  - Интегрировано в Login и Register страницы
+- Онбординг при первом входе с устройства ✅ (Реализовано 27.04.2026)
+  - Трёхшаговый визард при первом входе с нового устройства (обязательный, без пропуска)
+  - Шаг 1: Выбор языка интерфейса (динамически из доступных переводов)
+  - Шаг 2: Выбор часового пояса (автоопределение + ручной выбор)
+  - Шаг 3: Выбор раздела по умолчанию
+  - Все настройки сохраняются в бэкенд (PATCH /api/users/me) + localStorage
+  - Язык хранится в модели User (поле `language`)
+  - Флаг `onboarding-complete` в localStorage отслеживает прохождение на устройстве
+  - Маршрут `/onboarding` — полноэкранный, без sidebar
+  - Компоненты: `OnboardingWizard`, `OnboardingLanguage`, `OnboardingTimezone`, `OnboardingSection`
+  - Новый i18n-неймспейс `onboarding` (ru/en)
+  - Миграция: `alembic/versions/20260427_*_add_language_field_to_user_*.py`
+  - Файлы: `backend/app/models/user.py`, `backend/app/schemas/user.py`, `frontend/src/components/OnboardingWizard.tsx`, `frontend/src/components/OnboardingLanguage.tsx`, `frontend/src/components/OnboardingTimezone.tsx`, `frontend/src/components/OnboardingSection.tsx`, `frontend/src/routes/Onboarding.tsx`, `frontend/src/i18n/locales/ru/onboarding.json`, `frontend/src/i18n/locales/en/onboarding.json`, `frontend/src/router.tsx`, `frontend/src/routes/Login.tsx`, `frontend/src/routes/Register.tsx`, `frontend/src/stores/authStore.ts`, `frontend/src/api/users.ts`
 - Смена пароля пользователем в настройках аккаунта
   - Вкладка «Безопасность» в настройках с формой смены пароля
   - Требуется ввод текущего пароля для подтверждения
