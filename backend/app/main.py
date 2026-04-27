@@ -1,4 +1,5 @@
 import logging
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -42,7 +43,10 @@ limiter = Limiter(key_func=get_client_ip, enabled=settings.app_env != "test")
 async def lifespan(app: FastAPI):
     from app.scheduler import task_scheduler
 
+    t0 = time.monotonic()
+    logging.getLogger(__name__).info("LIFESPAN: starting scheduler startup...")
     await task_scheduler.startup()
+    logging.getLogger(__name__).info(f"LIFESPAN: scheduler startup done in {time.monotonic() - t0:.2f}s")
     yield
     await task_scheduler.shutdown()
 
@@ -95,6 +99,7 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health():
+        logging.getLogger(__name__).info("HEALTH: request received")
         return {"status": "healthy"}
 
     return app
