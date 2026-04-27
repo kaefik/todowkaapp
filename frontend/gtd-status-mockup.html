@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTD Status — 5 вариантов</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; color: #111827; padding: 24px; }
+  
+  .container { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 20px; margin-bottom: 24px; text-align: center; }
+  
+  .variant { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .variant h2 { font-size: 14px; color: #6b7280; margin-bottom: 4px; }
+  .variant h3 { font-size: 16px; margin-bottom: 16px; }
+  .variant .note { font-size: 12px; color: #9ca3af; margin-top: 12px; }
+  
+  label.field-label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; }
+
+  /* ===== Variant 1: Color Chips ===== */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 2px solid transparent; transition: all .15s;
+  }
+  .chip:hover { transform: scale(1.05); }
+  .chip.inbox { background: #f3f4f6; color: #4b5563; }
+  .chip.active { background: #dbeafe; color: #1d4ed8; }
+  .chip.next { background: #d1fae5; color: #047857; }
+  .chip.waiting { background: #fef3c7; color: #b45309; }
+  .chip.someday { background: #ede9fe; color: #6d28d9; }
+  .chip.completed { background: #f3f4f6; color: #9ca3af; }
+  .chip.trash { background: #fee2e2; color: #dc2626; }
+  
+  .chip.selected { border-width: 2px; box-shadow: 0 0 0 2px rgba(99,102,241,.3); }
+  .chip.inbox.selected { border-color: #9ca3af; }
+  .chip.active.selected { border-color: #3b82f6; }
+  .chip.next.selected { border-color: #10b981; }
+  .chip.waiting.selected { border-color: #f59e0b; }
+  .chip.someday.selected { border-color: #8b5cf6; }
+  .chip.completed.selected { border-color: #9ca3af; }
+  .chip.trash.selected { border-color: #ef4444; }
+
+  /* ===== Variant 2: Segmented Control ===== */
+  .segmented { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; }
+  .segmented button {
+    flex: 1; padding: 8px 4px; font-size: 11px; font-weight: 500;
+    border: none; cursor: pointer; background: #fff; color: #6b7280;
+    border-right: 1px solid #e5e7eb; transition: all .15s;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button:hover { background: #f9fafb; }
+  .segmented button.sel-inbox { background: #f3f4f6; color: #374151; }
+  .segmented button.sel-active { background: #dbeafe; color: #1d4ed8; }
+  .segmented button.sel-next { background: #d1fae5; color: #047857; }
+  .segmented button.sel-waiting { background: #fef3c7; color: #b45309; }
+  .segmented button.sel-someday { background: #ede9fe; color: #6d28d9; }
+  .segmented button.sel-completed { background: #f3f4f6; color: #9ca3af; }
+  .segmented button.sel-trash { background: #fee2e2; color: #dc2626; }
+
+  /* ===== Variant 3: Radio with dots ===== */
+  .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .radio-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    border: 2px solid #e5e7eb; transition: all .15s;
+  }
+  .radio-item:hover { border-color: #c7d2fe; }
+  .radio-item.selected { border-color: #6366f1; background: #eef2ff; }
+  .radio-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  }
+  .radio-dot.inbox { background: #9ca3af; }
+  .radio-dot.active { background: #3b82f6; }
+  .radio-dot.next { background: #10b981; }
+  .radio-dot.waiting { background: #f59e0b; }
+  .radio-dot.someday { background: #8b5cf6; }
+  .radio-dot.completed { background: #d1d5db; }
+  .radio-dot.trash { background: #ef4444; }
+  .radio-label { font-size: 13px; font-weight: 500; }
+
+  /* ===== Variant 4: Badge + Popover ===== */
+  .badge-current {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    background: #dbeafe; color: #1d4ed8; font-size: 13px; font-weight: 600;
+    border: 1px solid #93c5fd; transition: all .15s;
+  }
+  .badge-current:hover { background: #bfdbfe; }
+  .badge-current .arrow { font-size: 10px; }
+  .popover {
+    margin-top: 8px; background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 10px; padding: 8px; box-shadow: 0 10px 25px rgba(0,0,0,.1);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  }
+  .popover-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500; transition: all .1s;
+  }
+  .popover-item:hover { background: #f3f4f6; }
+  .popover-item.current { background: #dbeafe; color: #1d4ed8; }
+  .popover-item .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ===== Variant 5: Icon Bar ===== */
+  .icon-bar { display: flex; gap: 4px; }
+  .icon-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    border: 2px solid transparent; background: #f9fafb; transition: all .15s;
+    font-size: 18px; min-width: 48px;
+  }
+  .icon-btn span { font-size: 9px; color: #6b7280; font-weight: 500; }
+  .icon-btn:hover { background: #eef2ff; }
+  .icon-btn.selected { border-color: #6366f1; background: #eef2ff; }
+  .icon-btn.selected span { color: #4f46e5; }
+
+  /* ===== Current select for comparison ===== */
+  .current-select {
+    width: 100%; padding: 8px 12px; border: 1px solid #d1d5db;
+    border-radius: 6px; font-size: 14px; background: #fff; color: #111827;
+  }
+
+  /* Dark mode toggle */
+  .dark body, .dark .variant { background: #1f2937; color: #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>GTD Status — 5 вариантов интерфейса</h1>
+
+  <!-- Current (for reference) -->
+  <div class="variant">
+    <h2>Текущий вариант</h2>
+    <h3>Выпадающий список (Select)</h3>
+    <label class="field-label">GTD Статус</label>
+    <select class="current-select">
+      <option>Inbox</option>
+      <option selected>Active</option>
+      <option>Next</option>
+      <option>Waiting</option>
+      <option>Someday</option>
+      <option>Completed</option>
+      <option>Trash</option>
+    </select>
+  </div>
+
+  <!-- Variant 1 -->
+  <div class="variant">
+    <h2>Вариант 1</h2>
+    <h3>Цветные чипы (Pill Buttons)</h3>
+    <label class="field-label">GTD Статус</label>
+    <div class="chips">
+      <div class="chip inbox">Inbox</div>
+      <div class="chip active selected">Active</div>
+      <div class="chip next">Next</div>
+      <div class="chip waiting">Waiting</div>
+      <div class="chip someday">Someday</div>
+      <div class="chip completed">Completed</div>
+      <div class="chip trash">Trash</div>
+    </div>
+    <p class="note">Компактно, наглядно, все варианты перед глазами. Кликнул — выбрал.</p>
+  </div>
+
+  <!-- Variant 2 -->
+  <div class="variant">
+    <h2>Вариант 2</h2>
+    <h3>Сегментированный контроль</h3>
+    <label class="field-label">GTD Статус</label>
+    <div class="segmented">
+      <button>Inbox</button>
+      <button class="sel-active">Active</button>
+      <button>Next</button>
+      <button>Waiting</button>
+      <button>Someday</button>
+      <button>Done</button>
+      <button>Trash</button>
+    </div>
+    <p class="note">Слитная полоса кнопок. Тесновато для 7 вариантов — мелковат текст.</p>
+  </div>
+
+  <!-- Variant 3 -->
+  <div class="variant">
+    <h2>Вариант 3</h2>
+    <h3>Радио-кнопки с цветными точками (2 колонки)</h3>
+    <label class="field-label">GTD Статус</label>
+    <div class="radio-grid">
+      <div class="radio-item">
+        <div class="radio-dot inbox"></div>
+        <span class="radio-label">Inbox</span>
+      </div>
+      <div class="radio-item selected">
+        <div class="radio-dot active"></div>
+        <span class="radio-label">Active</span>
+      </div>
+      <div class="radio-item">
+        <div class="radio-dot next"></div>
+        <span class="radio-label">Next</span>
+      </div>
+      <div class="radio-item">
+        <div class="radio-dot waiting"></div>
+        <span class="radio-label">Waiting</span>
+      </div>
+      <div class="radio-item">
+        <div class="radio-dot someday"></div>
+        <span class="radio-label">Someday</span>
+      </div>
+      <div class="radio-item">
+        <div class="radio-dot completed"></div>
+        <span class="radio-label">Completed</span>
+      </div>
+      <div class="radio-item">
+        <div class="radio-dot trash"></div>
+        <span class="radio-label">Trash</span>
+      </div>
+    </div>
+    <p class="note">Привычный паттерн. Занимает больше места, но очень понятно.</p>
+  </div>
+
+  <!-- Variant 4 -->
+  <div class="variant">
+    <h2>Вариант 4</h2>
+    <h3>Бейдж + Popover-грид</h3>
+    <label class="field-label">GTD Статус</label>
+    <div class="badge-current">
+      ● Active <span class="arrow">▼</span>
+    </div>
+    <div class="popover">
+      <div class="popover-item">
+        <div class="dot" style="background:#9ca3af"></div> Inbox
+      </div>
+      <div class="popover-item current">
+        <div class="dot" style="background:#3b82f6"></div> Active
+      </div>
+      <div class="popover-item">
+        <div class="dot" style="background:#10b981"></div> Next
+      </div>
+      <div class="popover-item">
+        <div class="dot" style="background:#f59e0b"></div> Waiting
+      </div>
+      <div class="popover-item">
+        <div class="dot" style="background:#8b5cf6"></div> Someday
+      </div>
+      <div class="popover-item">
+        <div class="dot" style="background:#d1d5db"></div> Completed
+      </div>
+      <div class="popover-item">
+        <div class="dot" style="background:#ef4444"></div> Trash
+      </div>
+    </div>
+    <p class="note">Экономит место — показывает только текущий. Но нужен лишний клик.</p>
+  </div>
+
+  <!-- Variant 5 -->
+  <div class="variant">
+    <h2>Вариант 5</h2>
+    <h3>Иконки + подписи (Icon Bar)</h3>
+    <label class="field-label">GTD Статус</label>
+    <div class="icon-bar">
+      <div class="icon-btn">📥<span>Inbox</span></div>
+      <div class="icon-btn selected">⚡<span>Active</span></div>
+      <div class="icon-btn">▶️<span>Next</span></div>
+      <div class="icon-btn">⏳<span>Wait</span></div>
+      <div class="icon-btn">🌙<span>Some.</span></div>
+      <div class="icon-btn">✅<span>Done</span></div>
+      <div class="icon-btn">🗑<span>Trash</span></div>
+    </div>
+    <p class="note">Очень компактно. Минус — нужно запоминать иконки, текст мелкий.</p>
+  </div>
+</div>
+
+<script>
+  // Make everything interactive for demo
+  document.querySelectorAll('.chips').forEach(container => {
+    container.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        container.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+      });
+    });
+  });
+  document.querySelectorAll('.segmented').forEach(container => {
+    const classes = ['sel-inbox','sel-active','sel-next','sel-waiting','sel-someday','sel-completed','sel-trash'];
+    container.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('button').forEach(b => classes.forEach(c => b.classList.remove(c)));
+        const idx = Array.from(container.children).indexOf(btn);
+        btn.classList.add(classes[idx]);
+      });
+    });
+  });
+  document.querySelectorAll('.radio-grid').forEach(container => {
+    container.querySelectorAll('.radio-item').forEach(item => {
+      item.addEventListener('click', () => {
+        container.querySelectorAll('.radio-item').forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+      });
+    });
+  });
+  document.querySelectorAll('.icon-bar').forEach(container => {
+    container.querySelectorAll('.icon-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        container.querySelectorAll('.icon-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+      });
+    });
+  });
+  document.querySelectorAll('.popover').forEach(container => {
+    container.querySelectorAll('.popover-item').forEach(item => {
+      item.addEventListener('click', () => {
+        container.querySelectorAll('.popover-item').forEach(i => i.classList.remove('current'));
+        item.classList.add('current');
+      });
+    });
+  });
+</script>
+</body>
+</html>
