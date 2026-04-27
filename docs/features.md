@@ -139,6 +139,18 @@
 - Библиотека: @dnd-kit/core + @dnd-kit/sortable
 - Файлы: `backend/app/models/project.py`, `backend/app/schemas/project.py`, `backend/app/services/project_service.py`, `backend/app/api/projects.py`, `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/hooks/useProjects.ts`, `frontend/src/routes/Projects.tsx`
 
+#### Управление областями — Сортировка ✅ (Реализовано 27.04.2026)
+- Drag-and-drop перетаскивание областей для ручной сортировки (иконка-ручка ≡)
+- Быстрая авто-сортировка по кнопкам: по имени (А→Я), по дате (новые→старые)
+- Выбранный режим сортировки сохраняется в localStorage между сессиями
+- Порядок областей (sort_order) хранится в модели данных и синхронизируется между устройствами
+- API: PUT /api/areas/reorder — пакетное обновление порядка
+- Поле sort_order в модели Area (Integer, default=0)
+- Библиотека: @dnd-kit/core + @dnd-kit/sortable
+- Миграция: `alembic/versions/20260427_1800_add_sort_order_to_areas_a1b2c3d4e5f6.py`
+- DexieDB миграция v5: добавление sortOrder в DbArea
+- Файлы: `backend/app/models/area.py`, `backend/app/schemas/area.py`, `backend/app/services/area_service.py`, `backend/app/api/areas.py`, `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/hooks/useAreas.ts`, `frontend/src/routes/Areas.tsx`
+
 #### Управление проектами — Раздел «Без проекта» ✅ (Реализовано 27.04.2026)
 - Виртуальная карточка «Без проекта» на странице /projects — отображается только если есть задачи без проекта
 - Переход на /projects/no-project — полная страница задач без проекта с фильтрами и поиском

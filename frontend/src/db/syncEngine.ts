@@ -73,6 +73,7 @@ const RESOURCES: SyncResourceConfig[] = [
       name: item.name as string,
       description: (item.description as string | null) ?? null,
       color: (item.color as string | null) ?? null,
+      sortOrder: (item.sort_order as number) ?? 0,
       createdAt: (item.created_at as string) ?? new Date().toISOString(),
       updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
       _syncStatus: 'synced' as SyncStatus,

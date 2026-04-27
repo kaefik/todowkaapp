@@ -4,7 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { useAreas, type Area } from '../hooks/useAreas'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { useAreas, reorderAreas, autoSortAreas, type Area, type AreaSortMode } from '../hooks/useAreas'
 import { ColorPickerField } from '../components/ColorPickerField'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
@@ -23,7 +26,20 @@ function useAreaSchema() {
 
 type AreaFormData = z.infer<ReturnType<typeof useAreaSchema>>
 
-function AreaItem({
+function getStoredSortMode(): AreaSortMode | null {
+  try {
+    return localStorage.getItem('areas_sort_mode') as AreaSortMode | null
+  } catch { return null }
+}
+
+function storeSortMode(mode: AreaSortMode | null) {
+  try {
+    if (mode) localStorage.setItem('areas_sort_mode', mode)
+    else localStorage.removeItem('areas_sort_mode')
+  } catch {}
+}
+
+function SortableAreaItem({
   area,
   onEdit,
   onDelete,
@@ -34,6 +50,49 @@ function AreaItem({
 }) {
   const { t } = useTranslation('projects')
   const navigate = useNavigate()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: area.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  }
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-2">
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-1 flex-shrink-0 focus:outline-none"
+        aria-label={t('dragToSort')}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="3" r="1.5" />
+          <circle cx="11" cy="3" r="1.5" />
+          <circle cx="5" cy="8" r="1.5" />
+          <circle cx="11" cy="8" r="1.5" />
+          <circle cx="5" cy="13" r="1.5" />
+          <circle cx="11" cy="13" r="1.5" />
+        </svg>
+      </button>
+      <div className="flex-1 min-w-0">
+        <AreaItem area={area} onEdit={onEdit} onDelete={onDelete} navigate={navigate} />
+      </div>
+    </div>
+  )
+}
+
+function AreaItem({
+  area,
+  onEdit,
+  onDelete,
+  navigate,
+}: {
+  area: Area
+  onEdit: (area: Area) => void
+  onDelete: (id: string) => void
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  const { t } = useTranslation('projects')
   return (
     <div
       onClick={() => navigate(`/areas/${area.id}`)}
@@ -162,12 +221,71 @@ function AreaForm({
   )
 }
 
+function AreaSortPanel({ activeMode, onSort }: { activeMode: AreaSortMode | null; onSort: (mode: AreaSortMode) => void }) {
+  const { t } = useTranslation('projects')
+  const SORT_OPTIONS: { mode: AreaSortMode; label: string }[] = [
+    { mode: 'name', label: t('sortByName') },
+    { mode: 'date', label: t('sortByDate') },
+  ]
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">{t('sorting')}</span>
+      {SORT_OPTIONS.map(opt => (
+        <button
+          key={opt.mode}
+          onClick={() => onSort(opt.mode)}
+          className={`px-2 py-1 text-xs rounded-md transition-colors ${
+            activeMode === opt.mode
+              ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function AreasContent() {
   const { t } = useTranslation('projects')
   const { areas, isLoading, error, addArea, updateArea, deleteArea, refetch } = useAreas()
   const [editingArea, setEditingArea] = useState<Area | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [sortMode, setSortMode] = useState<AreaSortMode | null>(getStoredSortMode)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIndex = areas.findIndex(a => a.id === active.id)
+    const newIndex = areas.findIndex(a => a.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reordered = [...areas]
+    const [moved] = reordered.splice(oldIndex, 1)
+    if (!moved) return
+    reordered.splice(newIndex, 0, moved)
+
+    const items = reordered.map((a, i) => ({ id: a.id, sort_order: i }))
+    await reorderAreas(items)
+    setSortMode(null)
+    storeSortMode(null)
+  }
+
+  const handleAutoSort = async (mode: AreaSortMode) => {
+    const items = autoSortAreas(areas, mode)
+    await reorderAreas(items)
+    setSortMode(mode)
+    storeSortMode(mode)
+  }
 
   const handleCreate = async (data: AreaFormData) => {
     setIsSubmitting(true)
@@ -266,16 +384,24 @@ function AreasContent() {
         </div>
       )}
 
-      <div className="space-y-2">
-        {areas.map((area) => (
-          <AreaItem
-            key={area.id}
-            area={area}
-            onEdit={setEditingArea}
-            onDelete={handleDelete}
-          />
-        ))}
-      </div>
+      {areas.length > 1 && (
+        <AreaSortPanel activeMode={sortMode} onSort={handleAutoSort} />
+      )}
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={areas.map(a => a.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-3">
+            {areas.map((area) => (
+              <SortableAreaItem
+                key={area.id}
+                area={area}
+                onEdit={setEditingArea}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   )
 }

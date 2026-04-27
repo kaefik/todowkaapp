@@ -122,15 +122,14 @@ describe('TaskEditModal — новые поля', () => {
   }
 
   describe('GTD status field', () => {
-    it('renders GTD status select', async () => {
+    it('renders GTD status chips', async () => {
       renderModal()
-      await waitFor(() => expect(screen.getByLabelText('GTD-статус')).toBeInTheDocument())
+      await waitFor(() => expect(screen.getByText('Входящие')).toBeInTheDocument())
     })
 
     it('shows all GTD status options', async () => {
       renderModal()
-      await waitFor(() => expect(screen.getByLabelText('GTD-статус')).toBeInTheDocument())
-      expect(screen.getByText('Входящие')).toBeInTheDocument()
+      await waitFor(() => expect(screen.getByText('Входящие')).toBeInTheDocument())
       expect(screen.getByText('Следующее действие')).toBeInTheDocument()
       expect(screen.getByText('Ожидание')).toBeInTheDocument()
       expect(screen.getByText('Когда-нибудь')).toBeInTheDocument()
@@ -138,19 +137,21 @@ describe('TaskEditModal — новые поля', () => {
       expect(screen.getByText('Корзина')).toBeInTheDocument()
     })
 
-    it('has current GTD status selected', async () => {
+    it('has current GTD status selected with ring style', async () => {
       renderModal()
       await waitFor(() => {
-        expect((screen.getByLabelText('GTD-статус') as HTMLSelectElement).value).toBe('inbox')
+        const inboxBtn = screen.getByText('Входящие').closest('button')
+        expect(inboxBtn?.className).toContain('ring-2')
       })
     })
 
-    it('can change GTD status', async () => {
+    it('can change GTD status by clicking chip', async () => {
       const user = userEvent.setup()
       renderModal()
-      await waitFor(() => expect(screen.getByLabelText('GTD-статус')).toBeInTheDocument())
-      await user.selectOptions(screen.getByLabelText('GTD-статус'), 'next')
-      expect((screen.getByLabelText('GTD-статус') as HTMLSelectElement).value).toBe('next')
+      await waitFor(() => expect(screen.getByText('Следующее действие')).toBeInTheDocument())
+      await user.click(screen.getByText('Следующее действие'))
+      const nextBtn = screen.getByText('Следующее действие').closest('button')
+      expect(nextBtn?.className).toContain('ring-2')
     })
   })
 

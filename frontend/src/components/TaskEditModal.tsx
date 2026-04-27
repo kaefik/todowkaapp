@@ -82,6 +82,16 @@ const GTD_STATUS_OPTIONS: { value: GtdStatus; labelKey: string }[] = [
   { value: 'trash', labelKey: 'gtdTrash' },
 ]
 
+const GTD_CHIP_COLORS: Record<GtdStatus, { base: string; ring: string }> = {
+  inbox: { base: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300', ring: 'ring-gray-400 dark:ring-gray-500' },
+  active: { base: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300', ring: 'ring-blue-400 dark:ring-blue-500' },
+  next: { base: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', ring: 'ring-emerald-400 dark:ring-emerald-500' },
+  waiting: { base: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300', ring: 'ring-amber-400 dark:ring-amber-500' },
+  someday: { base: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300', ring: 'ring-purple-400 dark:ring-purple-500' },
+  completed: { base: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400', ring: 'ring-gray-400 dark:ring-gray-500' },
+  trash: { base: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400', ring: 'ring-red-400 dark:ring-red-500' },
+}
+
 const editTaskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().nullable().optional(),
@@ -195,6 +205,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema) as unknown as never,
@@ -477,17 +488,39 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             </Accordion>
 
             <div>
-              <label htmlFor="gtd_status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('gtdStatus')}
               </label>
+              <div className="flex flex-wrap gap-1.5">
+                {GTD_STATUS_OPTIONS.map((opt) => {
+                  const isSelected = watch('gtd_status') === opt.value
+                  const colorClasses = GTD_CHIP_COLORS[opt.value]
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setValue('gtd_status', opt.value, { shouldDirty: true })}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-all ${colorClasses.base} ${isSelected ? `ring-2 ring-offset-1 ${colorClasses.ring}` : 'opacity-70 hover:opacity-100'}`}
+                    >
+                      {t(opt.labelKey)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="area_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('area')}
+              </label>
               <select
-                {...register('gtd_status')}
-                id="gtd_status"
+                {...register('area_id')}
+                id="area_id"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               >
-                {GTD_STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {t(opt.labelKey)}
+                <option value="">{t('noArea')}</option>
+                {areas.map((area) => (
+                  <option key={area.id} value={area.id}>
+                    {area.name}
                   </option>
                 ))}
               </select>
@@ -603,24 +636,6 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 {contexts.map((ctx) => (
                   <option key={ctx.id} value={ctx.id}>
                     {ctx.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="area_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('area')}
-              </label>
-              <select
-                {...register('area_id')}
-                id="area_id"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-              >
-                <option value="">{t('noArea')}</option>
-                {areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
                   </option>
                 ))}
               </select>

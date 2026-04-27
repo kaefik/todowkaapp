@@ -24,7 +24,7 @@ class AreaService:
         result = await self.db.execute(
             select(Area)
             .where(Area.user_id == user_id)
-            .order_by(Area.name.asc())
+            .order_by(Area.sort_order.asc(), Area.created_at.desc())
             .limit(limit)
             .offset(offset)
         )
@@ -63,6 +63,13 @@ class AreaService:
             description=data.description,
             color=data.color,
         )
+        if data.sort_order is not None:
+            area.sort_order = data.sort_order
+        else:
+            max_result = await self.db.execute(
+                select(func.coalesce(func.max(Area.sort_order), -1)).where(Area.user_id == user_id)
+            )
+            area.sort_order = (max_result.scalar() or -1) + 1
         self.db.add(area)
         await self.db.flush()
         await self.db.refresh(area)
@@ -93,3 +100,18 @@ class AreaService:
         )
         await self.db.flush()
         return result.rowcount > 0
+
+    async def reorder_areas(self, user_id: UUID, items: list[dict]) -> None:
+        area_ids = [item['id'] for item in items]
+        result = await self.db.execute(
+            select(Area).where(
+                Area.id.in_(area_ids),
+                Area.user_id == user_id,
+            )
+        )
+        areas = {a.id: a for a in result.scalars().all()}
+        for item in items:
+            area = areas.get(item['id'])
+            if area:
+                area.sort_order = item['sort_order']
+        await self.db.flush()

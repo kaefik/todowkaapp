@@ -54,6 +54,7 @@ export interface DbArea {
   name: string
   description: string | null
   color: string | null
+  sortOrder: number
   createdAt: string
   updatedAt: string
   _syncStatus: SyncStatus
@@ -161,6 +162,14 @@ export class TodowkaDB extends Dexie {
     }).upgrade(tx => {
       return tx.table('tasks').toCollection().modify(task => {
         task.deadlineNotified = false
+      })
+    })
+
+    this.version(5).stores({
+      areas: 'id, userId, _syncStatus, updatedAt, sortOrder',
+    }).upgrade(tx => {
+      return tx.table('areas').toCollection().modify(area => {
+        area.sortOrder = 0
       })
     })
   }
