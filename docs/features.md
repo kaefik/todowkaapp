@@ -904,7 +904,17 @@
 
 ## История возможностей
 
-*Последнее обновление: 19 апреля 2026 года*
+*Последнее обновление: 27 апреля 2026 года*
+
+**27 апреля 2026:**
+- Исправление timezone-бага дедлайнов задач
+  - SQLite теряет timezone-информацию при хранении datetime (хранит как TEXT без Z-суффикса)
+  - После сохранения дедлайна и обновления страницы время отображалось на N часов меньше (N = смещение таймзоны пользователя)
+  - Корневая причина: Pydantic v2 сериализует naive datetime (из SQLite) без Z-суффикса; фронтенд трактует строку без Z как local time вместо UTC
+  - Решение: `BaseResponseSchema` — базовый Pydantic-класс с `@field_serializer("*")`, который добавляет UTC-суффикс к naive datetime при сериализации
+  - Все Response-схемы унаследованы от `BaseResponseSchema`: TaskResponse, UserResponse, ProjectResponse, AreaResponse, ContextResponse, TagResponse, NotificationResponse
+  - Попутно: `datetime.now()` → `datetime.now(UTC)` в TaskService (все timestamp'ы теперь UTC-aware)
+  - Файлы: `backend/app/schemas/base.py` (новый), `backend/app/schemas/task.py`, `backend/app/schemas/user.py`, `backend/app/schemas/project.py`, `backend/app/schemas/area.py`, `backend/app/schemas/context.py`, `backend/app/schemas/tag.py`, `backend/app/schemas/notification.py`, `backend/app/services/task_service.py`
 
 **19 апреля 2026:**
 - Исправление системы напоминаний (критические баги, v2)

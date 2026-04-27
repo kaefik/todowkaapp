@@ -1,10 +1,12 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
+
+from app.schemas.base import BaseResponseSchema
 
 
-class NotificationResponse(BaseModel):
+class NotificationResponse(BaseResponseSchema):
     id: UUID
     user_id: UUID
     task_id: UUID | None = None
@@ -15,14 +17,6 @@ class NotificationResponse(BaseModel):
     delivered_at: datetime | None = None
     read_at: datetime | None = None
     expires_at: datetime | None = None
-
-    @field_serializer('created_at', 'delivered_at', 'read_at', 'expires_at')
-    def serialize_datetime(self, dt: datetime | None, _info) -> str | None:
-        if dt is None:
-            return None
-        if dt.tzinfo is None:
-            return dt.isoformat() + 'Z'
-        return dt.isoformat()
 
     model_config = {
         'from_attributes': True

@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.base import BaseResponseSchema
+
 
 class TagCreate(BaseModel):
     id: str | None = Field(default=None, max_length=36)
@@ -15,7 +17,7 @@ class TagUpdate(BaseModel):
     color: str | None = Field(default=None, max_length=7, pattern=r'^#[0-9A-Fa-f]{6}$')
 
 
-class TagResponse(BaseModel):
+class TagResponse(BaseResponseSchema):
     id: UUID
     user_id: UUID
     name: str

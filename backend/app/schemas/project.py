@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.base import BaseResponseSchema
+
 
 class ProjectCreate(BaseModel):
     id: str | None = Field(default=None, max_length=36)
@@ -22,7 +24,7 @@ class ProjectUpdate(BaseModel):
     sort_order: int | None = Field(default=None, ge=0)
 
 
-class ProjectResponse(BaseModel):
+class ProjectResponse(BaseResponseSchema):
     id: UUID
     user_id: UUID
     area_id: UUID | None

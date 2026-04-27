@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from app.schemas.base import BaseResponseSchema
+
 
 def _has_uppercase(s: str) -> bool:
     return any(c.isupper() for c in s)
@@ -20,7 +22,7 @@ VALID_DEFAULT_SECTIONS = {
 }
 
 
-class UserResponse(BaseModel):
+class UserResponse(BaseResponseSchema):
     id: UUID
     username: str
     email: EmailStr

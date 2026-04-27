@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -194,7 +194,7 @@ class TaskService:
         for field, value in update_data.items():
             setattr(task, field, value)
 
-        task.updated_at = datetime.now()
+        task.updated_at = datetime.now(UTC)
 
         await self.db.flush()
         return await self.get_task(user_id, task_id)
@@ -208,9 +208,9 @@ class TaskService:
         was_trash = task.gtd_status == GtdStatus.TRASH.value
 
         task.gtd_status = gtd_status.value
-        task.updated_at = datetime.now()
+        task.updated_at = datetime.now(UTC)
         if gtd_status == GtdStatus.TRASH:
-            task.trashed_at = datetime.now()
+            task.trashed_at = datetime.now(UTC)
             task.due_date = None
             task.reminder_time = None
             task.reminder_offsets = None
@@ -219,7 +219,7 @@ class TaskService:
             task.last_reminder_sent_at = None
         elif gtd_status == GtdStatus.COMPLETED:
             task.is_completed = True
-            task.completed_at = datetime.now()
+            task.completed_at = datetime.now(UTC)
             task.trashed_at = None
         elif task.gtd_status != GtdStatus.COMPLETED.value:
             task.is_completed = False
@@ -241,8 +241,8 @@ class TaskService:
                 .where(Task.parent_task_id == str(task_id))
                 .values(
                     gtd_status=gtd_status.value,
-                    updated_at=datetime.now(),
-                    trashed_at=datetime.now(),
+                    updated_at=datetime.now(UTC),
+                    trashed_at=datetime.now(UTC),
                     due_date=None,
                     reminder_time=None,
                     reminder_offsets=None,
@@ -273,7 +273,7 @@ class TaskService:
             return None
 
         task.position = position
-        task.updated_at = datetime.now()
+        task.updated_at = datetime.now(UTC)
         await self.db.flush()
         return await self.get_task(user_id, task_id)
 
@@ -298,9 +298,9 @@ class TaskService:
         was_recurring_and_completed = task.is_recurring and was_completed
 
         task.is_completed = not task.is_completed
-        task.updated_at = datetime.now()
+        task.updated_at = datetime.now(UTC)
         if task.is_completed:
-            task.completed_at = datetime.now()
+            task.completed_at = datetime.now(UTC)
             task.gtd_status = GtdStatus.COMPLETED.value
         else:
             task.completed_at = None
@@ -357,7 +357,7 @@ class TaskService:
         return result.rowcount
 
     async def cleanup_old_trash(self, days: int = 30) -> int:
-        cutoff = datetime.now() - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)
 
         subtasks_stmt = delete(Task).where(
             Task.gtd_status == GtdStatus.TRASH.value,

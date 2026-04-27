@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.task import GtdStatus
+from app.schemas.base import BaseResponseSchema
 from app.schemas.context import ContextBriefResponse
 
 
@@ -86,7 +87,7 @@ class TaskReorderRequest(BaseModel):
     position: int = Field(ge=0)
 
 
-class TaskResponse(BaseModel):
+class TaskResponse(BaseResponseSchema):
     id: UUID
     user_id: UUID
     title: str

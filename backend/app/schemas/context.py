@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.base import BaseResponseSchema
+
 
 class ContextCreate(BaseModel):
     id: str | None = Field(default=None, max_length=36)
@@ -17,7 +19,7 @@ class ContextUpdate(BaseModel):
     icon: str | None = Field(default=None, max_length=50)
 
 
-class ContextResponse(BaseModel):
+class ContextResponse(BaseResponseSchema):
     id: UUID
     user_id: UUID
     name: str
