@@ -51,6 +51,9 @@ class ReminderService:
                 reminder_dt_local = datetime.combine(due_date_local.date(), reminder_time_to_use, tzinfo=user_timezone)
                 reminder_dt = reminder_dt_local.astimezone(ZoneInfo('UTC'))
 
+                if reminder_time_to_use == due_date_local.time():
+                    continue
+
                 if now_utc >= reminder_dt:
                     last_sent = task.last_reminder_sent_at
                     if last_sent and last_sent.tzinfo is None:
