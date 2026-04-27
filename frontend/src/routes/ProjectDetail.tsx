@@ -57,7 +57,7 @@ export function ProjectDetail() {
   )
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
-    await addTask({ ...data, project_id: id })
+    await addTask({ ...data, project_id: id, gtd_status: 'someday' })
   }
 
   const handleDeleteTask = async (taskId: string) => {
