@@ -178,7 +178,7 @@ docker-compose build --no-cache
 
 # Запуск миграций БД
 log_info "Запуск миграций БД..."
-if docker-compose -f "$SCRIPT_DIR/docker-compose.yml" run --rm --entrypoint python backend -m alembic upgrade head; then
+if docker-compose -f "$SCRIPT_DIR/docker-compose.yml" run --rm backend alembic upgrade head; then
     log_info "Миграции успешно применены"
 else
     log_error "Ошибка при миграции БД"
