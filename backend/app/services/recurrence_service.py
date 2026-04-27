@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -10,8 +9,6 @@ from app.models.task_recurrence import TaskRecurrence
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger(__name__)
 
 
 class RecurrenceService:
@@ -199,15 +196,8 @@ class RecurrenceService:
         current_date = task.due_date.replace(tzinfo=None)
         now = datetime.now()
         max_date = now + timedelta(days=7)
-        iteration = 0
-        max_iterations = 100
 
         while current_date < max_date:
-            iteration += 1
-            if iteration > max_iterations:
-                logger.warning(f"CATCH_UP: infinite loop detected for task {task.id}, breaking after {max_iterations} iterations")
-                break
-
             next_date = self.calculate_next_due_date(task)
             if next_date is None:
                 break
@@ -219,7 +209,6 @@ class RecurrenceService:
                 break
 
             if next_date <= now:
-                logger.info(f"CATCH_UP: iter={iteration} task={task.id} next_date={next_date} current_date={current_date}")
                 new_task = Task(
                     user_id=task.user_id,
                     title=task.title,
@@ -244,11 +233,11 @@ class RecurrenceService:
                 generated_tasks.append(new_task)
 
                 task.due_date = next_date
+                current_date = next_date
+            else:
+                task.due_date = next_date
+                break
 
-            current_date = next_date
-
-        if iteration > 10:
-            logger.warning(f"CATCH_UP: task {task.id} took {iteration} iterations")
         return generated_tasks
 
     def validate_recurrence_config(self, config: dict) -> bool:

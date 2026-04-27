@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import threading
-import time
 from datetime import datetime
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -107,33 +106,27 @@ class TaskScheduler:
 
     @staticmethod
     async def _job_reminder_recovery():
-        t0 = time.monotonic()
         logger.info("Running job: reminder_recovery")
 
         try:
             from app.services.reminder_service import ReminderService
 
             async with AsyncSessionLocal() as session:
-                logger.info("REMINDER_RECOVERY: session opened")
                 reminder_service = ReminderService(session)
 
-                t1 = time.monotonic()
                 due_items = await reminder_service.find_due_tasks()
-                logger.info(f"REMINDER_RECOVERY: find_due_tasks took {time.monotonic() - t1:.2f}s, found {len(due_items)} items")
+                logger.info(f"Recovery: found {len(due_items)} missed reminders")
 
                 sent_count = 0
                 for task, offset_minutes in due_items:
                     try:
                         if task.user:
-                            t2 = time.monotonic()
                             notification = await reminder_service.send_reminder(
                                 task, task.user, offset_minutes
                             )
                             await session.commit()
-                            logger.info(f"REMINDER_RECOVERY: send_reminder for task '{task.title}' took {time.monotonic() - t2:.2f}s")
 
                             from app.event_bus import event_bus
-                            logger.info(f"Publishing notification {notification.id} for user {task.user.id}")
                             await event_bus.publish(
                                 f"{task.user.id}:notifications",
                                 "notification_created",
@@ -174,7 +167,7 @@ class TaskScheduler:
                         logger.error(f"Recovery error for task '{task.title}': {e}")
                         await session.rollback()
 
-                logger.info(f"REMINDER_RECOVERY: done in {time.monotonic() - t0:.2f}s, sent {sent_count} missed reminders")
+                logger.info(f"Recovery: sent {sent_count} missed reminders")
 
         except Exception as e:
             logger.error(f"Error in reminder_recovery: {e}")
@@ -186,7 +179,6 @@ class TaskScheduler:
 
     @staticmethod
     async def _job_generate_recurring_tasks():
-        t0 = time.monotonic()
         logger.info("Running job: generate_recurring_tasks")
 
         try:
@@ -200,19 +192,15 @@ class TaskScheduler:
                     )
                 )
                 completed_recurring_tasks = list(result.scalars().all())
-                logger.info(f"GENERATE_RECURRING: found {len(completed_recurring_tasks)} tasks")
 
                 recurrence_service = RecurrenceService(session)
 
-                for i, task in enumerate(completed_recurring_tasks):
+                for task in completed_recurring_tasks:
                     if recurrence_service.should_generate_task(task):
-                        t1 = time.monotonic()
-                        logger.info(f"GENERATE_RECURRING: processing task {i+1}/{len(completed_recurring_tasks)} id={task.id}")
                         await recurrence_service.catch_up_missed_tasks(task)
-                        logger.info(f"GENERATE_RECURRING: task {i+1} done in {time.monotonic() - t1:.2f}s")
                         await session.commit()
 
-                logger.info(f"GENERATE_RECURRING: total done in {time.monotonic() - t0:.2f}s, processed {len(completed_recurring_tasks)} tasks")
+                logger.info(f"Processed {len(completed_recurring_tasks)} completed recurring tasks")
 
         except Exception as e:
             logger.error(f"Error in job_generate_recurring_tasks: {e}")
@@ -364,15 +352,12 @@ class TaskScheduler:
 
     @staticmethod
     async def _job_startup_recovery():
-        t0 = time.monotonic()
         logger.info("Running job: startup_recovery")
 
         try:
             from app.services.recurrence_service import RecurrenceService
 
             async with AsyncSessionLocal() as session:
-                logger.info("STARTUP_RECOVERY: session opened")
-                t1 = time.monotonic()
                 result = await session.execute(
                     select(Task).where(
                         Task.recurrence_type.isnot(None),
@@ -380,20 +365,16 @@ class TaskScheduler:
                     )
                 )
                 recurring_tasks = list(result.scalars().all())
-                logger.info(f"STARTUP_RECOVERY: query took {time.monotonic() - t1:.2f}s, found {len(recurring_tasks)} recurring tasks")
 
                 recurrence_service = RecurrenceService(session)
 
                 total_generated = 0
-                for i, task in enumerate(recurring_tasks):
-                    t2 = time.monotonic()
-                    logger.info(f"STARTUP_RECOVERY: processing task {i+1}/{len(recurring_tasks)} id={task.id} title='{task.title}' recurrence={task.recurrence_type}")
+                for task in recurring_tasks:
                     generated_tasks = await recurrence_service.catch_up_missed_tasks(task, max_days=7)
                     total_generated += len(generated_tasks)
-                    logger.info(f"STARTUP_RECOVERY: task {i+1} done in {time.monotonic() - t2:.2f}s, generated {len(generated_tasks)} tasks")
 
                 await session.commit()
-                logger.info(f"STARTUP_RECOVERY: total done in {time.monotonic() - t0:.2f}s, generated {total_generated} missed tasks")
+                logger.info(f"Startup recovery: generated {total_generated} missed tasks from {len(recurring_tasks)} recurring tasks")
 
         except Exception as e:
             logger.error(f"Error in job_startup_recovery: {e}")
