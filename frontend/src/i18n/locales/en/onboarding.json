@@ -1,0 +1,15 @@
+{
+  "title": "Welcome to Todowka",
+  "stepLanguage": "Choose Language",
+  "stepLanguageDesc": "Select your interface language. You can change it later in settings.",
+  "stepTimezone": "Timezone",
+  "stepTimezoneDesc": "Select your timezone for correct display of deadlines and reminders.",
+  "detectedTimezone": "Auto-detected:",
+  "changeTimezone": "Or choose another:",
+  "searchTimezone": "Search timezone...",
+  "stepSection": "Default Section",
+  "stepSectionDesc": "Which section should open when you start the app?",
+  "next": "Next",
+  "start": "Get Started",
+  "progress": "Step {{current}} of {{total}}"
+}

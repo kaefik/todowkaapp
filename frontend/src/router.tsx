@@ -21,6 +21,7 @@ import { ProjectDetail } from './routes/ProjectDetail'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './components/AppLayout'
 import { Notifications } from './routes/Notifications'
+import { Onboarding } from './routes/Onboarding'
 
 const VALID_SECTIONS = new Set([
   'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
@@ -41,6 +42,10 @@ const routes: RouteObject[] = [
   {
     path: '/register',
     element: <Register />,
+  },
+  {
+    path: '/onboarding',
+    element: <Onboarding />,
   },
   {
     path: '/',
