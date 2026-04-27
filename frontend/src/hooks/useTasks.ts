@@ -202,7 +202,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       description: data.description ?? null,
       isCompleted: false,
       completedAt: null,
-      gtdStatus: data.gtd_status ?? (data.due_date ? 'active' : 'inbox'),
+      gtdStatus: data.gtd_status ?? (data.due_date ? 'active' : 'someday'),
       contextId: data.context_id ?? null,
       areaId: data.area_id ?? null,
       projectId: data.project_id ?? null,
