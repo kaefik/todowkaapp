@@ -118,7 +118,7 @@ export function ProjectDetail() {
         &larr; {t('backToProjects').replace('← ', '')}
       </button>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+      <div className="sticky top-16 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3 mb-3">
           {project.color ? (
             <span
