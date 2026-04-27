@@ -116,6 +116,7 @@ class TaskScheduler:
 
                 due_items = await reminder_service.find_due_tasks()
                 logger.info(f"Recovery: found {len(due_items)} missed reminders")
+                await session.commit()
 
                 sent_count = 0
                 for task, offset_minutes in due_items:
@@ -217,6 +218,7 @@ class TaskScheduler:
 
                 due_items = await reminder_service.find_due_tasks()
                 logger.info(f"Found {len(due_items)} tasks with due reminders")
+                await session.commit()
 
                 for task, offset_minutes in due_items:
                     try:

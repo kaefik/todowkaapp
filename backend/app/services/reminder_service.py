@@ -58,6 +58,8 @@ class ReminderService:
                 reminder_dt = reminder_dt_local.astimezone(ZoneInfo('UTC'))
 
                 if reminder_time_to_use == due_date_local.time():
+                    task.last_reminder_sent_at = datetime.now(ZoneInfo('UTC'))
+                    task.reminder_fired = True
                     continue
 
                 if now_utc >= reminder_dt:
@@ -75,11 +77,20 @@ class ReminderService:
                 for offset_minutes in task.reminder_offsets:
                     if offset_minutes in sent_offsets:
                         continue
+                    if offset_minutes == 0:
+                        sent = list(task.sent_reminder_offsets or [])
+                        sent.append(0)
+                        task.sent_reminder_offsets = sent
+                        all_sent = set(task.reminder_offsets or []) <= set(sent)
+                        if all_sent:
+                            task.reminder_fired = True
+                        continue
                     calculated_reminder_dt = due_date - timedelta(minutes=offset_minutes)
                     if now_utc >= calculated_reminder_dt:
                         due_tasks.append((task, offset_minutes))
                         break
 
+        await self.db.flush()
         return due_tasks
 
     async def find_deadline_arrived_tasks(self) -> list[Task]:
