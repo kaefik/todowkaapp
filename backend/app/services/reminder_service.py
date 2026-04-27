@@ -23,7 +23,13 @@ class ReminderService:
 
         result = await self.db.execute(
             select(Task)
-            .options(selectinload(Task.user))
+            .options(
+                selectinload(Task.user),
+                selectinload(Task.project),
+                selectinload(Task.area),
+                selectinload(Task.context),
+                selectinload(Task.tags)
+            )
             .where(
                 Task.due_date.isnot(None),
                 Task.is_completed.is_(False),
@@ -81,7 +87,13 @@ class ReminderService:
 
         result = await self.db.execute(
             select(Task)
-            .options(selectinload(Task.user))
+            .options(
+                selectinload(Task.user),
+                selectinload(Task.project),
+                selectinload(Task.area),
+                selectinload(Task.context),
+                selectinload(Task.tags)
+            )
             .where(
                 Task.due_date.isnot(None),
                 Task.is_completed.is_(False),

@@ -452,14 +452,14 @@
 - Бэкенд: 26 тестов в `tests/test_reminder_service.py`, 11 тестов в `tests/test_notifications_api.py`, 3 теста в `tests/test_scheduler.py`, 2 теста в `tests/test_dedup.py`
 - Фронтенд: тесты SSE/polling/eventbus в `frontend/src/services/__tests__/ssePolling.test.ts`
 
-**Telegram-оповещения для напоминаний ✅ (Реализовано 26.04.2026)**
+**Telegram-оповещения для напоминаний ✅ (Реализовано 26.04.2026, обновлено 27.04.2026)**
 - Дублирование напоминаний о задачах (due_reminder) в Telegram
 - Каждый пользователь создаёт своего бота через @BotFather
 - Токен бота вводится в Настройках → Общие → Telegram
 - Валидация токена через Telegram API (getMe)
 - Привязка chat_id: пользователь пишет /start боту → scheduler job захватывает chat_id (каждые 5 сек)
 - Polling-архитектура: scheduler job опрашивает все неподключённые боты через httpx
-- Формат сообщения: заголовок задачи + дедлайн в timezone пользователя
+- **Полный формат сообщения:** название, описание, проект, область, контекст, теги, дедлайн, повторение, статус, заметки, дата создания — всё, что указано в задаче
 - Переключатель вкл/выкл Telegram-уведомлений в настройках
 - Приветственное сообщение при успешной привязке
 - Кнопка «Удалить токен» для отключения бота
@@ -470,7 +470,7 @@
 - API: POST /api/users/telegram/validate-token
 - Сервис: `backend/app/services/telegram_notifier.py`
 - i18n: ключи telegram* в ru/en settings.json
-- Файлы: `backend/app/services/telegram_notifier.py`, `backend/app/models/user.py`, `backend/app/schemas/user.py`, `backend/app/api/users.py`, `backend/app/scheduler.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
+- Файлы: `backend/app/services/telegram_notifier.py`, `backend/app/services/reminder_service.py`, `backend/app/models/user.py`, `backend/app/schemas/user.py`, `backend/app/api/users.py`, `backend/app/scheduler.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
 
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Очистка прочитанных уведомлений ✅ (Реализовано 24.04.2026)
