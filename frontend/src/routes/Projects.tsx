@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useProjects, reorderProjects, autoSortProjects, type Project, type SortMode } from '../hooks/useProjects'
+import { useProjects, reorderProjects, autoSortProjects, useNoProjectCount, type Project, type SortMode } from '../hooks/useProjects'
 import { ColorPickerField } from '../components/ColorPickerField'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
@@ -158,6 +158,25 @@ function SortableProjectCard({
   )
 }
 
+function NoProjectCard({ count, onClick }: { count: number; onClick: () => void }) {
+  const { t } = useTranslation('projects')
+  return (
+    <div
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3 mb-2">
+        <span className="w-4 h-4 rounded-full flex-shrink-0 bg-gray-300 dark:bg-gray-600 border-2 border-dashed border-gray-400 dark:border-gray-500" />
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          {t('noProject')}
+        </span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">({count})</span>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{t('noProjectDescription')}</p>
+    </div>
+  )
+}
+
 function SortPanel({ activeMode, onSort }: { activeMode: SortMode | null; onSort: (mode: SortMode) => void }) {
   const { t } = useTranslation('projects')
   const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
@@ -280,6 +299,7 @@ function ProjectsContent() {
   const tc = useTranslation('common').t
   const navigate = useNavigate()
   const { projects, isLoading, error, addProject, updateProject, deleteProject, refetch } = useProjects()
+  const noProjectCount = useNoProjectCount()
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -420,6 +440,10 @@ function ProjectsContent() {
 
       {projects.length > 1 && (
         <SortPanel activeMode={sortMode} onSort={handleAutoSort} />
+      )}
+
+      {noProjectCount > 0 && (
+        <NoProjectCard count={noProjectCount} onClick={() => handleClickProject('no-project')} />
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>

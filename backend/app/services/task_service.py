@@ -35,6 +35,7 @@ class TaskService:
         include_subtasks: bool = False,
         limit: int = 100,
         offset: int = 0,
+        no_project: bool = False,
     ) -> tuple[list[Task], int]:
         base_where = [Task.user_id == user_id]
         if not include_subtasks:
@@ -48,6 +49,8 @@ class TaskService:
             base_where.append(Task.area_id == area_id)
         if project_id is not None:
             base_where.append(Task.project_id == project_id)
+        if no_project:
+            base_where.append(Task.project_id.is_(None))
         if is_completed is not None:
             base_where.append(Task.is_completed == is_completed)
         if due_date_from is not None:

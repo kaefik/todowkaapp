@@ -97,6 +97,7 @@ export interface TaskFilters {
   context_id?: string
   area_id?: string
   project_id?: string
+  no_project?: boolean
   tag_id?: string
   is_completed?: boolean
   search?: string
@@ -141,6 +142,9 @@ function applyFilters(records: UiTask[], filters?: TaskFilters): UiTask[] {
   }
   if (filters?.project_id) {
     result = result.filter(t => t.project_id === filters.project_id)
+  }
+  if (filters?.no_project) {
+    result = result.filter(t => !t.project_id)
   }
   if (filters?.tag_id) {
     result = result.filter(t => t.tags.some(tag => tag.id === filters.tag_id))

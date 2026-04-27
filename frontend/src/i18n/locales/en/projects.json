@@ -40,6 +40,8 @@
   "colorFormat": "Format: #RRGGBB",
   "backToProjects": "← Back to projects",
   "projectNotFound": "Project not found",
+  "noProject": "No project",
+  "noProjectDescription": "Tasks not assigned to any project",
   "tasksWord": "tasks",
   "color": "Color",
   "resetColor": "Reset color",

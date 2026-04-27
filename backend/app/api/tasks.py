@@ -61,6 +61,7 @@ async def list_tasks(
     sort_by: str = Query(default='created_at'),
     sort_order: str = Query(default='desc'),
     include_subtasks: bool = Query(default=False),
+    no_project: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TaskListResponse:
@@ -90,6 +91,7 @@ async def list_tasks(
         include_subtasks=include_subtasks,
         limit=limit,
         offset=offset,
+        no_project=no_project,
     )
     items = []
     for t in tasks:

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 
-import { db, activeTable, activeTasksByProject } from '../db/database'
+import { db, activeTable, activeTasks, activeTasksByProject } from '../db/database'
 import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 
@@ -223,4 +223,19 @@ export function autoSortProjects(
       break
   }
   return sorted.map((p, i) => ({ id: p.id, sort_order: i }))
+}
+
+export function useNoProjectCount() {
+  const user = useAuthStore(s => s.user)
+  const { data = 0 } = useDexieQuery(
+    async () => {
+      if (!user) return 0
+      const tasks = await activeTasks(user.id)
+        .filter(t => !t.projectId)
+        .toArray()
+      return tasks.length
+    },
+    [user?.id]
+  )
+  return data
 }

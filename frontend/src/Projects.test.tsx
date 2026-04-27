@@ -26,6 +26,7 @@ vi.mock('@dnd-kit/utilities', () => ({
 
 vi.mock('./hooks/useProjects', () => ({
   useProjects: vi.fn(),
+  useNoProjectCount: vi.fn(() => 0),
 }))
 
 import { Projects } from './routes/Projects'

@@ -8,6 +8,8 @@ import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
 import { notifyTasksChanged } from '../hooks/useGtdCounts'
 
+const NO_PROJECT_ID = 'no-project'
+
 function ProgressBar({ percent, color }: { percent: number; color: string | null }) {
   const bgColor = color || '#6366f1'
   return (
@@ -26,7 +28,11 @@ export function ProjectDetail() {
   const navigate = useNavigate()
   const { projects, isLoading: isLoadingProjects } = useProjects()
 
-  const project = useMemo(() => projects.find(p => p.id === id) ?? null, [projects, id])
+  const isNoProject = id === NO_PROJECT_ID
+  const project = useMemo(
+    () => isNoProject ? null : (projects.find(p => p.id === id) ?? null),
+    [projects, id, isNoProject]
+  )
 
   const {
     filters,
@@ -36,9 +42,12 @@ export function ProjectDetail() {
     clearFilters,
     hasActiveFilters,
     activeFilterCount,
-  } = useTaskFilter({ project_id: id })
+  } = useTaskFilter({ project_id: isNoProject ? undefined : id })
 
-  const activeFilters = useMemo(() => ({ ...filters, project_id: id }), [filters, id])
+  const activeFilters = useMemo(
+    () => isNoProject ? { ...filters, no_project: true } : { ...filters, project_id: id },
+    [filters, id, isNoProject]
+  )
 
   const {
     tasks,
@@ -57,7 +66,11 @@ export function ProjectDetail() {
   )
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
-    await addTask({ ...data, project_id: id, gtd_status: 'someday' })
+    if (isNoProject) {
+      await addTask({ ...data, gtd_status: 'someday' })
+    } else {
+      await addTask({ ...data, project_id: id, gtd_status: 'someday' })
+    }
   }
 
   const handleDeleteTask = async (taskId: string) => {
@@ -79,7 +92,7 @@ export function ProjectDetail() {
     await toggleTask(taskId)
   }
 
-  if (isLoadingProjects) {
+  if (!isNoProject && isLoadingProjects) {
     return (
       <div className="space-y-4">
         <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
@@ -93,7 +106,7 @@ export function ProjectDetail() {
     )
   }
 
-  if (!project) {
+  if (!isNoProject && !project) {
     return (
       <div className="space-y-4">
         <button
@@ -120,33 +133,47 @@ export function ProjectDetail() {
 
       <div className="sticky top-16 z-20 bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3 mb-3">
-          {project.color ? (
-            <span
-              className="w-5 h-5 rounded-full flex-shrink-0"
-              style={{ backgroundColor: project.color }}
-            />
+          {isNoProject ? (
+            <>
+              <span className="w-5 h-5 rounded-full flex-shrink-0 bg-gray-300 dark:bg-gray-600 border-2 border-dashed border-gray-400 dark:border-gray-500" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('noProject')}</h1>
+            </>
           ) : (
-            <span className="w-5 h-5 rounded-full flex-shrink-0 bg-gray-300 dark:bg-gray-600" />
-          )}
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{project.name}</h1>
-          {!project.is_active && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-              {t('archive')}
-            </span>
+            <>
+              {project.color ? (
+                <span
+                  className="w-5 h-5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: project.color }}
+                />
+              ) : (
+                <span className="w-5 h-5 rounded-full flex-shrink-0 bg-gray-300 dark:bg-gray-600" />
+              )}
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{project.name}</h1>
+              {!project.is_active && (
+                <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                  {t('archive')}
+                </span>
+              )}
+            </>
           )}
         </div>
 
-        {project.description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{project.description}</p>
+        {isNoProject ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">{t('noProjectDescription')}</p>
+        ) : (
+          <>
+            {project.description && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{project.description}</p>
+            )}
+            <div className="space-y-2">
+              <ProgressBar percent={project.progress.progress_percent} color={project.color} />
+              <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                <span>{t('tasksCount', { completed: project.progress.tasks_completed, total: project.progress.tasks_total })}</span>
+                <span>{project.progress.progress_percent}%</span>
+              </div>
+            </div>
+          </>
         )}
-
-        <div className="space-y-2">
-          <ProgressBar percent={project.progress.progress_percent} color={project.color} />
-          <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-            <span>{t('tasksCount', { completed: project.progress.tasks_completed, total: project.progress.tasks_total })}</span>
-            <span>{project.progress.progress_percent}%</span>
-          </div>
-        </div>
       </div>
 
       <TaskFilterPanel
@@ -167,13 +194,13 @@ export function ProjectDetail() {
         searchQuery={filters.search}
         onAddTask={handleAddTask}
         showAddForm={true}
-        defaultProjectId={id}
+        defaultProjectId={isNoProject ? undefined : id}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
         onMoveTask={handleMoveTask}
         onSaveTask={handleSaveTask}
         onRefetch={() => refetch()}
-        emptyMessage={t('noProjects')}
+        emptyMessage={isNoProject ? t('noProjectDescription') : t('noProjects')}
         showGtdStatus
       />
     </div>

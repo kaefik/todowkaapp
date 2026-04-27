@@ -40,6 +40,8 @@
   "colorFormat": "Формат: #RRGGBB",
   "backToProjects": "← Назад к проектам",
   "projectNotFound": "Проект не найден",
+  "noProject": "Без проекта",
+  "noProjectDescription": "Задачи, не привязанные к проекту",
   "tasksWord": "задач",
   "color": "Цвет",
   "resetColor": "Сбросить цвет",

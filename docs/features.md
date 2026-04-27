@@ -139,6 +139,15 @@
 - Библиотека: @dnd-kit/core + @dnd-kit/sortable
 - Файлы: `backend/app/models/project.py`, `backend/app/schemas/project.py`, `backend/app/services/project_service.py`, `backend/app/api/projects.py`, `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/hooks/useProjects.ts`, `frontend/src/routes/Projects.tsx`
 
+#### Управление проектами — Раздел «Без проекта» ✅ (Реализовано 27.04.2026)
+- Виртуальная карточка «Без проекта» на странице /projects — отображается только если есть задачи без проекта
+- Переход на /projects/no-project — полная страница задач без проекта с фильтрами и поиском
+- Хук `useNoProjectCount` — реактивный подсчёт задач без проекта (Dexie live query)
+- Фильтр `no_project` на бэкенде (query param `no_project=true` для GET /api/tasks)
+- Фильтр `no_project` на фронтенде в `TaskFilters` и `applyFilters`
+- i18n: ключи `noProject`, `noProjectDescription` (ru/en)
+- Файлы: `backend/app/api/tasks.py`, `backend/app/services/task_service.py`, `frontend/src/routes/Projects.tsx`, `frontend/src/routes/ProjectDetail.tsx`, `frontend/src/hooks/useProjects.ts`, `frontend/src/hooks/useTasks.ts`, `frontend/src/i18n/locales/ru/projects.json`, `frontend/src/i18n/locales/en/projects.json`
+
 #### Управление пользователями (для администраторов)
 - Панель управления пользователями доступна только администраторам
 - Просмотр списка всех зарегистрированных пользователей
