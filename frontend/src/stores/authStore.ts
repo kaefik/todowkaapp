@@ -11,6 +11,7 @@ export interface User {
   is_admin: boolean
   timezone: string | null
   default_section: string
+  language: string | null
   telegram_bot_token: string | null
   telegram_chat_id: string | null
   telegram_notifications_enabled: boolean

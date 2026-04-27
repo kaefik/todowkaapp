@@ -8,6 +8,7 @@ export interface User {
   is_admin: boolean
   timezone: string | null
   default_section: string
+  language: string | null
   telegram_bot_token: string | null
   telegram_chat_id: string | null
   telegram_notifications_enabled: boolean
@@ -20,7 +21,7 @@ export const usersApi = {
     return response.data
   },
 
-  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'telegram_bot_token' | 'telegram_notifications_enabled'>>): Promise<User> => {
+  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'language' | 'telegram_bot_token' | 'telegram_notifications_enabled'>>): Promise<User> => {
     const response = await httpClient.patch<User>('/users/me', data)
     return response.data
   },
