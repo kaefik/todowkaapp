@@ -7,7 +7,6 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 
-from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.task import Task
 from app.models.user import User
@@ -17,8 +16,10 @@ logger = logging.getLogger(__name__)
 
 class TaskScheduler:
     def __init__(self):
+        from pathlib import Path
+        scheduler_db_path = str(Path(__file__).parent.parent / "data" / "scheduler.db")
         jobstores = {
-            'default': SQLAlchemyJobStore(url=settings.database_url.replace('+aiosqlite', ''))
+            'default': SQLAlchemyJobStore(url=f'sqlite:///{scheduler_db_path}')
         }
         self.scheduler = AsyncIOScheduler(
             jobstores=jobstores,
