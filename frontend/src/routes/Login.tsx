@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '../stores/authStore'
 import { useConfig } from '../hooks/useConfig'
-import { TimezoneSetupModal } from '../components/TimezoneSetupModal'
 import { useTranslation } from 'react-i18next'
 
 const loginSchema = z.object({
@@ -23,7 +22,6 @@ export function Login() {
   const { t } = useTranslation('auth')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sessionExpired, setSessionExpired] = useState(false)
-  const [showTimezoneModal, setShowTimezoneModal] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
@@ -45,20 +43,15 @@ export function Login() {
     setIsSubmitting(true)
     try {
       await login(data)
-      const currentUser = useAuthStore.getState().user
-      if (!currentUser?.timezone) {
-        setShowTimezoneModal(true)
+      if (!localStorage.getItem('onboarding-complete')) {
+        navigate('/onboarding')
       } else {
-        navigate('/tasks')
+        const saved = localStorage.getItem('default-section')
+        navigate(saved ? `/${saved}` : '/inbox')
       }
     } catch {
     }
     setIsSubmitting(false)
-  }
-
-  const handleTimezoneSetupComplete = () => {
-    setShowTimezoneModal(false)
-    navigate('/tasks')
   }
 
   return (
@@ -158,10 +151,6 @@ export function Login() {
           )}
         </form>
       </div>
-
-      {showTimezoneModal && (
-        <TimezoneSetupModal onClose={handleTimezoneSetupComplete} />
-      )}
     </div>
   )
 }
