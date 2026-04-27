@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import threading
 from datetime import datetime
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -397,55 +399,74 @@ class TaskScheduler:
 task_scheduler = TaskScheduler()
 
 _telegram_poll_offsets: dict[str, int] = {}
+_polling_thread: threading.Thread | None = None
+
+
+async def _do_poll_telegram_bots():
+    from app.services.telegram_notifier import TelegramNotifierService
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(
+                User.telegram_bot_token.isnot(None),
+                User.telegram_bot_token != '',
+                User.telegram_chat_id.is_(None),
+            )
+        )
+        users = list(result.scalars().all())
+
+        for user in users:
+            try:
+                offset = _telegram_poll_offsets.get(str(user.id))
+                updates, new_offset = await TelegramNotifierService.poll_updates(
+                    user.telegram_bot_token, offset
+                )
+                if new_offset is not None:
+                    _telegram_poll_offsets[str(user.id)] = new_offset
+
+                for upd in updates:
+                    message = upd.get("message", {})
+                    text = message.get("text", "").strip()
+                    chat_id = str(message.get("chat", {}).get("id", ""))
+
+                    if text == "/start" and chat_id:
+                        user.telegram_chat_id = chat_id
+                        user.telegram_notifications_enabled = True
+                        await session.commit()
+                        logger.info(
+                            f"Telegram chat_id {chat_id} linked for user {user.username}"
+                        )
+
+                        await TelegramNotifierService.send_message(
+                            user.telegram_bot_token,
+                            chat_id,
+                            "\u2705 Бот Todowka подключён! Теперь вы будете получать напоминания о задачах.",
+                        )
+                        break
+
+            except Exception as e:
+                logger.error(f"Error polling bot for user {user.id}: {e}")
+
+
+def _run_polling_in_thread():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(_do_poll_telegram_bots())
+    except Exception as e:
+        logger.error(f"Telegram polling thread error: {e}")
+    finally:
+        loop.close()
 
 
 async def _job_poll_telegram_bots():
-    logger.info("Running job: poll_telegram_bots")
+    global _polling_thread
+    if _polling_thread is not None and _polling_thread.is_alive():
+        return
 
-    try:
-        from app.services.telegram_notifier import TelegramNotifierService
-
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(
-                select(User).where(
-                    User.telegram_bot_token.isnot(None),
-                    User.telegram_bot_token != '',
-                    User.telegram_chat_id.is_(None),
-                )
-            )
-            users = list(result.scalars().all())
-
-            for user in users:
-                try:
-                    offset = _telegram_poll_offsets.get(str(user.id))
-                    updates, new_offset = await TelegramNotifierService.poll_updates(
-                        user.telegram_bot_token, offset
-                    )
-                    if new_offset is not None:
-                        _telegram_poll_offsets[str(user.id)] = new_offset
-
-                    for upd in updates:
-                        message = upd.get("message", {})
-                        text = message.get("text", "").strip()
-                        chat_id = str(message.get("chat", {}).get("id", ""))
-
-                        if text == "/start" and chat_id:
-                            user.telegram_chat_id = chat_id
-                            user.telegram_notifications_enabled = True
-                            await session.commit()
-                            logger.info(
-                                f"Telegram chat_id {chat_id} linked for user {user.username}"
-                            )
-
-                            await TelegramNotifierService.send_message(
-                                user.telegram_bot_token,
-                                chat_id,
-                                "\u2705 Бот Todowka подключён! Теперь вы будете получать напоминания о задачах.",
-                            )
-                            break
-
-                except Exception as e:
-                    logger.error(f"Error polling bot for user {user.id}: {e}")
-
-    except Exception as e:
-        logger.error(f"Error in poll_telegram_bots: {e}")
+    _polling_thread = threading.Thread(
+        target=_run_polling_in_thread,
+        daemon=True,
+        name="tg-poll",
+    )
+    _polling_thread.start()

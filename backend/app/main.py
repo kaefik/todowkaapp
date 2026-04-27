@@ -95,12 +95,6 @@ def create_app() -> FastAPI:
 
     @app.get("/health")
     async def health():
-        from sqlalchemy import text
-
-        from app.database import AsyncSessionLocal
-
-        async with AsyncSessionLocal() as session:
-            await session.execute(text("SELECT 1"))
         return {"status": "healthy"}
 
     return app
