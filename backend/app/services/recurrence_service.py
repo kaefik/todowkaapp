@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
 from app.models.task import Task
@@ -165,9 +165,9 @@ class RecurrenceService:
     async def get_recurrence_history(
         self, task_id: str, limit: int = 50, offset: int = 0
     ) -> tuple[list[TaskRecurrence], int]:
-        count_stmt = select(TaskRecurrence).where(TaskRecurrence.task_id == task_id)
-        count_result = await self.db.execute(select(count_stmt))
-        total = len(list(count_result.scalars().all()))
+        count_stmt = select(func.count(TaskRecurrence.id)).where(TaskRecurrence.task_id == task_id)
+        count_result = await self.db.execute(count_stmt)
+        total = count_result.scalar() or 0
 
         result = await self.db.execute(
             select(TaskRecurrence)

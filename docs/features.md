@@ -95,6 +95,20 @@
   - Файлы: `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`
 - Редактирование заголовка и описания через модальное окно
 - Отметка задачи как выполненной/невыполненной одним кликом
+- Повторяющиеся (рекуррентные) задачи ✅ (Реализовано 27.04.2026)
+  - При завершении рекуррентной задачи автоматически создаётся новая задача со сдвинутым дедлайном
+  - Типы повторения: ежедневно (daily), еженедельно (weekly), ежемесячно (monthly)
+  - Настраиваемый интервал (каждые N дней/недель/месяцев)
+  - Для weekly: выбор конкретных дней недели
+  - Для monthly: по числу месяца или по неделе+день недели (например, «первый понедельник»)
+  - Дата окончания повторений (опционально)
+  - Копирование в новую задачу: заголовок, описание, заметки, контекст, область, проект, напоминания, настройки повторения
+  - Новая задача создаётся со статусом `next`
+  - API: PATCH /tasks/{id}/toggle (автогенерация), PATCH /tasks/{id}/move (при move в completed), POST /tasks/{id}/stop-recurrence, GET /tasks/{id}/recurrences
+  - Компонент: `frontend/src/components/RecurrenceEditor.tsx`
+  - Сервис: `backend/app/services/recurrence_service.py`
+  - Тесты: `backend/tests/test_recurrence.py` (16 тестов)
+  - Файлы: `backend/app/models/task.py`, `backend/app/models/task_recurrence.py`, `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `backend/app/schemas/task.py`, `backend/app/schemas/recurrence.py`, `frontend/src/components/RecurrenceEditor.tsx`, `frontend/src/components/TaskEditModal.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useRecurrences.ts`, `frontend/src/db/database.ts`
 - Автоматическая фиксация времени выполнения задачи (completed_at)
 - Удаление задачи с подтверждением через кастомный диалог (ConfirmDialog)
   - Перемещение в корзину: диалог "Переместить в корзину?"
