@@ -353,7 +353,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     }
     if (gtdStatus === 'completed') {
       updateData.completed = true
-    } else if ((task.gtd_status as string) === 'completed' && gtdStatus !== 'completed') {
+    } else if ((task.gtd_status as string) === 'completed') {
       updateData.completed = false
     }
     await onSave(task.id, updateData as Parameters<typeof onSave>[1])
