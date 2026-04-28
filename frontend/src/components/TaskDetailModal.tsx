@@ -83,6 +83,14 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
   const [task, setTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerHeight < 600)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     if (isOpen && taskId) {
@@ -118,11 +126,15 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 dark:bg-black/90"
+      className={`fixed inset-0 z-[9999] ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-gray-800 shadow-2xl mx-4 max-w-2xl w-full rounded-lg max-h-[90vh] flex flex-col"
+        className={`bg-white dark:bg-gray-800 shadow-2xl ${
+          isMobile
+            ? 'w-full max-w-none rounded-t-lg mx-0 max-h-[95vh] flex flex-col'
+            : 'mx-4 max-w-2xl w-full rounded-lg max-h-[90vh] flex flex-col'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
