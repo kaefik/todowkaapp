@@ -930,6 +930,16 @@
 - Файлы: `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/hooks/useDebounce.ts`, `frontend/src/hooks/useTaskFilterSync.ts`
 - Интегрировано в GtdTaskList и Tasks
 
+#### Группировка задач ✅ (Реализовано 28.04.2026)
+- Визуальная группировка задач по: проекту, области, контексту, дедлайну, GTD-статусу
+- Сворачиваемые секции с заголовками, счётчиком задач и цветом/иконкой
+- Состояние свёрнутости секций сохраняется в localStorage
+- Дополнительные поля сортировки: по дате обновления, по дате выполнения
+- Выбор группировки сохраняется в localStorage через useTaskFilter
+- Доступно на всех страницах с панелью фильтров (GtdTaskList, Tasks, ProjectDetail, AreaDetail)
+- Поля area: AreaBrief добавлено в Task для разрешения имени/цвета области (как project и context)
+- Файлы: `frontend/src/utils/groupTasks.ts`, `frontend/src/components/TaskGroupSection.tsx`, `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useTaskFilter.ts`, `frontend/src/db/mappers.ts`
+
 #### Sidebar навигация ✅ (Реализовано 12.04.2026 — частично)
 - GTD-секции с badges-счётчиками (Inbox, Next, Waiting, Someday)
 - Completed и Trash с счётчиками
