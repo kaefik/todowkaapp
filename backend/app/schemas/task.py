@@ -1,7 +1,7 @@
 from datetime import datetime, time
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from app.models.task import GtdStatus
 from app.schemas.base import BaseResponseSchema
@@ -46,12 +46,6 @@ class TaskCreate(BaseModel):
     reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
 
-    @model_validator(mode='after')
-    def validate_recurrence_requires_due_date(self):
-        if self.recurrence_type and not self.due_date:
-            raise ValueError('due_date is required when recurrence_type is set')
-        return self
-
 
 class TaskUpdate(BaseModel):
     title: str | None = None
@@ -69,12 +63,6 @@ class TaskUpdate(BaseModel):
     recurrence_end_date: datetime | None = None
     reminder_time: time | None = None
     reminder_offsets: list[int] | None = None
-
-    @model_validator(mode='after')
-    def validate_recurrence_requires_due_date(self):
-        if self.recurrence_type and not self.due_date:
-            raise ValueError('due_date is required when recurrence_type is set')
-        return self
 
 
 class TaskMoveRequest(BaseModel):

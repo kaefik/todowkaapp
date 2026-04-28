@@ -107,8 +107,21 @@
   - API: PATCH /tasks/{id}/toggle (автогенерация), PATCH /tasks/{id}/move (при move в completed), POST /tasks/{id}/stop-recurrence, GET /tasks/{id}/recurrences
   - Компонент: `frontend/src/components/RecurrenceEditor.tsx`
   - Сервис: `backend/app/services/recurrence_service.py`
-  - Тесты: `backend/tests/test_recurrence.py` (16 тестов)
-  - Файлы: `backend/app/models/task.py`, `backend/app/models/task_recurrence.py`, `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `backend/app/schemas/task.py`, `backend/app/schemas/recurrence.py`, `frontend/src/components/RecurrenceEditor.tsx`, `frontend/src/components/TaskEditModal.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useRecurrences.ts`, `frontend/src/db/database.ts`
+   - Тесты: `backend/tests/test_recurrence.py` (22 теста)
+   - Файлы: `backend/app/models/task.py`, `backend/app/models/task_recurrence.py`, `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `backend/app/schemas/task.py`, `backend/app/schemas/recurrence.py`, `frontend/src/components/RecurrenceEditor.tsx`, `frontend/src/components/TaskEditModal.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useRecurrences.ts`, `frontend/src/db/database.ts`
+   - Исправления багов рекуррентности ✅ (28.04.2026):
+     - Нормализация дней недели: единый стандарт 1-7 (Пн=1, Вс=7) во всём сервисе
+     - Исправление timezone: корректная обработка naive/aware datetime при сравнении с recurrence_end_date
+     - Валидация recurrence_config: вызывается в create_task и update_task, проверяет диапазон дней 1-7
+     - Исправлен TaskCreate/TaskUpdate: убраны Pydantic model_validator, валидация перенесена в service-слой с доступом к данным задачи из БД
+     - Копирование тегов в новую задачу при генерации
+     - Пропуск задач в корзине (trash) при генерации следующей задачи
+     - Поддержка interval для weekly с days и monthly с day_of_month
+     - Кнопка «Остановить повторение» в RecurrenceHistoryPopup (TaskListView.tsx, Tasks.tsx)
+     - isRecurring выставляется при создании задачи с recurrence_type (CreateTask расширен)
+     - Удалён дублирующийся файл `backend/app/schemas/task_recurrence.py`
+     - Новые тесты: weekly с днями 1-7, копирование тегов, trash-пропуск, валидация config, update с сохранением due_date, monthly с interval
+     - Файлы: `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `backend/app/api/tasks.py`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/i18n/locales/ru/tasks.json`, `frontend/src/i18n/locales/en/tasks.json`
 - Автоматическая фиксация времени выполнения задачи (completed_at)
 - Удаление задачи с подтверждением через кастомный диалог (ConfirmDialog)
   - Перемещение в корзину: диалог "Переместить в корзину?"

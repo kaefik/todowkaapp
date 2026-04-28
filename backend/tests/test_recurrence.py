@@ -493,3 +493,179 @@ async def test_double_toggle_creates_only_one_new_task(client, auth_user):
     tasks_after_second_complete = (await client.get("/api/tasks", headers=h)).json()["items"]
     new_tasks = [t for t in tasks_after_second_complete if t["id"] != task_id]
     assert len(new_tasks) == 2
+
+
+@pytest.mark.asyncio
+async def test_weekly_recurrence_with_days_1_to_7(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Weekly with days",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "weekly",
+            "recurrence_config": {"type": "weekly", "interval": 1, "days": [1, 3, 5]},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert create_resp.status_code == 201
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    due = new_task["due_date"]
+    assert due is not None
+    from datetime import datetime as dt
+    parsed = dt.fromisoformat(due.replace("Z", "+00:00"))
+    weekday = parsed.weekday()
+    assert weekday in [0, 2, 4]
+
+
+@pytest.mark.asyncio
+async def test_new_task_copies_tags(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    tag_resp = await client.post("/api/tags", json={"name": "TestTag", "color": "#ff0000"}, headers=h)
+    assert tag_resp.status_code == 201
+    tag_id = tag_resp.json()["id"]
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Tagged recurring",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "daily",
+            "recurrence_config": {"type": "daily", "interval": 1},
+            "tag_ids": [tag_id],
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert create_resp.status_code == 201
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    assert new_task["tags"] is not None
+    assert len(new_task["tags"]) == 1
+    assert new_task["tags"][0]["id"] == tag_id
+
+
+@pytest.mark.asyncio
+async def test_trash_task_no_recurrence_generation(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Trash recurring",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "daily",
+            "recurrence_config": {"type": "daily", "interval": 1},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    task_id = create_resp.json()["id"]
+
+    move_resp = await client.patch(
+        f"/api/tasks/{task_id}/move",
+        json={"gtd_status": "completed"},
+        headers=h,
+    )
+    assert move_resp.status_code == 200
+
+    tasks_before_trash = (await client.get("/api/tasks", headers=h)).json()["items"]
+    assert len(tasks_before_trash) == 2
+
+    new_task = next(t for t in tasks_before_trash if t["id"] != task_id)
+    await client.patch(
+        f"/api/tasks/{new_task['id']}/move",
+        json={"gtd_status": "trash"},
+        headers=h,
+    )
+
+    tasks_after_trash = (await client.get("/api/tasks?gtd_status=trash", headers=h)).json()["items"]
+    trashed = next(t for t in tasks_after_trash if t["id"] == new_task["id"])
+    assert trashed["due_date"] is None
+
+
+@pytest.mark.asyncio
+async def test_validate_recurrence_config_rejects_invalid_days(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Invalid days",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "weekly",
+            "recurrence_config": {"type": "weekly", "interval": 1, "days": [0, 8]},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_update_task_recurrence_preserves_due_date(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Update recurrence",
+            "due_date": "2026-04-27T23:59:59Z",
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    task_id = create_resp.json()["id"]
+
+    update_resp = await client.put(
+        f"/api/tasks/{task_id}",
+        json={
+            "recurrence_type": "daily",
+            "recurrence_config": {"type": "daily", "interval": 1},
+        },
+        headers=h,
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["recurrence_type"] == "daily"
+
+
+@pytest.mark.asyncio
+async def test_monthly_recurrence_with_interval(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Every 2 months",
+            "due_date": "2026-04-15T23:59:59Z",
+            "recurrence_type": "monthly",
+            "recurrence_config": {"type": "monthly", "interval": 2, "day_of_month": 15},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    assert "2026-06-15" in new_task["due_date"]

@@ -58,6 +58,7 @@
   "offlineMode": "Offline mode: changes will be saved locally",
   "recurrenceHistory": "Recurrence history",
   "noRecurrences": "No recurrences",
+  "stopRecurrence": "Stop recurrence",
   "allStatuses": "All statuses",
   "allContexts": "All contexts",
   "allAreas": "All areas",

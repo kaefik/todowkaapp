@@ -42,12 +42,23 @@ function TaskIcons({ task, onHistoryClick }: { task: Task; onHistoryClick: () =>
 
 function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: () => void }) {
   const { t, i18n } = useTranslation('tasks')
-  const { recurrences, isLoading, error, fetchRecurrences } = useRecurrences()
+  const { recurrences, isLoading, error, fetchRecurrences, stopRecurrence } = useRecurrences()
   const locale = i18n.language === 'en' ? 'en-US' : 'ru-RU'
+  const [stopping, setStopping] = useState(false)
 
   useEffect(() => {
     fetchRecurrences(taskId)
   }, [taskId, fetchRecurrences])
+
+  const handleStop = async () => {
+    setStopping(true)
+    try {
+      await stopRecurrence(taskId)
+      onClose()
+    } catch {
+    }
+    setStopping(false)
+  }
 
   return (
     <div className="absolute z-50 left-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3">
@@ -72,6 +83,14 @@ function RecurrenceHistoryPopup({ taskId, onClose }: { taskId: string; onClose: 
           ))}
         </ul>
       )}
+      <button
+        type="button"
+        onClick={handleStop}
+        disabled={stopping}
+        className="mt-2 w-full text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 font-medium focus:outline-none disabled:opacity-50"
+      >
+        {stopping ? t('loading', { ns: 'common' }) : t('stopRecurrence')}
+      </button>
     </div>
   )
 }

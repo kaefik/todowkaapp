@@ -71,6 +71,9 @@ export interface CreateTask {
   area_id?: string | null
   project_id?: string | null
   tag_ids?: string[]
+  recurrence_type?: string | null
+  recurrence_config?: RecurrenceConfig | null
+  recurrence_end_date?: string | null
 }
 
 export interface UpdateTask {
@@ -212,14 +215,14 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
         position: 0,
       dueDate: data.due_date ?? null,
       notes: null,
-      recurrenceType: null,
-      recurrenceConfig: null,
-      recurrenceEndDate: null,
+      recurrenceType: data.recurrence_type ?? null,
+      recurrenceConfig: data.recurrence_config ? JSON.stringify(data.recurrence_config) : null,
+      recurrenceEndDate: data.recurrence_end_date ?? null,
       reminderTime: null,
       reminderOffsets: null,
       reminderFired: false,
       deadlineNotified: false,
-      isRecurring: false,
+      isRecurring: !!data.recurrence_type,
       tagIds: data.tag_ids ?? [],
       trashedAt: null,
       createdAt: now,

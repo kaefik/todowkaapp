@@ -117,6 +117,8 @@ async def create_task(
         if existing:
             return existing
         raise HTTPException(status_code=409, detail="Task already exists") from None
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from None
     await _publish_task_event(current_user.id, task.id, "created")
     return task
 
@@ -159,6 +161,8 @@ async def update_task(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid reference: related resource not found",
         ) from None
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from None
 
     if task is None:
         raise HTTPException(

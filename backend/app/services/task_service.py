@@ -131,6 +131,14 @@ class TaskService:
         if data.due_date is not None and gtd_status == GtdStatus.INBOX.value:
             gtd_status = GtdStatus.ACTIVE.value
 
+        if data.recurrence_type and not data.due_date:
+            raise ValueError('due_date is required when recurrence_type is set')
+
+        if data.recurrence_type and data.recurrence_config:
+            from app.services.recurrence_service import RecurrenceService
+            if not RecurrenceService.validate_recurrence_config(data.recurrence_type, data.recurrence_config):
+                raise ValueError('Invalid recurrence_config for the given recurrence_type')
+
         task = Task(
             id=task_id,
             user_id=str(user_id),
@@ -163,6 +171,17 @@ class TaskService:
             return None
 
         update_data = data.model_dump(exclude_unset=True)
+
+        effective_recurrence_type = update_data.get('recurrence_type', task.recurrence_type)
+        effective_due_date = update_data.get('due_date', task.due_date)
+
+        if effective_recurrence_type and not effective_due_date:
+            raise ValueError('due_date is required when recurrence_type is set')
+
+        if effective_recurrence_type and 'recurrence_config' in update_data and update_data['recurrence_config']:
+            from app.services.recurrence_service import RecurrenceService
+            if not RecurrenceService.validate_recurrence_config(effective_recurrence_type, update_data['recurrence_config']):
+                raise ValueError('Invalid recurrence_config for the given recurrence_type')
 
         internal_fields = {'reminder_fired', 'last_reminder_sent_at', 'sent_reminder_offsets'}
         for field in internal_fields:

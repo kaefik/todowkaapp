@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
@@ -19,15 +20,24 @@ class RecurrenceService:
         if not task.is_recurring:
             return None
 
-        if task.recurrence_end_date and datetime.now(task.recurrence_end_date.tzinfo) >= task.recurrence_end_date:
+        if task.gtd_status == 'trash':
+            return None
+
+        now_aware = datetime.now(UTC)
+        if task.recurrence_end_date and task.recurrence_end_date.tzinfo:
+            if now_aware >= task.recurrence_end_date:
+                return None
+        elif task.recurrence_end_date and now_aware.replace(tzinfo=None) >= task.recurrence_end_date.replace(tzinfo=None):
             return None
 
         next_due_date = self.calculate_next_due_date(task)
         if next_due_date is None:
             return None
 
-        if task.recurrence_end_date and next_due_date > task.recurrence_end_date:
-            return None
+        if task.recurrence_end_date:
+            end = task.recurrence_end_date.replace(tzinfo=None) if task.recurrence_end_date.tzinfo else task.recurrence_end_date
+            if next_due_date > end:
+                return None
 
         new_task = Task(
             user_id=task.user_id,
@@ -46,12 +56,23 @@ class RecurrenceService:
             reminder_offsets=task.reminder_offsets,
         )
 
+        if task.tags:
+            new_task.tags = list(task.tags)
+
         self.db.add(new_task)
         await self.db.flush()
 
         await self.create_task_recurrence(task, new_task, next_due_date)
 
         return new_task
+
+    async def _find_existing_generated_task(self, task_id: str, due_date: datetime) -> TaskRecurrence | None:
+        stmt = select(TaskRecurrence).where(
+            TaskRecurrence.task_id == task_id,
+            func.date(TaskRecurrence.due_date_of_generated_task) == due_date.date(),
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     def calculate_next_due_date(self, task: Task) -> datetime | None:
         if not task.due_date:
@@ -66,7 +87,10 @@ class RecurrenceService:
         if not isinstance(config, dict):
             return None
 
-        base_date = task.due_date.replace(tzinfo=None)
+        base_date = task.due_date
+        if base_date.tzinfo is not None:
+            base_date = base_date.replace(tzinfo=None)
+
         interval = config.get('interval', 1)
 
         if not isinstance(interval, int) or interval < 1:
@@ -77,8 +101,8 @@ class RecurrenceService:
 
         if recurrence_type == 'weekly':
             days = config.get('days')
-            if days and isinstance(days, list):
-                target_days = sorted(days)
+            if days and isinstance(days, list) and len(days) > 0:
+                target_days = sorted(d - 1 for d in days)
                 current_weekday = base_date.weekday()
 
                 for day in target_days:
@@ -87,7 +111,7 @@ class RecurrenceService:
                         return base_date + timedelta(days=delta)
 
                 first_day = target_days[0]
-                delta = (7 - current_weekday) + first_day
+                delta = (7 - current_weekday) + first_day + (7 * (interval - 1))
                 return base_date + timedelta(days=delta)
             else:
                 return base_date + timedelta(weeks=interval)
@@ -96,11 +120,13 @@ class RecurrenceService:
             day_of_month = config.get('day_of_month')
             if day_of_month and isinstance(day_of_month, int):
                 try:
-                    next_month = base_date.replace(day=1) + timedelta(days=32)
-                    next_month = next_month.replace(day=1)
-                    max_day = (next_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+                    month = base_date.month + interval
+                    year = base_date.year + (month - 1) // 12
+                    month = ((month - 1) % 12) + 1
+                    target_month = base_date.replace(year=year, month=month, day=1)
+                    max_day = (target_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
                     target_day = min(day_of_month, max_day.day)
-                    return next_month.replace(day=target_day)
+                    return target_month.replace(day=target_day)
                 except ValueError:
                     pass
             else:
@@ -108,11 +134,12 @@ class RecurrenceService:
                 day_of_week = config.get('day_of_week')
                 if week_of_month and day_of_week:
                     try:
-                        next_month = base_date.replace(day=1) + timedelta(days=32)
+                        target_weekday = day_of_week - 1
+
+                        next_month = base_date.replace(day=1) + timedelta(days=32 * interval)
                         next_month = next_month.replace(day=1)
                         first_day_of_month = next_month
 
-                        target_weekday = day_of_week - 1
                         days_until_first_target = (target_weekday - first_day_of_month.weekday()) % 7
                         first_occurrence = first_day_of_month + timedelta(days=days_until_first_target)
 
@@ -129,7 +156,7 @@ class RecurrenceService:
                             return last_occurrence
                     except (ValueError, TypeError):
                         pass
-                return base_date + timedelta(days=32)
+                return base_date + timedelta(days=32 * interval)
 
         return None
 
@@ -137,10 +164,17 @@ class RecurrenceService:
         if not task.is_recurring:
             return False
 
+        if task.gtd_status == 'trash':
+            return False
+
         if not task.due_date:
             return False
 
-        if task.recurrence_end_date and datetime.now(task.recurrence_end_date.tzinfo) >= task.recurrence_end_date:
+        now_aware = datetime.now(UTC)
+        if task.recurrence_end_date and task.recurrence_end_date.tzinfo:
+            if now_aware >= task.recurrence_end_date:
+                return False
+        elif task.recurrence_end_date and now_aware.replace(tzinfo=None) >= task.recurrence_end_date.replace(tzinfo=None):
             return False
 
         next_due_date = self.calculate_next_due_date(task)
@@ -153,6 +187,7 @@ class RecurrenceService:
         self, original_task: Task, generated_task: Task, due_date: datetime
     ) -> TaskRecurrence:
         recurrence = TaskRecurrence(
+            id=str(uuid4()),
             task_id=original_task.id,
             generated_task_id=generated_task.id,
             due_date_of_generated_task=due_date,
@@ -186,14 +221,21 @@ class RecurrenceService:
         if not task.is_recurring:
             return []
 
+        if task.gtd_status == 'trash':
+            return []
+
         if not task.due_date:
             return []
 
-        if task.recurrence_end_date and datetime.now(task.recurrence_end_date.tzinfo) >= task.recurrence_end_date:
+        now_aware = datetime.now(UTC)
+        if task.recurrence_end_date and task.recurrence_end_date.tzinfo:
+            if now_aware >= task.recurrence_end_date:
+                return []
+        elif task.recurrence_end_date and now_aware.replace(tzinfo=None) >= task.recurrence_end_date.replace(tzinfo=None):
             return []
 
         generated_tasks = []
-        current_date = task.due_date.replace(tzinfo=None)
+        current_date = task.due_date.replace(tzinfo=None) if task.due_date.tzinfo else task.due_date
         now = datetime.now()
         max_date = now + timedelta(days=7)
 
@@ -205,11 +247,20 @@ class RecurrenceService:
             if next_date > max_date:
                 break
 
-            if task.recurrence_end_date and next_date > task.recurrence_end_date:
-                break
+            if task.recurrence_end_date:
+                end = task.recurrence_end_date.replace(tzinfo=None) if task.recurrence_end_date.tzinfo else task.recurrence_end_date
+                if next_date > end:
+                    break
 
             if next_date <= now:
+                existing = await self._find_existing_generated_task(task.id, next_date)
+                if existing:
+                    task.due_date = next_date
+                    current_date = next_date
+                    continue
+
                 new_task = Task(
+                    id=str(uuid4()),
                     user_id=task.user_id,
                     title=task.title,
                     description=task.description,
@@ -226,6 +277,9 @@ class RecurrenceService:
                     reminder_offsets=task.reminder_offsets,
                 )
 
+                if task.tags:
+                    new_task.tags = list(task.tags)
+
                 self.db.add(new_task)
                 await self.db.flush()
 
@@ -240,11 +294,11 @@ class RecurrenceService:
 
         return generated_tasks
 
-    def validate_recurrence_config(self, config: dict) -> bool:
+    @staticmethod
+    def validate_recurrence_config(recurrence_type: str, config: dict) -> bool:
         if not isinstance(config, dict):
             return False
 
-        recurrence_type = config.get('type')
         if recurrence_type not in ['daily', 'weekly', 'monthly', 'custom']:
             return False
 
@@ -257,7 +311,7 @@ class RecurrenceService:
             if days is not None:
                 if not isinstance(days, list):
                     return False
-                if not all(isinstance(d, int) and 0 <= d <= 6 for d in days):
+                if not all(isinstance(d, int) and 1 <= d <= 7 for d in days):
                     return False
                 if len(days) == 0:
                     return False

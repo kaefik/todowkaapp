@@ -58,6 +58,7 @@
   "offlineMode": "Офлайн режим: изменения будут сохранены локально",
   "recurrenceHistory": "История повторений",
   "noRecurrences": "Нет повторений",
+  "stopRecurrence": "Остановить повторение",
   "allStatuses": "Все статусы",
   "allContexts": "Все контексты",
   "allAreas": "Все области",

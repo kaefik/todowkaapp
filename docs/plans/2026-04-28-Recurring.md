@@ -109,64 +109,88 @@
 
 Тип хранится и в отдельном поле модели, и внутри JSON-конфига. Могут рассинхронизироваться.
 
-#### 16. `catch_up_missed_tasks` не интегрирован
+#### 16. ~~`catch_up_missed_tasks` не интегрирован~~ [ОШИБКА В АНАЛИЗЕ]
 
-Метод существует, но не вызывается из API или шедулера. Мёртвый код.
+Первоначально предполагалось, что метод — мёртвый код. Проверка показала: метод **вызывается** из `scheduler.py` (строки 201, 375). Удалять или игнорировать нельзя.
 
 ---
 
 ## Исправленный план реализации
 
+### Phase 0: Предварительный анализ данных [НОВЫЙ ЭТАП]
+
+**Цель:** Перед выбором направления нормализации выяснить, что реально хранится в БД.
+
+**Шаги:**
+1. Выполнить запрос к продакшн/разработческой БД:
+   ```sql
+   SELECT recurrence_type, recurrence_config
+   FROM tasks
+   WHERE recurrence_type IS NOT NULL
+   LIMIT 50;
+   ```
+2. Определить формат `days` в существующих записях (0-6 или 1-7)
+3. Проверить тип `due_date` при чтении из SQLAlchemy: aware или naive?
+4. Зафиксировать результат — от него зависит выбор варианта A/B в Phase 1.1
+
+**Если БД пуста** (нет рекуррентных задач) — выбрать вариант A без миграции.
+**Если БД содержит задачи с days** — выбрать вариант в зависимости от формата.
+
+---
+
 ### Phase 1: Критические баги
 
 #### 1.1. Нормализация дней недели
 
-**Проблема:** Фронтенд шлёт 1-7, бекенд ожидает 0-6 в `calculate_next_due_date`.
+**Проблема:** Фронтенд шлёт 1-7, бекенд ожидает 0-6 в `calculate_next_due_date`. Monthly ожидает 1-7 (и делает `-1`), weekly — 0-6. Два стандарта в одном сервисе.
 
-**Решение:** Привести к единому стандарту. Варианты:
-- **A (рекомендуется):** Нормализовать на приёме в API — в `calculate_next_due_date` делать `day - 1` для weekly `days`. Менее инвазивно, не ломает существующие данные.
-- **B:** Изменить фронтенд на 0-6. Ломает обратную совместимость с уже сохранёнными задачами.
+**Решение:** Привести к **единому стандарту 1-7** (Пн=1, Вс=7) во всём сервисе — так фронтенд и бекенд говорят на одном языке.
+
+- **В `calculate_next_due_date`:** Weekly-блок: добавить `day = day - 1` перед сравнением с `weekday()` (как уже сделано для monthly). Monthly-блок: оставить как есть (уже корректно).
+- **В `validate_recurrence_config`:** Обновить weekly-проверку на `1 <= d <= 7` (сейчас `0 <= d <= 6`).
+- **Миграция данных:** Если Phase 0 выявил существующие задачи с `days` в формате 0-6 — написать Alembic migration для конвертации. Если БД пуста — миграция не нужна.
 
 **Файлы:**
-- `backend/app/services/recurrence_service.py` — добавить нормализацию в weekly-блок
-- `backend/app/services/recurrence_service.py` — обновить `validate_recurrence_config` на `1-7`
+- `backend/app/services/recurrence_service.py` — добавить `day - 1` в weekly-блок, обновить validate
+- `backend/alembic/` — миграция конвертации данных (если нужно по итогам Phase 0)
 
 #### 1.2. Исправление timezone в `calculate_next_due_date`
 
 **Проблема:** Возвращает naive datetime, сравнивается с aware `recurrence_end_date`.
 
-**Решение:** Сохранять timezone при вычислениях. Использовать `base_date.astimezone()` или хранить оригинальный tzinfo и применять к результату.
+**Решение:**
+1. Проверить по итогам Phase 0 — возвращает ли SQLAlchemy aware или naive datetime при чтении из SQLite
+2. Если aware — убрать `replace(tzinfo=None)` на строке 69, оставить tz как есть
+3. Если naive — привести к UTC явно: `base_date = task.due_date.replace(tzinfo=timezone.utc)` и возвращать aware datetime
 
 **Файлы:**
-- `backend/app/services/recurrence_service.py:69` — не снимать tzinfo
-- Все вычисления с timedelta сохраняют tz (timedelta не влияет на tz)
-
-**Риск:** SQLite хранит datetime как строки. Нужно проверить, что `DateTime(timezone=True)` корректно возвращает aware datetime при чтении. Если нет — привести к UTC явно.
+- `backend/app/services/recurrence_service.py:69`
 
 #### 1.3. Подключение и обновление `validate_recurrence_config`
 
-**Проблема:** Валидация не вызывается, диапазон дней несовместим с фронтендом.
+**Проблема:** Валидация не вызывается, диапазон дней несовместим с фронтендом, `config.get('type')` не существует в config.
 
 **Решение:**
-1. Обновить диапазон дней на `1-7` (после пункта 1.1)
-2. Вызывать в `create_task` и `update_task` (в TaskService или через Pydantic-схему)
-3. Убрать `config.type` из валидации или привести к `task.recurrence_type`
+1. Обновить диапазон дней на `1-7`
+2. Убрать чтение `config.get('type')` — тип брать из аргумента `recurrence_type` (передавать из task_service)
+3. Вызывать в `create_task` и `update_task` в TaskService
 
 **Файлы:**
 - `backend/app/services/recurrence_service.py` — обновить validate
 - `backend/app/services/task_service.py` — добавить вызов validate в create/update
-- `backend/app/schemas/task.py` — опционально: Pydantic-валидатор для config
 
 ### Phase 2: Функциональные баги
 
-#### 2.1. Исправление TaskUpdate валидатора
+#### 2.1. Исправление валидаторов TaskCreate и TaskUpdate
 
-**Проблема:** `model_validator` не отличает "не прислали due_date" от "прислали due_date=None".
+**Проблема:** `model_validator` не отличает "не прислали due_date" от "прислали due_date=None". Затронуты **обе** схемы: TaskCreate (строки 49-53) и TaskUpdate (строки 73-77).
 
-**Решение:** Использовать `model_validator(mode='before')` с проверкой полей в raw data, или убрать валидатор из TaskUpdate и проверять в service-слое с учётом существующих данных задачи.
+**Решение:** Убрать валидатор из Pydantic-схем. Проверять в service-слое с учётом существующих данных задачи (для update) и входных данных (для create). Это даёт доступ к текущему состоянию задачи из БД.
 
 **Файлы:**
-- `backend/app/schemas/task.py:73-77`
+- `backend/app/schemas/task.py:49-53` (TaskCreate) — убрать model_validator
+- `backend/app/schemas/task.py:73-77` (TaskUpdate) — убрать model_validator
+- `backend/app/services/task_service.py` — добавить проверку в create_task/update_task
 
 #### 2.2. Кнопка "Остановить повторение" в UI
 
@@ -185,12 +209,15 @@
 - `backend/app/services/recurrence_service.py:32-52` — добавить копирование тегов
 - Учитывать, что `task.tags` загружен через `selectinload`
 
-#### 2.4. Сброс recurrence при перемещении в trash
+#### 2.4. Trash + recurrence: сохранять настройки, отключать генерацию
 
-**Решение:** Очищать `recurrence_type`, `recurrence_config`, `recurrence_end_date` при перемещении в trash.
+**Проблема:** При перемещении в trash задача теряет `due_date`, но сохраняет recurrence-поля. При восстановлении — рекуррентная задача без due_date.
+
+**Решение:** НЕ сбрасывать recurrence-поля (пользователь потеряет настройки без возможности восстановления). Вместо этого — в `generate_next_task` и `calculate_next_due_date` проверять `task.gtd_status != 'trash'` и пропускать задачи в корзине.
 
 **Файлы:**
-- `backend/app/services/task_service.py:224-230`
+- `backend/app/services/recurrence_service.py` — добавить проверку статуса в generate_next_task
+- `backend/app/services/task_service.py` — при восстановлении из trash восстанавливать `due_date` (сохранять оригинальное значение перед перемещением в trash)
 
 ### Phase 3: Улучшения
 
@@ -210,25 +237,38 @@
 
 #### 3.3. `isRecurring` локально при создании
 
-**Решение:** В `useTasks.ts` при создании задачи с `recurrence_type` выставлять `isRecurring: true` локально.
+**Проблема:** `useTasks.ts:222` хардкодит `isRecurring: false`. Интерфейс `CreateTask` не включает recurrence-поля — задачи могут стать рекуррентными только через update.
+
+**Решение:**
+1. Расширить `CreateTask` для включения `recurrence_type`, `recurrence_config`, `recurrence_end_date`
+2. При создании задачи с `recurrence_type` выставлять `isRecurring: true` локально в Dexie
 
 **Файлы:**
-- `frontend/src/hooks/useTasks.ts`
+- `frontend/src/hooks/useTasks.ts` — расширить CreateTask, исправить isRecurring
+- `frontend/src/api/` — обновить типы если нужно
 
 #### 3.4. Idempotency для toggle
 
-**Решение:** Добавить проверку на существующую сгенерированную задачу с той же `due_date` перед созданием новой.
+**Решение:** Перед созданием новой задачи проверять наличие существующей TaskRecurrence с `(task_id, due_date)`. Если запись есть — пропустить генерацию.
+
+**Файлы:**
+- `backend/app/services/recurrence_service.py` — добавить проверку в generate_next_task
 
 ### Phase 4: Тесты
 
-Добавить тесты на:
-- Нормализацию дней недели (различные комбинации)
+**Бэкенд:**
+- Нормализация дней недели (различные комбинации 1-7)
 - Вычисление следующей даты (daily/weekly/monthly)
 - Timezone-корректность
-- Валидацию recurrence_config
+- Валидацию recurrence_config (диапазон 1-7, структура config)
 - Копирование тегов
-- Сброс recurrence при trash
+- Пропуск задач в trash при генерации
 - Граничные случаи (конец месяца, 29-31 февраля)
+- Idempotency toggle (двойной вызов)
+
+**Фронтенд:**
+- isRecurring выставляется при создании с recurrence_type
+- stopRecurrence вызывается корректно
 
 ---
 
@@ -236,7 +276,9 @@
 
 | Риск | Митигация |
 |------|-----------|
-| SQLite теряет timezone при хранении | Исследовать поведение перед фиксом. При необходимости хранить всё в UTC явно |
-| Существующие задачи с interval > 1 начнут работать по-новому | Проверить данные: `SELECT recurrence_config FROM tasks WHERE recurrence_type IS NOT NULL` |
-| Нормализация дней сломает уже сохранённые задачи | Выбрать направление нормализации, проверить существующие данные |
-| Двойной клик toggle без idempotency | Добавить в Phase 3 (не критично) |
+| SQLite теряет timezone при хранении | Phase 0: проверить фактический тип. При необходимости хранить всё в UTC явно |
+| Существующие задачи с `days` в формате 0-6 | Phase 0: проанализировать данные. Alembic migration для конвертации 0-6 → 1-7 |
+| Нормализация сломает существующие задачи | Выбрать направление ТОЛЬКО после Phase 0. Миграция данных перед развёртыванием |
+| Двойной клик toggle без idempotency | Phase 3.4: проверка (task_id, due_date) перед генерацией |
+| Восстановление из trash без due_date | Сохранять оригинальный due_date перед trash, восстанавливать при undo |
+| `catch_up_missed_tasks` вызывается из scheduler | Не удалять, не менять сигнатуру. Учесть при рефакторинге recurrence_service |
