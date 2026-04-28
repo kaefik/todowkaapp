@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { normalizeTimeInput } from '../utils/time'
 
 interface ReminderEditorProps {
   reminderTime: string | null
@@ -84,13 +85,14 @@ export function ReminderEditor({
   }
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = e.target.value
-    setTime(newTime)
+    setTime(e.target.value)
   }
 
   const handleTimeBlur = () => {
-    if (enabled && useTime && time) {
-      onChange({ reminder_time: time, reminder_offsets: null })
+    const normalized = normalizeTimeInput(time)
+    setTime(normalized)
+    if (enabled && useTime && normalized) {
+      onChange({ reminder_time: normalized, reminder_offsets: null })
     }
   }
 
@@ -158,10 +160,11 @@ export function ReminderEditor({
           {useTime && (
             <div className="ml-6">
               <input
-                type="time"
+                type="text"
                 value={time}
                 onChange={handleTimeChange}
                 onBlur={handleTimeBlur}
+                placeholder="HH:MM"
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
               />
               {isReminderInPast && (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { normalizeTimeInput } from '../utils/time'
 
 function toLocalDateStr(isoString: string | null | undefined): string | null {
   if (!isoString) return null
@@ -577,9 +578,15 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                     {t('deadlineTime')}
                   </label>
                   <input
-                    {...register('due_time')}
-                    type="time"
+                    {...register('due_time', {
+                      onBlur: (e) => {
+                        const normalized = normalizeTimeInput(e.target.value)
+                        setValue('due_time', normalized || null)
+                      }
+                    })}
+                    type="text"
                     id="due_time"
+                    placeholder="HH:MM"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                   />
                 </div>
