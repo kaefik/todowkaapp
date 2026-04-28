@@ -90,7 +90,6 @@ export function useDueDateCount(dayOffset: number): number {
       )
       .filter(t =>
         t._syncStatus !== 'deleted' &&
-        !t.parentTaskId &&
         !t.isCompleted &&
         t.dueDate !== null &&
         t.dueDate >= start &&

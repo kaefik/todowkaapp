@@ -1,67 +1,58 @@
 import { v4 as uuidv4 } from 'uuid'
 
 import { db } from '../db/database'
-import { dbTaskToUi } from '../db/mappers'
 import { useDexieQuery } from '../db/hooks'
-import { useAuthStore } from '../stores/authStore'
-import type { Task } from './useTasks'
+
+export interface ChecklistItem {
+  id: string
+  taskId: string
+  title: string
+  isCompleted: boolean
+  position: number
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
 
 interface UseSubtasksReturn {
-  subtasks: Task[]
+  subtasks: ChecklistItem[]
   isLoading: boolean
   error: string | null
-  addSubtask: (title: string, description?: string) => Promise<void>
+  addSubtask: (title: string) => Promise<void>
   toggleSubtask: (id: string) => Promise<void>
   deleteSubtask: (id: string) => Promise<void>
   refetch: () => Promise<void>
 }
 
-export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
-  const user = useAuthStore(s => s.user)
-
+export function useSubtasks(taskId: string | null): UseSubtasksReturn {
   const { data: subtasks = [], isLoading } = useDexieQuery(
     async () => {
-      if (!parentTaskId || !user) return []
-      const records = await db.tasks
-        .where('parentTaskId')
-        .equals(parentTaskId)
-        .filter(t => t._syncStatus !== 'deleted')
+      if (!taskId) return []
+      return db.checklistItems
+        .where('taskId')
+        .equals(taskId)
+        .filter(i => i._syncStatus !== 'deleted')
         .toArray()
-      const uiTasks = await Promise.all(records.map(dbTaskToUi))
-      return uiTasks as Task[]
     },
-    [user?.id, parentTaskId]
+    [taskId]
   )
 
-  const addSubtask = async (title: string, description?: string) => {
-    if (!parentTaskId || !user) return
+  const addSubtask = async (title: string) => {
+    if (!taskId) return
     const id = uuidv4()
     const now = new Date().toISOString()
-    await db.tasks.add({
+    const existing = await db.checklistItems
+      .where('taskId')
+      .equals(taskId)
+      .filter(i => i._syncStatus !== 'deleted')
+      .count()
+    await db.checklistItems.add({
       id,
-      userId: user.id,
+      taskId,
       title,
-      description: description ?? null,
       isCompleted: false,
+      position: existing,
       completedAt: null,
-      gtdStatus: 'inbox',
-      contextId: null,
-      areaId: null,
-      projectId: null,
-      parentTaskId,
-      position: 0,
-      dueDate: null,
-      notes: null,
-      recurrenceType: null,
-      recurrenceConfig: null,
-      recurrenceEndDate: null,
-      reminderTime: null,
-      reminderOffsets: null,
-      reminderFired: false,
-      deadlineNotified: false,
-      isRecurring: false,
-      tagIds: [],
-      trashedAt: null,
       createdAt: now,
       updatedAt: now,
       _syncStatus: 'local',
@@ -69,10 +60,10 @@ export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
     })
     await db.mutations.add({
       id: uuidv4(),
-      entityType: 'task',
+      entityType: 'checklistItem',
       entityId: id,
       action: 'create',
-      payload: JSON.stringify({ title, description, parent_task_id: parentTaskId, id }),
+      payload: JSON.stringify({ taskId, title }),
       timestamp: Date.now(),
       retryCount: 0,
       lastError: null,
@@ -80,11 +71,10 @@ export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
   }
 
   const toggleSubtask = async (id: string) => {
-    if (!user) return
-    const existing = await db.tasks.get(id)
+    const existing = await db.checklistItems.get(id)
     if (!existing) return
     const now = new Date().toISOString()
-    await db.tasks.update(id, {
+    await db.checklistItems.update(id, {
       isCompleted: !existing.isCompleted,
       completedAt: existing.isCompleted ? null : now,
       updatedAt: now,
@@ -92,7 +82,7 @@ export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
     })
     await db.mutations.add({
       id: uuidv4(),
-      entityType: 'task',
+      entityType: 'checklistItem',
       entityId: id,
       action: 'toggle',
       payload: null,
@@ -103,14 +93,13 @@ export function useSubtasks(parentTaskId: string | null): UseSubtasksReturn {
   }
 
   const deleteSubtask = async (id: string) => {
-    if (!user) return
-    await db.tasks.update(id, {
+    await db.checklistItems.update(id, {
       _syncStatus: 'deleted',
       updatedAt: new Date().toISOString(),
     })
     await db.mutations.add({
       id: uuidv4(),
-      entityType: 'task',
+      entityType: 'checklistItem',
       entityId: id,
       action: 'delete',
       payload: null,
