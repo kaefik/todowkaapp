@@ -34,6 +34,7 @@ class UserResponse(BaseResponseSchema):
     telegram_bot_token: str | None = None
     telegram_chat_id: str | None = None
     telegram_notifications_enabled: bool = False
+    capitalize_first: bool = True
     created_at: datetime
 
     model_config = {
@@ -56,6 +57,7 @@ class UserUpdate(BaseModel):
     password: str | None = None
     telegram_bot_token: str | None = None
     telegram_notifications_enabled: bool | None = None
+    capitalize_first: bool | None = None
 
     @field_validator('default_section')
     @classmethod

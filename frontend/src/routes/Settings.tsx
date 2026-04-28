@@ -10,7 +10,7 @@ import { VerbSettings } from '../components/VerbSettings'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
 
 type Theme = 'light' | 'dark'
-type Tab = 'general' | 'profile' | 'security' | 'verbs' | 'users'
+type Tab = 'general' | 'appearance' | 'profile' | 'security' | 'verbs' | 'users'
 
 function SettingsContent() {
   const { t, i18n } = useTranslation('settings')
@@ -150,6 +150,7 @@ function SettingsContent() {
 
   const tabs: { key: Tab; label: string; adminOnly: boolean }[] = [
     { key: 'general', label: t('tabGeneral'), adminOnly: false },
+    { key: 'appearance', label: t('tabAppearance'), adminOnly: false },
     { key: 'profile', label: t('tabProfile'), adminOnly: false },
     { key: 'security', label: t('tabSecurity'), adminOnly: false },
     { key: 'verbs', label: t('tabVerbs'), adminOnly: false },
@@ -210,47 +211,6 @@ function SettingsContent() {
                   </optgroup>
                 ))}
               </select>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('appearance')}</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('theme')}
-                </label>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleThemeChange('light')}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
-                      theme === 'light'
-                        ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-white border-2 border-gray-300 dark:border-gray-600" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('themeLight')}</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => handleThemeChange('dark')}
-                    className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
-                      theme === 'dark'
-                        ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-gray-900 dark:bg-gray-100" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('themeDark')}</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -544,6 +504,89 @@ function SettingsContent() {
                   {t('resetUiButton')}
                 </button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'appearance' && (
+        <>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('appearance')}</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('theme')}
+                </label>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleThemeChange('light')}
+                    className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
+                      theme === 'light'
+                        ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-white border-2 border-gray-300 dark:border-gray-600" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('themeLight')}</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange('dark')}
+                    className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
+                      theme === 'dark'
+                        ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-gray-900 dark:bg-gray-100" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{t('themeDark')}</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t('capitalizeFirstLabel')}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('capitalizeFirstHint')}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const updated = await usersApi.updateCurrentUser({
+                      capitalize_first: !user?.capitalize_first,
+                    })
+                    setCurrentUser(updated)
+                  } catch {
+                    addToast({ title: t('errorSaving'), body: '', type: 'error' })
+                  }
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                  user?.capitalize_first !== false
+                    ? 'bg-indigo-600 dark:bg-indigo-500'
+                    : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={user?.capitalize_first !== false}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    user?.capitalize_first !== false ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
           </div>
         </>

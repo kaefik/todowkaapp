@@ -6,6 +6,7 @@ import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useVerbTemplates, type VerbTemplate } from '../hooks/useVerbTemplates'
 import { useToastStore } from '../stores/toastStore'
+import { useAuthStore } from '../stores/authStore'
 import { TaskEditModal } from './TaskEditModal'
 import { TaskDetailModal } from './TaskDetailModal'
 import { HighlightText } from './TaskFilterPanel'
@@ -270,6 +271,8 @@ export function TaskListView({
     setFabOpen(prev => !prev)
   }
 
+  const capitalizeFirst = useAuthStore((s) => s.user?.capitalize_first !== false)
+
   const handleAddTask = async (data: TaskCreateFormData) => {
     setIsAdding(true)
     try {
@@ -278,7 +281,10 @@ export function TaskListView({
       const normalizedText = verbPrefix
         ? userText.charAt(0).toLowerCase() + userText.slice(1)
         : userText
-      const titleWithVerb = verbPrefix + normalizedText
+      let titleWithVerb = verbPrefix + normalizedText
+      if (capitalizeFirst && titleWithVerb.length > 0) {
+        titleWithVerb = titleWithVerb.charAt(0).toUpperCase() + titleWithVerb.slice(1)
+      }
       await onAddTask({ title: titleWithVerb, description: data.description || undefined })
       reset()
       setShowDescription(false)

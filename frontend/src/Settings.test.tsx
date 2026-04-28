@@ -135,7 +135,6 @@ describe('Settings', () => {
     it('shows general tab content by default', () => {
       renderSettings()
 
-      expect(screen.getByText('Внешний вид')).toBeInTheDocument()
       expect(screen.getByText('О приложении')).toBeInTheDocument()
     })
 
@@ -158,16 +157,23 @@ describe('Settings', () => {
   })
 
   describe('theme switching', () => {
-    it('renders theme options', () => {
+    const switchToAppearanceTab = async () => {
+      const appearanceTab = screen.getByRole('button', { name: 'Внешний вид' })
+      await userEvent.setup().click(appearanceTab)
+    }
+
+    it('renders theme options', async () => {
       renderSettings()
+      await switchToAppearanceTab()
 
       expect(screen.getByText('Тема оформления')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /Светлая/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /Тёмная/i })).toBeInTheDocument()
     })
 
-    it('selects light theme by default', () => {
+    it('selects light theme by default', async () => {
       renderSettings()
+      await switchToAppearanceTab()
 
       const lightButton = screen.getByRole('button', { name: /Светлая/i })
       expect(lightButton).toHaveClass('border-indigo-500')
@@ -176,6 +182,7 @@ describe('Settings', () => {
     it('switches to dark theme when dark button is clicked', async () => {
       const user = userEvent.setup()
       renderSettings()
+      await switchToAppearanceTab()
 
       const darkButton = screen.getByRole('button', { name: /Тёмная/i })
       await user.click(darkButton)
@@ -184,7 +191,7 @@ describe('Settings', () => {
       expect(window.localStorage.setItem).toHaveBeenCalledWith('theme', 'dark')
     })
 
-    it('loads theme from localStorage', () => {
+    it('loads theme from localStorage', async () => {
       Object.defineProperty(window, 'localStorage', {
         value: {
           getItem: vi.fn(() => 'dark'),
@@ -195,12 +202,13 @@ describe('Settings', () => {
         writable: true,
       })
       renderSettings()
+      await switchToAppearanceTab()
 
       const darkButton = screen.getByRole('button', { name: /Тёмная/i })
       expect(darkButton).toHaveClass('border-indigo-500')
     })
 
-    it('uses system preference when no theme in localStorage', () => {
+    it('uses system preference when no theme in localStorage', async () => {
       Object.defineProperty(window, 'localStorage', {
         value: {
           getItem: vi.fn(() => null),
@@ -224,6 +232,7 @@ describe('Settings', () => {
         })),
       })
       renderSettings()
+      await switchToAppearanceTab()
 
       const darkButton = screen.getByRole('button', { name: /Тёмная/i })
       expect(darkButton).toHaveClass('border-indigo-500')

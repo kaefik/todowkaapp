@@ -15,6 +15,7 @@ export interface User {
   telegram_bot_token: string | null
   telegram_chat_id: string | null
   telegram_notifications_enabled: boolean
+  capitalize_first: boolean
   created_at: string
 }
 

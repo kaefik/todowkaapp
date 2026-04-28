@@ -275,6 +275,14 @@
 - Миграция: `alembic/versions/20260423_1744_add_default_section_to_user_049a3a3a7f9b.py`
 - Файлы: `backend/app/models/user.py`, `backend/app/schemas/user.py`, `frontend/src/router.tsx`, `frontend/src/routes/Settings.tsx`, `frontend/src/stores/authStore.ts`, `frontend/src/api/users.ts`
 
+#### Настройка капитализации первой буквы ✅ (Реализовано 28.04.2026)
+- Автоматическая капитализация первой буквы заголовка задачи при создании
+- По умолчанию включено — первая буква всегда заглавная
+- Настраиваемый переключатель: Настройки → вкладка «Внешний вид» → «Заглавная первая буква»
+- Хранение: на сервере (поле `capitalize_first` в модели User), синхронизация между устройствами
+- Миграция: `alembic/versions/20260428_1735_add_capitalize_first_to_user_11e915d16cba.py`
+- Файлы: `backend/app/models/user.py`, `backend/app/schemas/user.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
+
 #### Пользовательский интерфейс
 - Адаптивный дизайн для всех устройств (десктоп, планшет, телефон)
 - Чистый и интуитивно понятный интерфейс
