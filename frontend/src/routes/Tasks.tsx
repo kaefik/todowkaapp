@@ -6,6 +6,7 @@ import { useRecurrences } from '../hooks/useRecurrences'
 import { TaskEditModal } from '../components/TaskEditModal'
 import { TaskDetailModal } from '../components/TaskDetailModal'
 import { TaskFilterPanel, HighlightText } from '../components/TaskFilterPanel'
+import { TruncatedDescription } from '../components/TruncatedDescription'
 import { TaskGroupSection } from '../components/TaskGroupSection'
 import { groupTasks } from '../utils/groupTasks'
 import { useTaskFilter } from '../hooks/useTaskFilter'
@@ -365,11 +366,11 @@ function TasksContent() {
                         </span>
                       )}
                     </h3>
-                    {task.description && (
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        <HighlightText text={task.description} query={filters.search} />
-                      </p>
-                    )}
+                    <TruncatedDescription
+                      text={task.description || ''}
+                      query={filters.search}
+                      onExpand={() => setViewingTaskId(task.id)}
+                    />
                     {task.tags && task.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {task.tags.map((tag) => (
@@ -445,11 +446,11 @@ function TasksContent() {
                           </span>
                         )}
                       </h3>
-                      {task.description && (
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          <HighlightText text={task.description} query={filters.search} />
-                        </p>
-                      )}
+                      <TruncatedDescription
+                        text={task.description || ''}
+                        query={filters.search}
+                        onExpand={() => setViewingTaskId(task.id)}
+                      />
                       {task.tags && task.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {task.tags.map((tag) => (
@@ -543,11 +544,12 @@ function TasksContent() {
                           </span>
                         )}
                       </h3>
-                      {task.description && (
-                        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500">
-                          <HighlightText text={task.description} query={filters.search} />
-                        </p>
-                      )}
+                      <TruncatedDescription
+                        text={task.description || ''}
+                        query={filters.search}
+                        onExpand={() => setViewingTaskId(task.id)}
+                        crossedOut
+                      />
                       {task.tags && task.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {task.tags.map((tag) => (

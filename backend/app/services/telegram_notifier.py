@@ -81,7 +81,8 @@ class TelegramNotifierService:
         ]
 
         if task.description:
-            lines.append(f"\U0001f4dd Описание: {task.description}")
+            desc = task.description if len(task.description) <= 100 else task.description[:100] + "..."
+            lines.append(f"\U0001f4dd Описание: {desc}")
 
         if task.project:
             lines.append(f"\U0001f4c1 Проект: {task.project.name}")

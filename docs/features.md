@@ -94,6 +94,14 @@
   - Компонент: `frontend/src/components/TaskDetailModal.tsx`
   - Файлы: `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`
 - Редактирование заголовка и описания через модальное окно
+- Усечение описания задачи в списке ✅ (Реализовано 28.04.2026)
+  - Описание обрезается до ~100 символов в списке задач с кнопкой «Ещё...»
+  - При клике «Ещё...» открывается TaskDetailModal с полным описанием
+  - При активном поиске описание показывается полностью с подсветкой совпадений
+  - В Telegram-уведомлениях описание обрезается до 100 символов + «...»
+  - В Edit Task описание показывается полностью
+  - Компонент: `frontend/src/components/TruncatedDescription.tsx`
+  - Файлы: `frontend/src/components/TruncatedDescription.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `backend/app/services/telegram_notifier.py`
 - Отметка задачи как выполненной/невыполненной одним кликом
 - Повторяющиеся (рекуррентные) задачи ✅ (Реализовано 27.04.2026)
   - При завершении рекуррентной задачи автоматически создаётся новая задача со сдвинутым дедлайном

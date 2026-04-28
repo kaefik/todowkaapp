@@ -10,6 +10,7 @@ import { useAuthStore } from '../stores/authStore'
 import { TaskEditModal } from './TaskEditModal'
 import { TaskDetailModal } from './TaskDetailModal'
 import { HighlightText } from './TaskFilterPanel'
+import { TruncatedDescription } from './TruncatedDescription'
 import { VerbChips } from './VerbChips'
 import { VerbFab } from './VerbFab'
 import { useForm } from 'react-hook-form'
@@ -479,11 +480,11 @@ export function TaskListView({
                       <RecurrenceHistoryPopup taskId={task.id} onClose={() => setHistoryTaskId(null)} />
                     )}
                   </h3>
-                  {task.description && (
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      <HighlightText text={task.description} query={searchQuery} />
-                    </p>
-                  )}
+                  <TruncatedDescription
+                    text={task.description || ''}
+                    query={searchQuery}
+                    onExpand={() => setViewingTaskId(task.id)}
+                  />
                   {task.tags && task.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1">
                       {task.tags.map((tag) => (
@@ -623,11 +624,11 @@ export function TaskListView({
                           <RecurrenceHistoryPopup taskId={task.id} onClose={() => setHistoryTaskId(null)} />
                         )}
                       </h3>
-                      {task.description && (
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          <HighlightText text={task.description} query={searchQuery} />
-                        </p>
-                      )}
+                      <TruncatedDescription
+                        text={task.description || ''}
+                        query={searchQuery}
+                        onExpand={() => setViewingTaskId(task.id)}
+                      />
                       {task.tags && task.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {task.tags.map((tag) => (
@@ -641,6 +642,7 @@ export function TaskListView({
                           ))}
                         </div>
                       )}
+
                       <div className="flex items-center gap-2 mt-1">
                         {(() => {
                           const result = formatDueDate(task.due_date, locale)
@@ -753,11 +755,12 @@ export function TaskListView({
                           <RecurrenceHistoryPopup taskId={task.id} onClose={() => setHistoryTaskId(null)} />
                         )}
                       </h3>
-                      {task.description && (
-                        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500 line-through decoration-2 decoration-gray-400 dark:decoration-gray-500">
-                          <HighlightText text={task.description} query={searchQuery} />
-                        </p>
-                      )}
+                      <TruncatedDescription
+                        text={task.description || ''}
+                        query={searchQuery}
+                        onExpand={() => setViewingTaskId(task.id)}
+                        crossedOut
+                      />
                       {task.tags && task.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {task.tags.map((tag) => (
@@ -767,6 +770,7 @@ export function TaskListView({
                               style={{ backgroundColor: tag.color || '#6366f1' }}
                             >
                               {tag.name}
+
                             </span>
                           ))}
                         </div>
