@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TaskFilters as TaskFiltersType, GtdStatus } from '../hooks/useTasks'
+import type { TaskFilters as TaskFiltersType, GtdStatus, GroupBy } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useProjects } from '../hooks/useProjects'
@@ -70,7 +70,17 @@ export function TaskFilterPanel({
     { value: 'created_at', labelKey: 'sortCreated' },
     { value: 'title', labelKey: 'sortName' },
     { value: 'due_date', labelKey: 'sortDeadline' },
+    { value: 'updated_at', labelKey: 'sortUpdated' },
+    { value: 'completed_at', labelKey: 'sortCompletedAt' },
     { value: 'position', labelKey: 'sortPosition' },
+  ]
+
+  const GROUP_BY_OPTIONS: { value: GroupBy; labelKey: string }[] = [
+    { value: 'project', labelKey: 'groupProject' },
+    { value: 'area', labelKey: 'groupArea' },
+    { value: 'context', labelKey: 'groupContext' },
+    { value: 'due_date', labelKey: 'groupDueDate' },
+    { value: 'gtd_status', labelKey: 'groupGtdStatus' },
   ]
 
   return (
@@ -160,6 +170,19 @@ export function TaskFilterPanel({
             >
               {filters.sort_order === 'desc' ? '↓' : '↑'}
             </button>
+
+            <select
+              value={filters.group_by || ''}
+              onChange={(e) => onUpdateFilter('group_by', (e.target.value || undefined) as GroupBy | undefined)}
+              className="px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="">{t('groupNone')}</option>
+              {GROUP_BY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       ) : (
