@@ -82,7 +82,7 @@ export function SortGroupPopover({ filters, onUpdateFilter }: SortGroupPopoverPr
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 z-50 w-72">
+        <div className="absolute left-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg p-4 z-50 w-72">
           <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
             {t('popoverGroup')}
           </div>
