@@ -14,6 +14,8 @@ import { VerbFab } from './VerbFab'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { groupTasks } from '../utils/groupTasks'
+import { TaskGroupSection } from './TaskGroupSection'
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be at most 255 characters'),
@@ -55,6 +57,7 @@ export interface TaskListViewProps {
   emptyMessage?: string
   autoFocus?: boolean
   showGtdStatus?: boolean
+  groupBy?: import('../hooks/useTasks').GroupBy
 }
 
 function formatShortDate(date: Date, locale: string) {
@@ -192,6 +195,7 @@ export function TaskListView({
   emptyMessage,
   autoFocus = false,
   showGtdStatus = false,
+  groupBy,
 }: TaskListViewProps) {
   const { t, i18n } = useTranslation('tasks')
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -299,6 +303,7 @@ export function TaskListView({
 
   const activeTasks = tasks.filter((t) => !t.completed)
   const completedTasks = tasks.filter((t) => t.completed)
+  const activeGroups = groupBy ? groupTasks(activeTasks, groupBy) : null
   const [isCompletedCollapsed, setIsCompletedCollapsed] = useState(true)
 
   const effectiveEmptyMessage = emptyMessage ?? t('noTasks')
@@ -437,7 +442,7 @@ export function TaskListView({
         </div>
       )}
 
-      {activeTasks.length > 0 && (
+      {activeTasks.length > 0 && !activeGroups && (
         <div className="space-y-2">
           {activeTasks.map((task) => (
             <div
@@ -571,6 +576,121 @@ export function TaskListView({
                 </div>
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {activeGroups && activeGroups.length > 0 && (
+        <div className="space-y-4">
+          {activeGroups.map((group) => (
+            <TaskGroupSection
+              key={group.key}
+              group={group}
+              storageKey={`group-collapsed:${group.key}:${groupBy}`}
+            >
+              {group.tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => setViewingTaskId(task.id)}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => onToggleTask(task.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium relative text-gray-900 dark:text-gray-100">
+                        <span className="inline-flex items-center">
+                          <HighlightText text={task.title} query={searchQuery} />
+                          <TaskIcons task={task} onHistoryClick={() => setHistoryTaskId(task.id)} />
+                        </span>
+                        {historyTaskId === task.id && (
+                          <RecurrenceHistoryPopup taskId={task.id} onClose={() => setHistoryTaskId(null)} />
+                        )}
+                      </h3>
+                      {task.description && (
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          <HighlightText text={task.description} query={searchQuery} />
+                        </p>
+                      )}
+                      {task.tags && task.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {task.tags.map((tag) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white"
+                              style={{ backgroundColor: tag.color || '#6366f1' }}
+                            >
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {(() => {
+                          const result = formatDueDate(task.due_date, locale)
+                          const isOverdue = result.overdue
+                          const dueText = !task.due_date
+                            ? t('noDueDate')
+                            : result.isPlain
+                              ? result.text + (result.time ? `, ${result.time}` : '')
+                              : t(result.text, { date: result.date, count: result.count }) + (result.time ? `, ${result.time}` : '')
+                          return (
+                            <p className={`text-xs ${isOverdue ? 'text-red-500 dark:text-red-400 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
+                              {dueText}
+                            </p>
+                          )
+                        })()}
+                        {task.checklist_total > 0 && (
+                          <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
+                            {task.checklist_completed}/{task.checklist_total}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
+                      {!hideMoveButtons &&
+                        effectiveMoveTargets
+                          .filter((mt) => mt.status !== task.gtd_status)
+                          .map((mt) => (
+                            <button
+                              key={mt.status}
+                              onClick={() => onMoveTask(task.id, mt.status)}
+                              className="text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none"
+                              title={t('moveTo', { label: mt.label })}
+                            >
+                              {mt.label}
+                            </button>
+                          ))}
+                      {onRestoreTask && (
+                        <button
+                          onClick={() => onRestoreTask(task.id)}
+                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 focus:outline-none font-medium"
+                        >
+                          {t('restore')}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setEditingTask(task)}
+                        className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+                      >
+                        {t('editBtn')}
+                      </button>
+                      <button
+                        onClick={() => onDeleteTask(task.id)}
+                        className="text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 focus:outline-none"
+                      >
+                        {t('deleteBtn')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </TaskGroupSection>
           ))}
         </div>
       )}
