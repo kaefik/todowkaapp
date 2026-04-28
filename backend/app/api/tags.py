@@ -12,6 +12,14 @@ from app.services.tag_service import TagService
 tags_router = APIRouter(prefix="/tags", tags=["tags"])
 
 
+async def _publish_tag_event(user_id: str, tag_id: str, action: str):
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{user_id}:sync", f"tag_{action}", {
+        "tag_id": str(tag_id),
+        "action": action,
+    })
+
+
 @tags_router.get("", response_model=TagListResponse)
 async def list_tags(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -34,6 +42,7 @@ async def create_tag(
 ) -> TagResponse:
     service = TagService(db)
     tag = await service.create_tag(user_id=current_user.id, data=data)
+    await _publish_tag_event(current_user.id, tag.id, "created")
     return tag
 
 
@@ -71,6 +80,7 @@ async def update_tag(
             detail="Tag not found",
         )
 
+    await _publish_tag_event(current_user.id, tag_id, "updated")
     return tag
 
 
@@ -89,6 +99,7 @@ async def delete_tag(
             detail="Tag not found",
         )
 
+    await _publish_tag_event(current_user.id, tag_id, "deleted")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

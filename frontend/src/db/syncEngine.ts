@@ -137,11 +137,13 @@ async function mergeAndPut(
   items: Record<string, unknown>[],
   userId: string,
   transform: SyncResourceConfig['transform']
-): Promise<void> {
+): Promise<Set<string>> {
+  const serverIds = new Set<string>()
   const mergedRecords: unknown[] = []
 
   for (const item of items) {
     const id = item.id as string
+    serverIds.add(id)
     const skip = await shouldSkipMerge(entityType, id)
     if (skip) continue
 
@@ -169,21 +171,63 @@ async function mergeAndPut(
     mergedRecords.push(merged)
   }
 
-  if (mergedRecords.length === 0) return
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (table as any).bulkPut(mergedRecords)
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      useToastStore.getState().addToast({
-        title: i18n.t('sync:storageFull'),
-        body: i18n.t('sync:storageFullDescription'),
-        type: 'error',
-      })
+  if (mergedRecords.length > 0) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (table as any).bulkPut(mergedRecords)
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+        useToastStore.getState().addToast({
+          title: i18n.t('sync:storageFull'),
+          body: i18n.t('sync:storageFullDescription'),
+          type: 'error',
+        })
+        throw err
+      }
       throw err
     }
-    throw err
+  }
+
+  return serverIds
+}
+
+async function removeServerDeleted(
+  table: SyncResourceConfig['table'],
+  entityType: EntityType,
+  serverIds: Set<string>,
+  userId: string
+): Promise<void> {
+  if (serverIds.size === 0) return
+
+  const localRecords = await table
+    .where('userId')
+    .equals(userId)
+    .toArray()
+
+  const syncedLocal = localRecords.filter(
+    r => (r as unknown as { _syncStatus: SyncStatus })._syncStatus === 'synced'
+  )
+
+  if (syncedLocal.length === 0) return
+
+  const toDelete: string[] = []
+  for (const record of syncedLocal) {
+    const r = record as unknown as { id: string; _syncStatus: SyncStatus }
+    if (!serverIds.has(r.id)) {
+      toDelete.push(r.id)
+    }
+  }
+
+  if (toDelete.length > syncedLocal.length * 0.5) {
+    console.warn(
+      `[SyncEngine] removeServerDeleted: skipping suspicious bulk delete for ${entityType} ` +
+      `(${toDelete.length}/${syncedLocal.length} records). Server may have returned incomplete data.`
+    )
+    return
+  }
+
+  if (toDelete.length > 0) {
+    await table.bulkDelete(toDelete)
   }
 }
 
@@ -211,14 +255,16 @@ export async function initialSync(userId: string): Promise<void> {
 async function initialSyncInternal(userId: string): Promise<void> {
   await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint)
-    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+    const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+    await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
   }))
 }
 
 export async function pull(userId: string): Promise<void> {
   await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint)
-    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+    const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+    await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
   }))
 }
 

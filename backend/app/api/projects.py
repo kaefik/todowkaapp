@@ -20,6 +20,14 @@ from app.services.project_service import ProjectService
 projects_router = APIRouter(prefix="/projects", tags=["projects"])
 
 
+async def _publish_project_event(user_id: str, project_id: str, action: str):
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{user_id}:sync", f"project_{action}", {
+        "project_id": str(project_id),
+        "action": action,
+    })
+
+
 @projects_router.get("", response_model=ProjectListResponse)
 async def list_projects(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -72,6 +80,7 @@ async def create_project(
 ) -> ProjectResponse:
     service = ProjectService(db)
     project = await service.create_project(user_id=current_user.id, data=data)
+    await _publish_project_event(current_user.id, project.id, "created")
     return project
 
 
@@ -122,6 +131,7 @@ async def update_project(
             detail="Project not found",
         )
 
+    await _publish_project_event(current_user.id, project_id, "updated")
     return project
 
 
@@ -140,6 +150,7 @@ async def delete_project(
             detail="Project not found",
         )
 
+    await _publish_project_event(current_user.id, project_id, "deleted")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

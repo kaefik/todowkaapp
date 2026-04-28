@@ -18,6 +18,14 @@ from app.services.area_service import AreaService
 areas_router = APIRouter(prefix="/areas", tags=["areas"])
 
 
+async def _publish_area_event(user_id: str, area_id: str, action: str):
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{user_id}:sync", f"area_{action}", {
+        "area_id": str(area_id),
+        "action": action,
+    })
+
+
 @areas_router.get("", response_model=AreaListResponse)
 async def list_areas(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -52,6 +60,7 @@ async def create_area(
 ) -> AreaResponse:
     service = AreaService(db)
     area = await service.create_area(user_id=current_user.id, data=data)
+    await _publish_area_event(current_user.id, area.id, "created")
     return area
 
 
@@ -89,6 +98,7 @@ async def update_area(
             detail="Area not found",
         )
 
+    await _publish_area_event(current_user.id, area_id, "updated")
     return area
 
 
@@ -107,4 +117,5 @@ async def delete_area(
             detail="Area not found",
         )
 
+    await _publish_area_event(current_user.id, area_id, "deleted")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

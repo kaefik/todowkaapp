@@ -12,6 +12,14 @@ from app.services.context_service import ContextService
 contexts_router = APIRouter(prefix="/contexts", tags=["contexts"])
 
 
+async def _publish_context_event(user_id: str, context_id: str, action: str):
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{user_id}:sync", f"context_{action}", {
+        "context_id": str(context_id),
+        "action": action,
+    })
+
+
 @contexts_router.get("", response_model=ContextListResponse)
 async def list_contexts(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -34,6 +42,7 @@ async def create_context(
 ) -> ContextResponse:
     service = ContextService(db)
     context = await service.create_context(user_id=current_user.id, data=data)
+    await _publish_context_event(current_user.id, context.id, "created")
     return context
 
 
@@ -71,6 +80,7 @@ async def update_context(
             detail="Context not found",
         )
 
+    await _publish_context_event(current_user.id, context_id, "updated")
     return context
 
 
@@ -89,4 +99,5 @@ async def delete_context(
             detail="Context not found",
         )
 
+    await _publish_context_event(current_user.id, context_id, "deleted")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
