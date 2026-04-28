@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import type { TaskFilters } from './useTasks'
+import type { TaskFilters, GroupBy } from './useTasks'
 import { useDebounce } from './useDebounce'
 
 interface StoredFilters {
@@ -11,7 +11,7 @@ interface StoredFilters {
   due_date_to?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
-  group_by?: string
+  group_by?: GroupBy
 }
 
 interface StoredUiState {
