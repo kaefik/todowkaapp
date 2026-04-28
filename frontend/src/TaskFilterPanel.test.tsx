@@ -99,7 +99,9 @@ describe('TaskFilterPanel', () => {
     )
   }
 
-  const getSearchBtn = () => screen.getByRole('button', { hidden: true })
+  const getSearchBtn = () => screen.getAllByRole('button').find(
+    btn => !btn.getAttribute('title')
+  )!
 
   describe('search', () => {
     it('renders search icon button initially', () => {
@@ -206,31 +208,29 @@ describe('TaskFilterPanel', () => {
   })
 
   describe('sorting', () => {
-    it('renders sort dropdown when search is open', async () => {
+    it('renders SortGroupPopover button when search is closed', () => {
+      renderPanel()
+      expect(screen.getByTitle('Вид списка')).toBeInTheDocument()
+    })
+
+    it('opens popover with sort chips on click', async () => {
       const user = userEvent.setup()
       renderPanel()
-      await user.click(getSearchBtn())
+      await user.click(screen.getByTitle('Вид списка'))
       await waitFor(() => {
-        expect(screen.getByText('По дате создания')).toBeInTheDocument()
+        expect(screen.getByText('Группировка')).toBeInTheDocument()
+        expect(screen.getByText('Сортировка')).toBeInTheDocument()
+        expect(screen.getByText('Направление')).toBeInTheDocument()
       })
     })
 
-    it('calls onUpdateFilter when sort option changed', async () => {
+    it('calls onUpdateFilter when sort chip clicked in popover', async () => {
       const user = userEvent.setup()
       renderPanel()
-      await user.click(getSearchBtn())
-      await waitFor(() => expect(screen.getByDisplayValue('По дате создания')).toBeInTheDocument())
-      await user.selectOptions(screen.getByDisplayValue('По дате создания'), 'title')
+      await user.click(screen.getByTitle('Вид списка'))
+      await waitFor(() => expect(screen.getByText('Группировка')).toBeInTheDocument())
+      await user.click(screen.getByText('По названию'))
       expect(mockOnUpdateFilter).toHaveBeenCalledWith('sort_by', 'title')
-    })
-
-    it('renders sort order toggle', async () => {
-      const user = userEvent.setup()
-      renderPanel({ sort_order: 'desc' })
-      await user.click(getSearchBtn())
-      await waitFor(() => {
-        expect(screen.getByTitle('По убыванию')).toBeInTheDocument()
-      })
     })
   })
 })

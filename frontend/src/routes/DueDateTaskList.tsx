@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getDayBounds, useDueDateTasks } from '../hooks/useDueDateTasks'
 import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { useAuthStore } from '../stores/authStore'
+import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
+import { useTaskFilter } from '../hooks/useTaskFilter'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 interface DueDateTaskListProps {
@@ -15,7 +17,17 @@ interface DueDateTaskListProps {
 export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskListProps) {
   const { t } = useTranslation('tasks')
   const user = useAuthStore(s => s.user)
-  const { tasks, isLoading } = useDueDateTasks(dayOffset)
+  const { tasks: dueTasks, isLoading } = useDueDateTasks(dayOffset)
+
+  const {
+    filters,
+    searchInput,
+    setSearchInput,
+    updateFilter,
+    clearFilters,
+    hasActiveFilters,
+    activeFilterCount,
+  } = useTaskFilter()
 
   const {
     addTask,
@@ -24,6 +36,28 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
     moveTask,
     refetch,
   } = useTasks()
+
+  const tasks = useMemo(() => {
+    let result = dueTasks
+    if (filters.search) {
+      const q = filters.search.toLowerCase()
+      result = result.filter(t => t.title.toLowerCase().includes(q))
+    }
+    if (filters.sort_by) {
+      const dir = filters.sort_order === 'desc' ? -1 : 1
+      result = [...result].sort((a, b) => {
+        const aVal = a[filters.sort_by as keyof typeof a]
+        const bVal = b[filters.sort_by as keyof typeof b]
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return 1
+        if (bVal == null) return -1
+        if (aVal < bVal) return -1 * dir
+        if (aVal > bVal) return 1 * dir
+        return 0
+      })
+    }
+    return result
+  }, [dueTasks, filters.search, filters.sort_by, filters.sort_order])
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
@@ -61,10 +95,24 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
     <div className="space-y-6">
       {title && <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{title}</h1>}
 
+      <TaskFilterPanel
+        filters={filters}
+        searchInput={searchInput}
+        onSearchInput={setSearchInput}
+        onUpdateFilter={updateFilter}
+        onClearFilters={clearFilters}
+        hasActiveFilters={hasActiveFilters}
+        activeFilterCount={activeFilterCount}
+        hideGtdStatus
+        hideProject
+        hideArea
+      />
+
       <TaskListView
         tasks={tasks}
         isLoading={isLoading}
         error={null}
+        searchQuery={filters.search}
         onAddTask={handleAddTask}
         showAddForm={true}
         defaultGtdStatus="active"
@@ -74,6 +122,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
         onSaveTask={handleSaveTask}
         onRefetch={refetch}
         emptyMessage={emptyMessage}
+        groupBy={filters.group_by}
       />
 
       <ConfirmDialog
