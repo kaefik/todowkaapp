@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import i18n from '../i18n'
 
@@ -174,21 +174,6 @@ function applyFilters(records: UiTask[], filters?: TaskFilters): UiTask[] {
   if (filters?.due_date_to) {
     result = result.filter(t => t.due_date !== null && t.due_date <= filters.due_date_to!)
   }
-  if (filters?.sort_by) {
-    const dir = filters.sort_order === 'desc' ? -1 : 1
-    result.sort((a, b) => {
-      const aVal = a[filters.sort_by as keyof UiTask]
-      const bVal = b[filters.sort_by as keyof UiTask]
-      if (aVal == null && bVal == null) return 0
-      if (aVal == null) return 1
-      if (bVal == null) return -1
-      if (aVal < bVal) return -1 * dir
-      if (aVal > bVal) return 1 * dir
-      return 0
-    })
-  } else {
-    result.sort((a, b) => a.position - b.position)
-  }
   return result
 }
 
@@ -205,7 +190,28 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     [user?.id]
   )
 
-  const tasks = rawTasks as Task[]
+  const sortBy = filters?.sort_by
+  const sortOrder = filters?.sort_order
+
+  const tasks = useMemo(() => {
+    const sorted = [...rawTasks]
+    if (sortBy) {
+      const dir = sortOrder === 'desc' ? -1 : 1
+      sorted.sort((a, b) => {
+        const aVal = a[sortBy as keyof UiTask]
+        const bVal = b[sortBy as keyof UiTask]
+        if (aVal == null && bVal == null) return 0
+        if (aVal == null) return 1
+        if (bVal == null) return -1
+        if (aVal < bVal) return -1 * dir
+        if (aVal > bVal) return 1 * dir
+        return 0
+      })
+    } else {
+      sorted.sort((a, b) => (a as UiTask).position - (b as UiTask).position)
+    }
+    return sorted as Task[]
+  }, [rawTasks, sortBy, sortOrder])
 
   const addTask = async (data: CreateTask) => {
     if (!user) return

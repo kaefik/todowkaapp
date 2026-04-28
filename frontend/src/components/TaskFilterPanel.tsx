@@ -1,11 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TaskFilters as TaskFiltersType, GtdStatus, GroupBy } from '../hooks/useTasks'
+import type { TaskFilters as TaskFiltersType, GtdStatus } from '../hooks/useTasks'
 import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useProjects } from '../hooks/useProjects'
 import { useTags } from '../hooks/useTags'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { SortGroupPopover } from './SortGroupPopover'
 
 interface TaskFilterPanelProps {
   filters: TaskFiltersType
@@ -64,23 +65,6 @@ export function TaskFilterPanel({
     { value: 'someday', labelKey: 'gtdSomeday' },
     { value: 'completed', labelKey: 'gtdCompleted' },
     { value: 'trash', labelKey: 'gtdTrash' },
-  ]
-
-  const SORT_OPTIONS = [
-    { value: 'created_at', labelKey: 'sortCreated' },
-    { value: 'title', labelKey: 'sortName' },
-    { value: 'due_date', labelKey: 'sortDeadline' },
-    { value: 'updated_at', labelKey: 'sortUpdated' },
-    { value: 'completed_at', labelKey: 'sortCompletedAt' },
-    { value: 'position', labelKey: 'sortPosition' },
-  ]
-
-  const GROUP_BY_OPTIONS: { value: GroupBy; labelKey: string }[] = [
-    { value: 'project', labelKey: 'groupProject' },
-    { value: 'area', labelKey: 'groupArea' },
-    { value: 'context', labelKey: 'groupContext' },
-    { value: 'due_date', labelKey: 'groupDueDate' },
-    { value: 'gtd_status', labelKey: 'groupGtdStatus' },
   ]
 
   return (
@@ -146,43 +130,7 @@ export function TaskFilterPanel({
               </button>
             )}
 
-            <select
-              value={filters.sort_by || 'created_at'}
-              onChange={(e) => onUpdateFilter('sort_by', e.target.value || undefined)}
-              className="px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={() =>
-                onUpdateFilter(
-                  'sort_order',
-                  filters.sort_order === 'desc' ? 'asc' : 'desc'
-                )
-              }
-              className="px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600"
-              title={filters.sort_order === 'desc' ? t('sortDesc') : t('sortAsc')}
-            >
-              {filters.sort_order === 'desc' ? '↓' : '↑'}
-            </button>
-
-            <select
-              value={filters.group_by || ''}
-              onChange={(e) => onUpdateFilter('group_by', (e.target.value || undefined) as GroupBy | undefined)}
-              className="px-2 py-2 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="">{t('groupNone')}</option>
-              {GROUP_BY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.labelKey)}
-                </option>
-              ))}
-            </select>
+            <SortGroupPopover filters={filters} onUpdateFilter={onUpdateFilter} />
           </div>
         </div>
       ) : (
@@ -210,6 +158,8 @@ export function TaskFilterPanel({
               {t('resetFilters')}
             </button>
           )}
+
+          <SortGroupPopover filters={filters} onUpdateFilter={onUpdateFilter} />
         </div>
       )}
 

@@ -206,5 +206,9 @@
   "groupLater": "Later",
   "groupNoDueDate": "No deadline",
   "sortUpdated": "By updated date",
-  "sortCompletedAt": "By completed date"
+  "sortCompletedAt": "By completed date",
+  "viewSettings": "List view",
+  "popoverGroup": "Grouping",
+  "popoverSort": "Sorting",
+  "popoverDirection": "Direction"
 }

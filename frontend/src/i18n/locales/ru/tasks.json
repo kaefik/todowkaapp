@@ -206,5 +206,9 @@
   "groupLater": "Позже",
   "groupNoDueDate": "Без дедлайна",
   "sortUpdated": "По дате обновления",
-  "sortCompletedAt": "По дате выполнения"
+  "sortCompletedAt": "По дате выполнения",
+  "viewSettings": "Вид списка",
+  "popoverGroup": "Группировка",
+  "popoverSort": "Сортировка",
+  "popoverDirection": "Направление"
 }
