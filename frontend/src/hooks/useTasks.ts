@@ -10,6 +10,8 @@ import type { Tag } from './useTags'
 
 export type GtdStatus = 'inbox' | 'active' | 'next' | 'waiting' | 'someday' | 'completed' | 'trash'
 
+export type GroupBy = 'project' | 'area' | 'context' | 'due_date' | 'gtd_status'
+
 export interface RecurrenceConfig {
   type: 'daily' | 'weekly' | 'monthly'
   interval: number
@@ -33,6 +35,12 @@ export interface ContextBrief {
   icon: string | null
 }
 
+export interface AreaBrief {
+  id: string
+  name: string
+  color: string | null
+}
+
 export interface Task {
   id: string
   title: string
@@ -41,6 +49,7 @@ export interface Task {
   gtd_status: GtdStatus
   context_id: string | null
   area_id: string | null
+  area: AreaBrief | null
   project_id: string | null
   project: ProjectBrief | null
   context: ContextBrief | null
@@ -107,6 +116,7 @@ export interface TaskFilters {
   sort_order?: 'asc' | 'desc'
   due_date_from?: string
   due_date_to?: string
+  group_by?: GroupBy
 }
 
 interface UseTasksReturn {

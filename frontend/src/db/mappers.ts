@@ -9,6 +9,7 @@ export interface UiTask {
   gtd_status: string
   context_id: string | null
   area_id: string | null
+  area: { id: string; name: string; color: string | null } | null
   project_id: string | null
   project: { id: string; name: string; color: string | null; is_active: boolean } | null
   context: { id: string; name: string; color: string | null; icon: string | null } | null
@@ -64,6 +65,14 @@ export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
     }
   }
 
+  let area = null
+  if (task.areaId) {
+    const a = await db.areas.get(task.areaId)
+    if (a && a._syncStatus !== 'deleted') {
+      area = { id: a.id, name: a.name, color: a.color }
+    }
+  }
+
   return {
     id: task.id,
     title: task.title,
@@ -75,6 +84,7 @@ export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
     project_id: task.projectId,
     project,
     context,
+    area,
     position: task.position,
     due_date: task.dueDate,
     notes: task.notes,
