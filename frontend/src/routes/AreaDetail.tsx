@@ -155,6 +155,7 @@ export function AreaDetail() {
         onRefetch={() => refetch()}
         emptyMessage={t('noAreaTasks')}
         showGtdStatus
+        groupBy={filters.group_by}
       />
     </div>
   )

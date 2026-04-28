@@ -202,6 +202,7 @@ export function ProjectDetail() {
         onRefetch={() => refetch()}
         emptyMessage={isNoProject ? t('noProjectDescription') : t('noProjects')}
         showGtdStatus
+        groupBy={filters.group_by}
       />
     </div>
   )

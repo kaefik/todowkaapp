@@ -119,6 +119,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
         onRefetch={refetch}
         emptyMessage={t('noTasks')}
         autoFocus={gtdStatus === 'inbox'}
+        groupBy={filters.group_by}
       />
 
       <ConfirmDialog
