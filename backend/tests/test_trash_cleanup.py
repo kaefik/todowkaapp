@@ -116,28 +116,18 @@ async def test_cleanup_old_trash_deletes_old_tasks(db_session, auth_user):
 
 
 @pytest.mark.asyncio
-async def test_cleanup_old_trash_deletes_subtasks(db_session, auth_user):
+async def test_cleanup_old_trash_deletes_tasks(db_session, auth_user):
     task_service = TaskService(db_session)
     user_id = auth_user["user"].id
 
-    parent_id = str(uuid4())
-    parent = Task(
-        id=parent_id,
-        user_id=str(user_id),
-        title="Old parent in trash",
-        gtd_status=GtdStatus.TRASH.value,
-        trashed_at=datetime.now() - timedelta(days=35),
-    )
-    subtask = Task(
+    task = Task(
         id=str(uuid4()),
         user_id=str(user_id),
-        title="Old subtask in trash",
+        title="Old task in trash",
         gtd_status=GtdStatus.TRASH.value,
-        parent_task_id=parent_id,
         trashed_at=datetime.now() - timedelta(days=35),
     )
-    db_session.add(parent)
-    db_session.add(subtask)
+    db_session.add(task)
     await db_session.flush()
 
     deleted = await task_service.cleanup_old_trash(days=30)

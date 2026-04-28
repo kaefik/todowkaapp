@@ -3,7 +3,7 @@ import type { DbTask, DbTag, SyncStatus } from '../database'
 
 const {
   mockTagsWhere,
-  mockTasksWhere,
+  mockChecklistItemsWhere,
   mockProjectsGet,
   mockContextsGet,
 } = vi.hoisted(() => {
@@ -11,20 +11,20 @@ const {
     anyOf: vi.fn().mockReturnThis(),
     toArray: vi.fn().mockResolvedValue([]),
   }
-  const mockTasksWhere = {
+  const mockChecklistItemsWhere = {
     equals: vi.fn().mockReturnThis(),
     filter: vi.fn().mockReturnThis(),
     toArray: vi.fn().mockResolvedValue([]),
   }
   const mockProjectsGet = vi.fn().mockResolvedValue(undefined)
   const mockContextsGet = vi.fn().mockResolvedValue(undefined)
-  return { mockTagsWhere, mockTasksWhere, mockProjectsGet, mockContextsGet }
+  return { mockTagsWhere, mockChecklistItemsWhere, mockProjectsGet, mockContextsGet }
 })
 
 vi.mock('../database', () => ({
   db: {
     tags: { where: vi.fn().mockReturnValue(mockTagsWhere) },
-    tasks: { where: vi.fn().mockReturnValue(mockTasksWhere) },
+    checklistItems: { where: vi.fn().mockReturnValue(mockChecklistItemsWhere) },
     projects: { get: (...args: unknown[]) => mockProjectsGet(...args) },
     contexts: { get: (...args: unknown[]) => mockContextsGet(...args) },
   },
@@ -43,7 +43,6 @@ function makeApiTask(overrides: Record<string, unknown> = {}) {
     context_id: 'ctx1',
     area_id: 'area1',
     project_id: 'proj1',
-    parent_task_id: null,
     position: 5,
     due_date: '2026-06-01',
     notes: 'some notes',
@@ -73,7 +72,6 @@ function makeDbTask(overrides: Partial<DbTask> = {}): DbTask {
     contextId: 'ctx1',
     areaId: 'area1',
     projectId: 'proj1',
-    parentTaskId: null,
     position: 5,
     dueDate: '2026-06-01',
     notes: 'some notes',
@@ -97,7 +95,7 @@ function makeDbTask(overrides: Partial<DbTask> = {}): DbTask {
 beforeEach(() => {
   vi.clearAllMocks()
   mockTagsWhere.toArray.mockResolvedValue([])
-  mockTasksWhere.toArray.mockResolvedValue([])
+  mockChecklistItemsWhere.toArray.mockResolvedValue([])
   mockProjectsGet.mockResolvedValue(undefined)
   mockContextsGet.mockResolvedValue(undefined)
 })
@@ -116,7 +114,6 @@ describe('apiTaskToDb', () => {
     expect(result.contextId).toBe('ctx1')
     expect(result.areaId).toBe('area1')
     expect(result.projectId).toBe('proj1')
-    expect(result.parentTaskId).toBeNull()
     expect(result.position).toBe(5)
     expect(result.dueDate).toBe('2026-06-01')
     expect(result.notes).toBe('some notes')
@@ -160,7 +157,6 @@ describe('dbTaskToUi', () => {
     expect(ui.context_id).toBe('ctx1')
     expect(ui.area_id).toBe('area1')
     expect(ui.project_id).toBe('proj1')
-    expect(ui.parent_task_id).toBeNull()
     expect(ui.position).toBe(5)
     expect(ui.due_date).toBe('2026-06-01')
     expect(ui.notes).toBe('some notes')
@@ -211,15 +207,15 @@ describe('dbTaskToUi', () => {
     expect(ui.context).toEqual({ id: 'ctx1', name: 'Work', color: 'green', icon: '💼' })
   })
 
-  it('computes subtasks_count dynamically', async () => {
-    mockTasksWhere.toArray.mockResolvedValueOnce([
-      { id: 's1', isCompleted: true, _syncStatus: 'synced' } as DbTask,
-      { id: 's2', isCompleted: false, _syncStatus: 'synced' } as DbTask,
+  it('computes checklist_total and checklist_completed dynamically', async () => {
+    mockChecklistItemsWhere.toArray.mockResolvedValueOnce([
+      { id: 'c1', isCompleted: true, _syncStatus: 'synced' } as any,
+      { id: 'c2', isCompleted: false, _syncStatus: 'synced' } as any,
     ])
 
     const ui = await dbTaskToUi(makeDbTask())
-    expect(ui.subtasks_count).toBe(2)
-    expect(ui.subtasks_completed).toBe(1)
+    expect(ui.checklist_total).toBe(2)
+    expect(ui.checklist_completed).toBe(1)
   })
 
   it('excludes soft-deleted projects and contexts', async () => {

@@ -12,7 +12,6 @@ export interface UiTask {
   project_id: string | null
   project: { id: string; name: string; color: string | null; is_active: boolean } | null
   context: { id: string; name: string; color: string | null; icon: string | null } | null
-  parent_task_id: string | null
   position: number
   due_date: string | null
   notes: string | null
@@ -25,8 +24,8 @@ export interface UiTask {
   deadline_notified: boolean
   is_recurring: boolean
   tags: Tag[]
-  subtasks_count: number
-  subtasks_completed: number
+  checklist_total: number
+  checklist_completed: number
   user_id: string
   created_at: string
   updated_at: string
@@ -41,13 +40,13 @@ export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
       .map(t => ({ id: t.id, name: t.name, color: t.color, user_id: t.userId, created_at: t.createdAt, updated_at: t.updatedAt }))
   }
 
-  const subtasks = await db.tasks
-    .where('parentTaskId')
+  const checklistItems = await db.checklistItems
+    .where('taskId')
     .equals(task.id)
-    .filter(t => t._syncStatus !== 'deleted')
+    .filter(i => i._syncStatus !== 'deleted')
     .toArray()
-  const subtasksCount = subtasks.length
-  const subtasksCompleted = subtasks.filter(s => s.isCompleted).length
+  const checklistTotal = checklistItems.length
+  const checklistCompleted = checklistItems.filter(i => i.isCompleted).length
 
   let project = null
   if (task.projectId) {
@@ -76,7 +75,6 @@ export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
     project_id: task.projectId,
     project,
     context,
-    parent_task_id: task.parentTaskId,
     position: task.position,
     due_date: task.dueDate,
     notes: task.notes,
@@ -89,8 +87,8 @@ export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
     deadline_notified: task.deadlineNotified,
     is_recurring: task.isRecurring,
     tags,
-    subtasks_count: subtasksCount,
-    subtasks_completed: subtasksCompleted,
+    checklist_total: checklistTotal,
+    checklist_completed: checklistCompleted,
     user_id: task.userId,
     created_at: task.createdAt,
     updated_at: task.updatedAt,
@@ -113,7 +111,6 @@ export function apiTaskToDb(
     contextId: (apiTask.context_id as string | null) ?? null,
     areaId: (apiTask.area_id as string | null) ?? null,
     projectId: (apiTask.project_id as string | null) ?? null,
-    parentTaskId: (apiTask.parent_task_id as string | null) ?? null,
     position: (apiTask.position as number) ?? 0,
     dueDate: (apiTask.due_date as string | null) ?? null,
     notes: (apiTask.notes as string | null) ?? null,

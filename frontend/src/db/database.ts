@@ -13,7 +13,6 @@ export interface DbTask {
   contextId: string | null
   areaId: string | null
   projectId: string | null
-  parentTaskId: string | null
   position: number
   dueDate: string | null
   notes: string | null
@@ -98,13 +97,26 @@ export interface DbVerbTemplate {
 
 export interface DbMutation {
   id: string
-  entityType: 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate'
+  entityType: 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem'
   entityId: string
   action: 'create' | 'update' | 'delete' | 'toggle' | 'move' | 'reorder'
   payload: string | null
   timestamp: number
   retryCount: number
   lastError: string | null
+}
+
+export interface DbChecklistItem {
+  id: string
+  taskId: string
+  title: string
+  isCompleted: boolean
+  position: number
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
+  _syncStatus: SyncStatus
+  _lastSyncedAt: string | null
 }
 
 export interface DbSyncMeta {
@@ -119,6 +131,7 @@ export class TodowkaDB extends Dexie {
   contexts!: Table<DbContext>
   tags!: Table<DbTag>
   verbTemplates!: Table<DbVerbTemplate>
+  checklistItems!: Table<DbChecklistItem>
   mutations!: Table<DbMutation>
   syncMeta!: Table<DbSyncMeta>
 
@@ -128,7 +141,7 @@ export class TodowkaDB extends Dexie {
     this.version(1).stores({
       tasks: [
         'id', 'userId', 'gtdStatus', 'projectId', 'contextId',
-        'areaId', 'parentTaskId', 'isCompleted', '_syncStatus',
+        'areaId', 'isCompleted', '_syncStatus',
         '[userId+gtdStatus]', '[userId+projectId]',
         '[userId+contextId]', '[userId+areaId]', 'updatedAt',
       ].join(','),
@@ -155,7 +168,7 @@ export class TodowkaDB extends Dexie {
     this.version(4).stores({
       tasks: [
         'id', 'userId', 'gtdStatus', 'projectId', 'contextId',
-        'areaId', 'parentTaskId', 'isCompleted', '_syncStatus',
+        'areaId', 'isCompleted', '_syncStatus',
         '[userId+gtdStatus]', '[userId+projectId]',
         '[userId+contextId]', '[userId+areaId]', 'updatedAt',
       ].join(','),
@@ -172,6 +185,43 @@ export class TodowkaDB extends Dexie {
         area.sortOrder = 0
       })
     })
+
+    this.version(6).stores({
+      tasks: [
+        'id', 'userId', 'gtdStatus', 'projectId', 'contextId',
+        'areaId', 'isCompleted', '_syncStatus',
+        '[userId+gtdStatus]', '[userId+projectId]',
+        '[userId+contextId]', '[userId+areaId]', 'updatedAt',
+      ].join(','),
+      checklistItems: 'id, taskId, _syncStatus, updatedAt, position',
+    }).upgrade(async tx => {
+      await tx.table('tasks').toCollection().modify(task => {
+        delete task.parentTaskId
+      })
+      const subtasks: Record<string, unknown>[] = []
+      await tx.table('tasks').toCollection().each(task => {
+        if (task.parentTaskId && task._syncStatus !== 'deleted') {
+          subtasks.push({
+            id: task.id,
+            taskId: task.parentTaskId,
+            title: task.title,
+            isCompleted: task.isCompleted,
+            position: task.position || 0,
+            completedAt: task.completedAt,
+            createdAt: task.createdAt,
+            updatedAt: task.updatedAt,
+            _syncStatus: 'synced' as SyncStatus,
+            _lastSyncedAt: task._lastSyncedAt,
+          })
+        }
+      })
+      if (subtasks.length > 0) {
+        await tx.table('checklistItems').bulkPut(subtasks)
+      }
+      await tx.table('tasks').filter(t => !!t.parentTaskId).modify(t => {
+        t._syncStatus = 'deleted'
+      })
+    })
   }
 }
 
@@ -184,7 +234,7 @@ export function activeTasks(userId: string) {
       [userId, Dexie.minKey],
       [userId, Dexie.maxKey]
     )
-    .filter(t => t._syncStatus !== 'deleted' && !t.parentTaskId)
+    .filter(t => t._syncStatus !== 'deleted')
 }
 
 export function activeTasksByStatus(userId: string, status: string) {

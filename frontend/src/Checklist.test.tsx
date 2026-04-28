@@ -8,8 +8,8 @@ vi.mock('./hooks/useTasks', () => ({
   useTasks: vi.fn(),
 }))
 
-vi.mock('./hooks/useSubtasks', () => ({
-  useSubtasks: vi.fn(),
+vi.mock('./hooks/useChecklist', () => ({
+  useChecklist: vi.fn(),
 }))
 
 vi.mock('./hooks/useTaskFilter', () => ({
@@ -34,7 +34,7 @@ vi.mock('./components/ReminderEditor', () => ({
 }))
 
 import { useTasks } from './hooks/useTasks'
-import { useSubtasks } from './hooks/useSubtasks'
+import { useChecklist } from './hooks/useChecklist'
 import { useTaskFilter } from './hooks/useTaskFilter'
 
 const mockTask: Task = {
@@ -46,13 +46,12 @@ const mockTask: Task = {
   context_id: null,
   area_id: null,
   project_id: null,
-  parent_task_id: null,
   position: 0,
   due_date: null,
   notes: null,
   tags: [],
-  subtasks_count: 2,
-  subtasks_completed: 1,
+  checklist_total: 2,
+  checklist_completed: 1,
   user_id: 'u1',
   created_at: '2026-04-12T00:00:00',
   updated_at: '2026-04-12T00:00:00',
@@ -89,13 +88,13 @@ function setupListMocks() {
     fetchTask: vi.fn(),
     refetch: vi.fn(),
   })
-  vi.mocked(useSubtasks).mockReturnValue({
-    subtasks: [],
+  vi.mocked(useChecklist).mockReturnValue({
+    items: [],
     isLoading: false,
     error: null,
-    addSubtask: vi.fn(),
-    toggleSubtask: vi.fn(),
-    deleteSubtask: vi.fn(),
+    addItem: vi.fn(),
+    toggleItem: vi.fn(),
+    deleteItem: vi.fn(),
     refetch: vi.fn(),
   })
   vi.mocked(useTaskFilter).mockReturnValue({
@@ -108,7 +107,7 @@ function setupListMocks() {
   })
 }
 
-describe('TaskListView — subtask indicator', () => {
+describe('TaskListView — checklist indicator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorageMock.getItem.mockReturnValue(null)
@@ -122,7 +121,7 @@ describe('TaskListView — subtask indicator', () => {
     vi.doUnmock('./components/TaskEditModal')
   })
 
-  it('renders subtask count indicator in task list', async () => {
+  it('renders checklist count indicator in task list', async () => {
     const { GtdTaskList } = await import('./routes/GtdTaskList')
     render(
       <MemoryRouter>
@@ -132,40 +131,40 @@ describe('TaskListView — subtask indicator', () => {
     expect(screen.getByText('1/2')).toBeInTheDocument()
   })
 
-  it('does not render subtask section or add button in task list', async () => {
+  it('does not render checklist section or add button in task list', async () => {
     const { GtdTaskList } = await import('./routes/GtdTaskList')
     render(
       <MemoryRouter>
         <GtdTaskList gtdStatus="inbox" title="Inbox" />
       </MemoryRouter>
     )
-    expect(screen.queryByText('1/2 подзадач')).not.toBeInTheDocument()
-    expect(screen.queryByText('+ Подзадача')).not.toBeInTheDocument()
-    expect(screen.queryByPlaceholderText('Новая подзадача...')).not.toBeInTheDocument()
+    expect(screen.queryByText('1/2 пунктов')).not.toBeInTheDocument()
+    expect(screen.queryByText('+ Пункт')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('Новый пункт...')).not.toBeInTheDocument()
   })
 })
 
-describe('TaskEditModal — subtasks', () => {
-  const mockAddSubtask = vi.fn()
-  const mockToggleSubtask = vi.fn()
-  const mockDeleteSubtask = vi.fn()
-  const mockSubtaskRefetch = vi.fn()
+describe('TaskEditModal — checklist', () => {
+  const mockAddItem = vi.fn()
+  const mockToggleItem = vi.fn()
+  const mockDeleteItem = vi.fn()
+  const mockRefetch = vi.fn()
   const mockOnSave = vi.fn()
   const mockOnClose = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useSubtasks).mockReturnValue({
-      subtasks: [
-        { id: 's1', title: 'Subtask 1', completed: true, gtd_status: 'inbox', tags: [], subtasks_count: 0, subtasks_completed: 0, user_id: 'u1', created_at: '', updated_at: '' } as Task,
-        { id: 's2', title: 'Subtask 2', completed: false, gtd_status: 'inbox', tags: [], subtasks_count: 0, subtasks_completed: 0, user_id: 'u1', created_at: '', updated_at: '' } as Task,
+    vi.mocked(useChecklist).mockReturnValue({
+      items: [
+        { id: 'c1', task_id: 't1', title: 'Item 1', is_completed: true, position: 0, completed_at: null, created_at: '', updated_at: '' },
+        { id: 'c2', task_id: 't1', title: 'Item 2', is_completed: false, position: 1, completed_at: null, created_at: '', updated_at: '' },
       ],
       isLoading: false,
       error: null,
-      addSubtask: mockAddSubtask,
-      toggleSubtask: mockToggleSubtask,
-      deleteSubtask: mockDeleteSubtask,
-      refetch: mockSubtaskRefetch,
+      addItem: mockAddItem,
+      toggleItem: mockToggleItem,
+      deleteItem: mockDeleteItem,
+      refetch: mockRefetch,
     })
   })
 
@@ -178,104 +177,104 @@ describe('TaskEditModal — subtasks', () => {
     )
   }
 
-  it('renders subtasks accordion', async () => {
+  it('renders checklist accordion', async () => {
     await renderModal()
-    expect(screen.getByText('Подзадачи (1/2)')).toBeInTheDocument()
+    expect(screen.getByText('Чеклист (1/2)')).toBeInTheDocument()
   })
 
-  it('shows subtasks after expanding accordion', async () => {
+  it('shows checklist items after expanding accordion', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
+    await user.click(screen.getByText('Чеклист (1/2)'))
     await waitFor(() => {
-      expect(screen.getByText('Subtask 1')).toBeInTheDocument()
-      expect(screen.getByText('Subtask 2')).toBeInTheDocument()
+      expect(screen.getByText('Item 1')).toBeInTheDocument()
+      expect(screen.getByText('Item 2')).toBeInTheDocument()
     })
   })
 
-  it('shows checkboxes for subtasks', async () => {
+  it('shows checkboxes for checklist items', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
+    await user.click(screen.getByText('Чеклист (1/2)'))
     await waitFor(() => {
       const checkboxes = screen.getAllByRole('checkbox')
       expect(checkboxes.length).toBeGreaterThanOrEqual(2)
     })
   })
 
-  it('has completed subtask checked', async () => {
+  it('has completed item checked', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
+    await user.click(screen.getByText('Чеклист (1/2)'))
     await waitFor(() => {
-      expect(screen.getByText('Subtask 1')).toBeInTheDocument()
+      expect(screen.getByText('Item 1')).toBeInTheDocument()
     })
-    const st1Container = screen.getByText('Subtask 1').closest('div')
-    const checkbox = st1Container?.querySelector('input[type="checkbox"]')
+    const item1Container = screen.getByText('Item 1').closest('div')
+    const checkbox = item1Container?.querySelector('input[type="checkbox"]')
     expect(checkbox?.checked).toBe(true)
   })
 
-  it('has incomplete subtask unchecked', async () => {
+  it('has incomplete item unchecked', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
+    await user.click(screen.getByText('Чеклист (1/2)'))
     await waitFor(() => {
-      expect(screen.getByText('Subtask 2')).toBeInTheDocument()
+      expect(screen.getByText('Item 2')).toBeInTheDocument()
     })
-    const st2Container = screen.getByText('Subtask 2').closest('div')
-    const checkbox = st2Container?.querySelector('input[type="checkbox"]')
+    const item2Container = screen.getByText('Item 2').closest('div')
+    const checkbox = item2Container?.querySelector('input[type="checkbox"]')
     expect(checkbox?.checked).toBe(false)
   })
 
-  it('shows line-through for completed subtask', async () => {
+  it('shows line-through for completed item', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
+    await user.click(screen.getByText('Чеклист (1/2)'))
     await waitFor(() => {
-      const st1 = screen.getByText('Subtask 1')
-      expect(st1.className).toContain('line-through')
+      const item1 = screen.getByText('Item 1')
+      expect(item1.className).toContain('line-through')
     })
   })
 
-  it('shows input for new subtask when expanded', async () => {
+  it('shows input for new checklist item when expanded', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
+    await user.click(screen.getByText('Чеклист (1/2)'))
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Новая подзадача...')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('Новый пункт...')).toBeInTheDocument()
     })
   })
 
-  it('calls addSubtask on Enter', async () => {
+  it('calls addItem on Enter', async () => {
     const user = userEvent.setup()
-    mockAddSubtask.mockResolvedValue(undefined)
+    mockAddItem.mockResolvedValue(undefined)
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
-    await waitFor(() => expect(screen.getByPlaceholderText('Новая подзадача...')).toBeInTheDocument())
-    await user.type(screen.getByPlaceholderText('Новая подзадача...'), 'New subtask{Enter}')
+    await user.click(screen.getByText('Чеклист (1/2)'))
+    await waitFor(() => expect(screen.getByPlaceholderText('Новый пункт...')).toBeInTheDocument())
+    await user.type(screen.getByPlaceholderText('Новый пункт...'), 'New item{Enter}')
     await waitFor(() => {
-      expect(mockAddSubtask).toHaveBeenCalledWith('New subtask')
+      expect(mockAddItem).toHaveBeenCalledWith('New item')
     })
   })
 
-  it('calls toggleSubtask on checkbox click', async () => {
+  it('calls toggleItem on checkbox click', async () => {
     const user = userEvent.setup()
-    mockToggleSubtask.mockResolvedValue(undefined)
+    mockToggleItem.mockResolvedValue(undefined)
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
-    await waitFor(() => expect(screen.getByText('Subtask 2')).toBeInTheDocument())
-    const st2Container = screen.getByText('Subtask 2').closest('div')
-    const checkbox = st2Container?.querySelector('input[type="checkbox"]')
+    await user.click(screen.getByText('Чеклист (1/2)'))
+    await waitFor(() => expect(screen.getByText('Item 2')).toBeInTheDocument())
+    const item2Container = screen.getByText('Item 2').closest('div')
+    const checkbox = item2Container?.querySelector('input[type="checkbox"]')
     expect(checkbox).toBeTruthy()
     if (checkbox) await user.click(checkbox)
-    expect(mockToggleSubtask).toHaveBeenCalledWith('s2')
+    expect(mockToggleItem).toHaveBeenCalledWith('c2')
   })
 
-  it('renders delete buttons for subtasks', async () => {
+  it('renders delete buttons for checklist items', async () => {
     const user = userEvent.setup()
     await renderModal()
-    await user.click(screen.getByText('Подзадачи (1/2)'))
-    await waitFor(() => expect(screen.getByText('Subtask 1')).toBeInTheDocument())
+    await user.click(screen.getByText('Чеклист (1/2)'))
+    await waitFor(() => expect(screen.getByText('Item 1')).toBeInTheDocument())
     const deleteButtons = screen.getAllByText('✕')
     expect(deleteButtons.length).toBe(2)
   })

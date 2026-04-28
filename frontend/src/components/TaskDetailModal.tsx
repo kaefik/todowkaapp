@@ -285,16 +285,16 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
                 </div>
               )}
 
-              {task.subtasks_count > 0 && (
+              {task.checklist_total > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('subtasksLabel')}</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('checklistLabel')}</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('ofCompletedSub', { completed: task.subtasks_completed, total: task.subtasks_count })}
+                    {t('ofCompletedChecklist', { completed: task.checklist_completed, total: task.checklist_total })}
                   </p>
                   <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-indigo-600 dark:bg-indigo-400 h-2 rounded-full transition-all"
-                      style={{ width: `${(task.subtasks_completed / task.subtasks_count) * 100}%` }}
+                      style={{ width: `${(task.checklist_completed / task.checklist_total) * 100}%` }}
                     />
                   </div>
                 </div>

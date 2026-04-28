@@ -44,8 +44,8 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
   }
 
   const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
-  const subtaskWarning = pendingDeleteTask && pendingDeleteTask.subtasks_count > 0
-    ? ' ' + t('subtaskWarning', { count: pendingDeleteTask.subtasks_count })
+  const checklistWarning = pendingDeleteTask && pendingDeleteTask.checklist_total > 0
+    ? ' ' + t('checklistWarning', { count: pendingDeleteTask.checklist_total })
     : ''
 
   const handleSaveTask = async (id: string, data: UpdateTask) => {
@@ -79,7 +79,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
       <ConfirmDialog
         open={!!pendingDeleteId}
         title={t('confirmTrash')}
-        message={`${t('confirmTrashBody')}.${subtaskWarning}`}
+        message={`${t('confirmTrashBody')}.${checklistWarning}`}
         confirmText={t('delete', { ns: 'common' })}
         variant="danger"
         onConfirm={confirmDelete}

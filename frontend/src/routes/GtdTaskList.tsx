@@ -61,12 +61,12 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
   }
 
   const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
-  const subtaskWarning = pendingDeleteTask && pendingDeleteTask.subtasks_count > 0
-    ? ` ${t('subtaskCount', { count: pendingDeleteTask.subtasks_count })}.${gtdStatus === 'trash' ? ' ' + t('subtasksWillBeDeleted') : ' ' + t('subtasksWillBeTrashed')}`
+  const checklistWarning = pendingDeleteTask && pendingDeleteTask.checklist_total > 0
+    ? ` ${t('checklistCount_one', { count: pendingDeleteTask.checklist_total })}.${gtdStatus === 'trash' ? ' ' + t('checklistWillBeDeleted') : ' ' + t('checklistWillBeTrashed')}`
     : ''
 
   const deleteTitle = gtdStatus === 'trash' ? t('confirmDelete') : t('confirmTrash')
-  const deleteMessage = (gtdStatus === 'trash' ? t('thisActionCannotBeUndone') : t('confirmTrashBody')) + subtaskWarning
+  const deleteMessage = (gtdStatus === 'trash' ? t('thisActionCannotBeUndone') : t('confirmTrashBody')) + checklistWarning
 
   const handleRestoreTask = async (id: string) => {
     setPendingRestoreId(id)

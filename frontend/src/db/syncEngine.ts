@@ -6,7 +6,7 @@ import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
 import i18n from '../i18n'
 
-type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate'
+type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem'
 
 interface SyncResourceConfig {
   endpoint: string
@@ -341,6 +341,7 @@ function getTableForType(entityType: EntityType) {
     case 'context': return db.contexts
     case 'tag': return db.tags
     case 'verbTemplate': return db.verbTemplates
+    case 'checklistItem': return db.checklistItems
   }
 }
 
@@ -352,6 +353,7 @@ function getEndpointForType(entityType: EntityType): string {
     case 'context': return '/contexts'
     case 'tag': return '/tags'
     case 'verbTemplate': return '/verb-templates'
+    case 'checklistItem': return '/tasks'
   }
 }
 
@@ -499,8 +501,32 @@ async function executeMutation(
     payload: string | null
   }
 ): Promise<void> {
-  const endpoint = getEndpointForType(mutation.entityType)
   const payload = mutation.payload ? JSON.parse(mutation.payload) : null
+
+  if (mutation.entityType === 'checklistItem') {
+    const task_id = payload?.task_id
+    if (!task_id) throw new Error('checklistItem missing task_id')
+    const base = `/tasks/${task_id}/checklist`
+    switch (mutation.action) {
+      case 'create': {
+        await httpClient.post(base, { title: payload.title, position: payload.position })
+        break
+      }
+      case 'update': {
+        await httpClient.patch(`${base}/${mutation.entityId}`, payload)
+        break
+      }
+      case 'delete': {
+        await httpClient.delete(`${base}/${mutation.entityId}`)
+        break
+      }
+      default:
+        console.warn(`[SyncEngine] Unknown checklist action: ${mutation.action}`)
+    }
+    return
+  }
+
+  const endpoint = getEndpointForType(mutation.entityType)
 
   switch (mutation.action) {
     case 'create': {

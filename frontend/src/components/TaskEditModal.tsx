@@ -38,7 +38,7 @@ import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
 import { useOnlineStatus } from '../db/hooks'
-import { useSubtasks } from '../hooks/useSubtasks'
+import { useChecklist } from '../hooks/useChecklist'
 import { RecurrenceEditor } from './RecurrenceEditor'
 import { ReminderEditor } from './ReminderEditor'
 
@@ -162,6 +162,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     datesAndNotes: false,
     recurrence: false,
     subtasks: false,
+    checklist: false,
   })
 
   const [recurrenceData, setRecurrenceData] = useState<{
@@ -182,9 +183,9 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   })
   const [isTodayDue, setIsTodayDue] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
-  const [isAddingSubtask, setIsAddingSubtask] = useState(false)
-  const { subtasks, isLoading: isLoadingSubtasks, addSubtask, toggleSubtask, deleteSubtask, refetch: refetchSubtasks } = useSubtasks(task?.id ?? null)
+  const [newChecklistTitle, setNewChecklistTitle] = useState('')
+  const [isAddingChecklist, setIsAddingChecklist] = useState(false)
+  const { items: checklistItems, isLoading: isLoadingChecklist, addItem, toggleItem, deleteItem, refetch: refetchChecklist } = useChecklist(task?.id ?? null)
   const defaultValues = useMemo(() => {
     if (!task) return undefined
     return {
@@ -240,7 +241,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         reminder_offsets: task.reminder_offsets,
       })
       setIsTodayDue(dueDateStr === today)
-      setNewSubtaskTitle('')
+      setNewChecklistTitle('')
     }
   }, [task, isOpen, reset])
 
@@ -298,21 +299,21 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     }
   }
 
-  const handleAddSubtask = async () => {
-    const trimmed = newSubtaskTitle.trim()
+  const handleAddChecklist = async () => {
+    const trimmed = newChecklistTitle.trim()
     if (!trimmed || !task) return
-    setIsAddingSubtask(true)
+    setIsAddingChecklist(true)
     try {
-      await addSubtask(trimmed)
-      setNewSubtaskTitle('')
+      await addItem(trimmed)
+      setNewChecklistTitle('')
     } catch {}
-    setIsAddingSubtask(false)
+    setIsAddingChecklist(false)
   }
 
-  const handleSubtaskKeyDown = (e: React.KeyboardEvent) => {
+  const handleChecklistKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      handleAddSubtask()
+      handleAddChecklist()
     }
   }
 
@@ -362,9 +363,9 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   if (!isOpen || !task) return null
 
-  const subtasksAccordionTitle = subtasks.length > 0
-    ? t('subtasksCount', { completed: subtasks.filter(s => s.completed).length, total: subtasks.length })
-    : t('subtasks')
+  const checklistAccordionTitle = checklistItems.length > 0
+    ? t('checklistCount', { completed: checklistItems.filter(i => i.is_completed).length, total: checklistItems.length })
+    : t('checklist')
 
   const deadlineRecurrenceTitle = t('deadlineRecurrenceReminders')
     + (recurrenceData.recurrence_type ? ' \u{1F504}' : '')
@@ -427,36 +428,36 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             </div>
 
             <Accordion
-              title={subtasksAccordionTitle}
-              isOpen={accordionStates.subtasks}
-              onToggle={() => toggleAccordion('subtasks')}
+              title={checklistAccordionTitle}
+              isOpen={accordionStates.checklist}
+              onToggle={() => toggleAccordion('checklist')}
             >
-              {isLoadingSubtasks && subtasks.length === 0 && (
+              {isLoadingChecklist && checklistItems.length === 0 && (
                 <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
               )}
-              {subtasks.length > 0 && (
+              {checklistItems.length > 0 && (
                 <div className="space-y-1 mb-3">
-                  {subtasks.map((st) => (
-                    <div key={st.id} className="flex items-center gap-2 group">
+                  {checklistItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 group">
                       <input
                         type="checkbox"
-                        checked={st.completed}
+                        checked={item.is_completed}
                         onChange={() => {
-                          toggleSubtask(st.id)
-                          setTimeout(refetchSubtasks, 300)
+                          toggleItem(item.id)
+                          setTimeout(refetchChecklist, 300)
                         }}
                         className="h-4 w-4 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                       />
                       <span
-                        className={`text-sm flex-1 ${st.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300'}`}
+                        className={`text-sm flex-1 ${item.is_completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300'}`}
                       >
-                        {st.title}
+                        {item.title}
                       </span>
                       <button
                         type="button"
                         onClick={() => {
-                          deleteSubtask(st.id)
-                          setTimeout(refetchSubtasks, 300)
+                          deleteItem(item.id)
+                          setTimeout(refetchChecklist, 300)
                         }}
                         className="text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
@@ -469,17 +470,17 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={newSubtaskTitle}
-                  onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                  onKeyDown={handleSubtaskKeyDown}
-                  placeholder={t('newSubtask')}
-                  disabled={isAddingSubtask}
+                  value={newChecklistTitle}
+                  onChange={(e) => setNewChecklistTitle(e.target.value)}
+                  onKeyDown={handleChecklistKeyDown}
+                  placeholder={t('newChecklistItem')}
+                  disabled={isAddingChecklist}
                   className="flex-1 text-sm px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
                 <button
                   type="button"
-                  onClick={handleAddSubtask}
-                  disabled={isAddingSubtask || !newSubtaskTitle.trim()}
+                  onClick={handleAddChecklist}
+                  disabled={isAddingChecklist || !newChecklistTitle.trim()}
                   className="px-3 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:opacity-50"
                 >
                   +

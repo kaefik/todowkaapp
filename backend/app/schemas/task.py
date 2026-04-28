@@ -37,7 +37,6 @@ class TaskCreate(BaseModel):
     context_id: str | None = Field(default=None, max_length=36)
     area_id: str | None = Field(default=None, max_length=36)
     project_id: str | None = Field(default=None, max_length=36)
-    parent_task_id: str | None = Field(default=None, max_length=36)
     due_date: datetime | None = None
     notes: str | None = None
     tag_ids: list[str] | None = None
@@ -62,7 +61,6 @@ class TaskUpdate(BaseModel):
     context_id: str | None = Field(default=None, max_length=36)
     area_id: str | None = Field(default=None, max_length=36)
     project_id: str | None = Field(default=None, max_length=36)
-    parent_task_id: str | None = Field(default=None, max_length=36)
     due_date: datetime | None = None
     notes: str | None = None
     tag_ids: list[str] | None = None
@@ -98,7 +96,6 @@ class TaskResponse(BaseResponseSchema):
     context_id: UUID | None
     area_id: UUID | None
     project_id: UUID | None
-    parent_task_id: UUID | None
     position: int
     due_date: datetime | None
     notes: str | None
@@ -113,8 +110,8 @@ class TaskResponse(BaseResponseSchema):
     tags: list[TagBriefResponse] = []
     project: ProjectBriefResponse | None = None
     context: ContextBriefResponse | None = None
-    subtasks_count: int = 0
-    subtasks_completed: int = 0
+    checklist_total: int = 0
+    checklist_completed: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -136,8 +133,3 @@ class GtdCountsResponse(BaseModel):
     someday: int = 0
     completed: int = 0
     trash: int = 0
-
-
-class SubtaskCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = None

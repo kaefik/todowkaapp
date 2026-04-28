@@ -39,9 +39,7 @@ class Task(Base):
     project_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey('projects.id', ondelete='SET NULL'), nullable=True
     )
-    parent_task_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey('tasks.id', ondelete='CASCADE'), nullable=True
-    )
+
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -62,8 +60,7 @@ class Task(Base):
     context = relationship('Context', back_populates='tasks')
     area = relationship('Area', back_populates='tasks')
     project = relationship('Project', back_populates='tasks')
-    parent_task = relationship('Task', remote_side='Task.id', back_populates='subtasks')
-    subtasks = relationship('Task', back_populates='parent_task', cascade='all, delete-orphan')
+    checklist_items = relationship('ChecklistItem', back_populates='task', cascade='all, delete-orphan')
     tags = relationship('Tag', secondary='task_tags', back_populates='tasks', lazy='selectin')
     recurrences = relationship('TaskRecurrence', back_populates='task', cascade='all, delete-orphan', foreign_keys='TaskRecurrence.task_id')
 
@@ -73,7 +70,7 @@ class Task(Base):
         Index('ix_tasks_user_context_id', 'user_id', 'context_id'),
         Index('ix_tasks_user_area_id', 'user_id', 'area_id'),
         Index('ix_tasks_user_project_id', 'user_id', 'project_id'),
-        Index('ix_tasks_parent_task_id', 'parent_task_id'),
+
         Index('ix_tasks_user_due_date', 'user_id', 'due_date'),
         Index('ix_tasks_user_position', 'user_id', 'position'),
         Index('ix_tasks_trashed_at', 'gtd_status', 'trashed_at'),

@@ -44,7 +44,6 @@ export interface Task {
   project_id: string | null
   project: ProjectBrief | null
   context: ContextBrief | null
-  parent_task_id: string | null
   position: number
   due_date: string | null
   notes: string | null
@@ -56,8 +55,8 @@ export interface Task {
   reminder_fired: boolean
   is_recurring: boolean
   tags: Tag[]
-  subtasks_count: number
-  subtasks_completed: number
+  checklist_total: number
+  checklist_completed: number
   user_id: string
   created_at: string
   updated_at: string
@@ -208,10 +207,9 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       completedAt: null,
       gtdStatus: data.gtd_status ?? (data.due_date ? 'active' : 'someday'),
       contextId: data.context_id ?? null,
-      areaId: data.area_id ?? null,
-      projectId: data.project_id ?? null,
-      parentTaskId: null,
-      position: 0,
+        areaId: data.area_id ?? null,
+        projectId: data.project_id ?? null,
+        position: 0,
       dueDate: data.due_date ?? null,
       notes: null,
       recurrenceType: null,
@@ -326,31 +324,6 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       retryCount: 0,
       lastError: null,
     })
-
-    if (gtd_status === 'trash') {
-      const children = await db.tasks
-        .where('parentTaskId')
-        .equals(id)
-        .filter(t => t._syncStatus !== 'deleted')
-        .toArray()
-      for (const child of children) {
-        await db.tasks.update(child.id, {
-          gtdStatus: gtd_status,
-          updatedAt: now,
-          _syncStatus: 'modified',
-        })
-        await db.mutations.add({
-          id: uuidv4(),
-          entityType: 'task',
-          entityId: child.id,
-          action: 'move',
-          payload: JSON.stringify({ gtd_status }),
-          timestamp: Date.now(),
-          retryCount: 0,
-          lastError: null,
-        })
-      }
-    }
   }
 
   const restoreTask = async (id: string) => {

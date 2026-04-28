@@ -508,9 +508,9 @@ export function TaskListView({
                         </p>
                       )
                     })()}
-                    {task.subtasks_count > 0 && (
+                    {task.checklist_total > 0 && (
                       <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
-                        {task.subtasks_completed}/{task.subtasks_count}
+                        {task.checklist_completed}/{task.checklist_total}
                       </span>
                     )}
                   </div>
@@ -667,9 +667,9 @@ export function TaskListView({
                             </p>
                           )
                         })()}
-                        {task.subtasks_count > 0 && (
+                        {task.checklist_total > 0 && (
                           <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-medium">
-                            {task.subtasks_completed}/{task.subtasks_count}
+                            {task.checklist_completed}/{task.checklist_total}
                           </span>
                         )}
                       </div>

@@ -888,19 +888,20 @@
 - ~Quick Capture Bar~ — не реализовано, не планируется
 - ~Клавиатурный шорткат (Ctrl+K)~ — не реализовано, не планируется
 
-#### Подзадачи ✅ (Реализовано 11.04.2026)
-- Иерархия задач (parent_task_id)
-- Создание подзадач через API: POST /api/tasks/{id}/subtasks
-- Получение подзадач: GET /api/tasks/{id}/subtasks
-- Подсчёт подзадач: subtasks_count, subtasks_completed в TaskResponse
-- GET /api/tasks — по умолчанию только корневые, ?include_subtasks=true для всех
-- Каскадное удаление подзадач при удалении родительской задачи
-- Хук useSubtasks(parentTaskId) — CRUD подзадач
-- Раскрываемый список подзадач в модальном окне редактирования задачи (TaskEditModal): индикатор (3/5), toggle, добавление, удаление
-- Индикатор прогресса подзадач (X/Y) в карточке задачи в списке
-- API: GET/POST /api/tasks/{id}/subtasks, GET /api/tasks?include_subtasks=true
-- Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/hooks/useSubtasks.ts`, `frontend/src/components/TaskEditModal.tsx`
-- Тесты: `backend/tests/test_tasks.py` (9 тестов подзадач)
+#### Чеклист ✅ (Реализовано 28.04.2026, заменяет подзадачи)
+- Отдельная таблица `checklist_items` (id, task_id, title, is_completed, position, completed_at) вместо самореферентных подзадач
+- API: GET/POST /api/tasks/{id}/checklist, PATCH/DELETE /api/tasks/{id}/checklist/{item_id}
+- Подсчёт: checklist_total, checklist_completed в TaskResponse
+- Каскадное удаление пунктов при удалении задачи (CASCADE на FK)
+- Хук useChecklist(taskId) — CRUD пунктов чеклиста (offline-first через Dexie + мутации)
+- Раскрываемый Accordion «Чеклист» в TaskEditModal: индикатор (3/5), toggle, добавление, удаление
+- Индикатор прогресса чеклиста (X/Y) в карточке задачи в TaskListView
+- Прогресс-бар в TaskDetailModal
+- DexieDB v6: таблица checklistItems, миграция данных из подзадач
+- Синхронизация: SSE-событие checklist_updated, entityType checklistItem в SyncEngine
+- Миграция: создание таблицы checklist_items, миграция данных из tasks с parent_task_id, удаление колонки parent_task_id
+- Файлы: `backend/app/models/checklist.py`, `backend/app/schemas/checklist.py`, `backend/app/services/checklist_service.py`, `backend/app/api/checklist.py`, `frontend/src/hooks/useChecklist.ts`, `frontend/src/db/database.ts`, `frontend/src/db/mappers.ts`
+- Тесты: `backend/tests/test_tasks.py` (7 тестов чеклиста), `frontend/src/Checklist.test.tsx`
 
 #### Поиск и фильтрация ✅ (Реализовано 12.04.2026)
 - Полнотекстовый поиск по title + description + notes (регистронезависимый, ILIKE)
@@ -911,7 +912,7 @@
 - Dropdown сортировки + toggle asc/desc
 - Сохранение фильтров в URL query params (shareable links)
 - Подсветка найденного текста (HighlightText) в заголовках и описаниях задач
-- 13 query params в GET /api/tasks (gtd_status, context_id, area_id, project_id, tag_id, is_completed, due_date_from, due_date_to, search, sort_by, sort_order, include_subtasks, limit/offset)
+- 12 query params в GET /api/tasks (gtd_status, context_id, area_id, project_id, tag_id, is_completed, due_date_from, due_date_to, search, sort_by, sort_order, limit/offset)
 - 13 новых тестов: фильтрация по context/area/project/tag/is_completed/due_date_range, сортировка по title/due_date, комбинированные фильтры, case-insensitive поиск, поиск в description/notes
 - Файлы: `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/hooks/useDebounce.ts`, `frontend/src/hooks/useTaskFilterSync.ts`
 - Интегрировано в GtdTaskList и Tasks

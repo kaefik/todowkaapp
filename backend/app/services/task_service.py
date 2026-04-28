@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
-from sqlalchemy import Integer, delete, func, select, update
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -32,14 +32,11 @@ class TaskService:
         search: str | None = None,
         sort_by: str = 'created_at',
         sort_order: str = 'desc',
-        include_subtasks: bool = False,
         limit: int = 100,
         offset: int = 0,
         no_project: bool = False,
     ) -> tuple[list[Task], int]:
         base_where = [Task.user_id == user_id]
-        if not include_subtasks:
-            base_where.append(Task.parent_task_id.is_(None))
 
         if gtd_status is not None:
             base_where.append(Task.gtd_status == gtd_status)
@@ -143,7 +140,6 @@ class TaskService:
             context_id=data.context_id,
             area_id=data.area_id,
             project_id=data.project_id,
-            parent_task_id=data.parent_task_id,
             due_date=data.due_date,
             notes=data.notes,
             recurrence_type=data.recurrence_type,
@@ -251,23 +247,6 @@ class TaskService:
 
         await self.db.flush()
 
-        if gtd_status == GtdStatus.TRASH:
-            subtasks_stmt = (
-                update(Task)
-                .where(Task.parent_task_id == str(task_id))
-                .values(
-                    gtd_status=gtd_status.value,
-                    updated_at=datetime.now(UTC),
-                    trashed_at=datetime.now(UTC),
-                    due_date=None,
-                    reminder_time=None,
-                    reminder_offsets=None,
-                    reminder_fired=False,
-                )
-            )
-            await self.db.execute(subtasks_stmt)
-            await self.db.flush()
-
         if gtd_status == GtdStatus.COMPLETED and self.recurrence_service and not was_recurring_and_completed:
             if self.recurrence_service.should_generate_task(task):
                 new_task = await self.recurrence_service.generate_next_task(task)
@@ -296,7 +275,7 @@ class TaskService:
     async def get_gtd_counts(self, user_id: UUID) -> dict[str, int]:
         result = await self.db.execute(
             select(Task.gtd_status, func.count(Task.id))
-            .where(Task.user_id == user_id, Task.parent_task_id.is_(None))
+            .where(Task.user_id == user_id)
             .group_by(Task.gtd_status)
         )
         rows = result.all()
@@ -339,34 +318,18 @@ class TaskService:
         return await self.get_task(user_id, task_id)
 
     async def clear_trash(self, user_id: UUID) -> int:
-        subtasks_stmt = delete(Task).where(
-            Task.user_id == user_id,
-            Task.gtd_status == GtdStatus.TRASH.value,
-            Task.parent_task_id.isnot(None),
-        )
-        await self.db.execute(subtasks_stmt)
-
         stmt = delete(Task).where(
             Task.user_id == user_id,
             Task.gtd_status == GtdStatus.TRASH.value,
-            Task.parent_task_id.is_(None),
         )
         result = await self.db.execute(stmt)
         await self.db.flush()
         return result.rowcount
 
     async def clear_completed(self, user_id: UUID) -> int:
-        subtasks_stmt = delete(Task).where(
-            Task.user_id == user_id,
-            Task.gtd_status == GtdStatus.COMPLETED.value,
-            Task.parent_task_id.isnot(None),
-        )
-        await self.db.execute(subtasks_stmt)
-
         stmt = delete(Task).where(
             Task.user_id == user_id,
             Task.gtd_status == GtdStatus.COMPLETED.value,
-            Task.parent_task_id.is_(None),
         )
         result = await self.db.execute(stmt)
         await self.db.flush()
@@ -375,19 +338,10 @@ class TaskService:
     async def cleanup_old_trash(self, days: int = 30) -> int:
         cutoff = datetime.now(UTC) - timedelta(days=days)
 
-        subtasks_stmt = delete(Task).where(
-            Task.gtd_status == GtdStatus.TRASH.value,
-            Task.trashed_at.isnot(None),
-            Task.trashed_at < cutoff,
-            Task.parent_task_id.isnot(None),
-        )
-        await self.db.execute(subtasks_stmt)
-
         stmt = delete(Task).where(
             Task.gtd_status == GtdStatus.TRASH.value,
             Task.trashed_at.isnot(None),
             Task.trashed_at < cutoff,
-            Task.parent_task_id.is_(None),
         )
         result = await self.db.execute(stmt)
         await self.db.flush()
@@ -397,56 +351,6 @@ class TaskService:
         task = await self.get_task(user_id, task_id)
         if task is None:
             return False
-        await self.db.execute(
-            delete(Task).where(Task.parent_task_id == str(task_id))
-        )
         await self.db.delete(task)
         await self.db.flush()
         return True
-
-    async def get_subtasks(self, user_id: UUID, parent_task_id: UUID | str) -> list[Task]:
-        parent = await self.get_task(user_id, parent_task_id)
-        if parent is None:
-            return []
-        result = await self.db.execute(
-            select(Task)
-            .options(selectinload(Task.tags), selectinload(Task.project), selectinload(Task.context))
-            .where(Task.parent_task_id == str(parent_task_id), Task.user_id == user_id)
-            .order_by(Task.position.asc(), Task.created_at.asc())
-        )
-        return list(result.scalars().all())
-
-    async def create_subtask(
-        self, user_id: UUID, parent_task_id: UUID | str, data: TaskCreate
-    ) -> Task | None:
-        parent = await self.get_task(user_id, parent_task_id)
-        if parent is None:
-            return None
-        task = Task(
-            user_id=str(user_id),
-            title=data.title,
-            description=data.description,
-            gtd_status=data.gtd_status.value if isinstance(data.gtd_status, GtdStatus) else data.gtd_status,
-            context_id=data.context_id,
-            area_id=data.area_id,
-            project_id=data.project_id,
-            parent_task_id=str(parent_task_id),
-            due_date=data.due_date,
-            notes=data.notes,
-        )
-        if data.tag_ids:
-            tags = await self._resolve_tags(user_id, data.tag_ids)
-            task.tags = tags
-        self.db.add(task)
-        await self.db.flush()
-        return await self.get_task(user_id, task.id)
-
-    async def get_subtask_counts(self, user_id: UUID, parent_task_id: UUID | str) -> tuple[int, int]:
-        result = await self.db.execute(
-            select(func.count(Task.id), func.sum(func.cast(Task.is_completed, Integer)))
-            .where(Task.parent_task_id == str(parent_task_id), Task.user_id == user_id)
-        )
-        row = result.one()
-        total = row[0] or 0
-        completed = row[1] or 0
-        return total, completed
