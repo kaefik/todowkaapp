@@ -94,7 +94,7 @@ async def list_tasks(
     checklist_service = ChecklistService(db)
     items = []
     for t in tasks:
-        checklist_total, checklist_completed = await checklist_service.get_checklist_counts(current_user.id, t.id)
+        checklist_total, checklist_completed = await checklist_service.get_checklist_counts(t.id)
         resp = TaskResponse.model_validate(t)
         resp.checklist_total = checklist_total
         resp.checklist_completed = checklist_completed
@@ -137,7 +137,7 @@ async def get_task(
         )
 
     checklist_service = ChecklistService(db)
-    checklist_total, checklist_completed = await checklist_service.get_checklist_counts(current_user.id, task.id)
+    checklist_total, checklist_completed = await checklist_service.get_checklist_counts(task.id)
     resp = TaskResponse.model_validate(task)
     resp.checklist_total = checklist_total
     resp.checklist_completed = checklist_completed
