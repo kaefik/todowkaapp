@@ -71,7 +71,7 @@ describe('AppLayout / Sidebar', () => {
       expect(screen.getByText('Входящие')).toBeInTheDocument()
       expect(screen.getByText('Сегодня')).toBeInTheDocument()
       expect(screen.getByText('Завтра')).toBeInTheDocument()
-      expect(screen.getByText('Next Actions')).toBeInTheDocument()
+      expect(screen.getByText('Следующие действия')).toBeInTheDocument()
       expect(screen.getByText('Ожидание')).toBeInTheDocument()
       expect(screen.getByText('Когда-нибудь')).toBeInTheDocument()
     })
