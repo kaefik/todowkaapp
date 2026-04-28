@@ -159,7 +159,6 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const [isMobile, setIsMobile] = useState(false)
   const [accordionStates, setAccordionStates] = useState({
     tags: true,
-    categorization: false,
     datesAndNotes: false,
     recurrence: false,
     subtasks: false,
@@ -626,30 +625,23 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
             />
           </Accordion>
 
-          <Accordion
-            title={t('categorization')}
-            isOpen={accordionStates.categorization}
-            onToggle={() => toggleAccordion('categorization')}
-          >
-            <div>
-              <label htmlFor="context_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {t('context')}
-              </label>
-              <select
-                {...register('context_id')}
-                id="context_id"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-              >
-                <option value="">{t('noContext')}</option>
-                {contexts.map((ctx) => (
-                  <option key={ctx.id} value={ctx.id}>
-                    {ctx.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-          </Accordion>
+          <div>
+            <label htmlFor="context_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('context')}
+            </label>
+            <select
+              {...register('context_id')}
+              id="context_id"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+            >
+              <option value="">{t('noContext')}</option>
+              {contexts.map((ctx) => (
+                <option key={ctx.id} value={ctx.id}>
+                  {ctx.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <Accordion
             title={t('notes')}
