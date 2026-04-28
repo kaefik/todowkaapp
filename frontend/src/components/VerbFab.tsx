@@ -38,7 +38,7 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-40">
+      <div className="fixed bottom-6 right-6 z-50">
         <button
           type="button"
           onClick={onToggle}
@@ -53,10 +53,10 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/20 z-30"
+        className="fixed inset-0 bg-black/20 z-40"
         onClick={handleBackdropClick}
       />
-      <div className="fixed bottom-6 right-6 z-40 flex flex-col-reverse items-end gap-2">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-2">
         <button
           type="button"
           onClick={onToggle}

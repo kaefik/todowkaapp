@@ -314,6 +314,19 @@ export function TaskListView({
 
   const effectiveEmptyMessage = emptyMessage ?? t('noTasks')
 
+  const mobileFab = (
+    <div className="md:hidden">
+      <VerbFab
+        templates={templates}
+        activeVerb={activeVerb?.id ?? null}
+        onSelect={handleVerbSelect}
+        onAddCustom={handleAddCustomVerb}
+        isOpen={fabOpen}
+        onToggle={handleFabToggle}
+      />
+    </div>
+  )
+
   if (isLoading && tasks.length === 0) {
     return (
       <>
@@ -323,6 +336,7 @@ export function TaskListView({
             <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
           </div>
         ))}
+        {mobileFab}
       </>
     )
   }
@@ -431,16 +445,7 @@ export function TaskListView({
         </div>
       )}
 
-      <div className="md:hidden">
-        <VerbFab
-          templates={templates}
-          activeVerb={activeVerb?.id ?? null}
-          onSelect={handleVerbSelect}
-          onAddCustom={handleAddCustomVerb}
-          isOpen={fabOpen}
-          onToggle={handleFabToggle}
-        />
-      </div>
+      {mobileFab}
 
       {activeTasks.length === 0 && completedTasks.length === 0 && !isLoading && (
         <div className="text-center py-12">
