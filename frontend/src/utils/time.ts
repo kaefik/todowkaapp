@@ -5,7 +5,7 @@ export function normalizeTimeInput(value: string): string {
   if (trimmed.includes(':')) {
     const parts = trimmed.split(':')
     if (parts.length !== 2) return ''
-    const [hStr, mStr] = parts
+    const [hStr = '', mStr = ''] = parts
     const h = parseInt(hStr, 10)
     const m = parseInt(mStr, 10)
     if (isNaN(h) || isNaN(m)) return ''
