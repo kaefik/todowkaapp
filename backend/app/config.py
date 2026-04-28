@@ -25,7 +25,14 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     bcrypt_rounds: int = 12
     hibp_enabled: bool = False
-    frontend_url: str = "http://localhost:5173"
+
+    @property
+    def frontend_url(self) -> str:
+        origins = [o.strip() for o in self.allowed_origins.split(",")]
+        for origin in origins:
+            if origin.startswith("https://"):
+                return origin.rstrip("/")
+        return origins[0].rstrip("/") if origins else "http://localhost:5173"
 
     @field_validator("secret_key")
     @classmethod
