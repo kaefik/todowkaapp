@@ -73,7 +73,11 @@ class TelegramNotifierService:
             return False
 
     @staticmethod
-    def format_full_task_info(task: 'Task', user_tz: ZoneInfo) -> str:
+    def _build_task_link(task_id, frontend_url: str) -> str:
+        return f'<a href="{frontend_url}/tasks?editTaskId={task_id}">🔗 Открыть задачу</a>'
+
+    @staticmethod
+    def format_full_task_info(task: 'Task', user_tz: ZoneInfo, frontend_url: str | None = None) -> str:
         lines = [
             "\U0001f514 <b>Напоминание о задаче</b>",
             "",
@@ -146,6 +150,10 @@ class TelegramNotifierService:
                 local_created = created_at.astimezone(user_tz)
             lines.append(f"\U0001f4c5 Создано: {local_created.strftime('%d.%m.%Y %H:%M')}")
 
+        if frontend_url and task.id:
+            lines.append("")
+            lines.append(TelegramNotifierService._build_task_link(task.id, frontend_url))
+
         return "\n".join(lines)
 
     @staticmethod
@@ -155,7 +163,8 @@ class TelegramNotifierService:
 
         user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
 
-        text = TelegramNotifierService.format_full_task_info(task, user_tz)
+        from app.config import settings
+        text = TelegramNotifierService.format_full_task_info(task, user_tz, frontend_url=settings.frontend_url)
 
         success = await TelegramNotifierService.send_message(
             user.telegram_bot_token, user.telegram_chat_id, text

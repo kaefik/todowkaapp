@@ -318,11 +318,13 @@ class TaskScheduler:
                             and user.telegram_bot_token
                         ):
                             try:
+                                from app.config import settings
                                 from app.services.telegram_notifier import TelegramNotifierService
+                                task_link = TelegramNotifierService._build_task_link(task.id, settings.frontend_url)
                                 await TelegramNotifierService.send_message(
                                     user.telegram_bot_token,
                                     user.telegram_chat_id,
-                                    f'⏰ Дедлайн задачи "{task.title}" наступил!',
+                                    f'⏰ Дедлайн задачи "{task.title}" наступил!\n\n{task_link}',
                                 )
                             except Exception as tg_err:
                                 logger.error(f"Telegram deadline send failed for user {user.username}: {tg_err}")

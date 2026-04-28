@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     bcrypt_rounds: int = 12
     hibp_enabled: bool = False
+    frontend_url: str = "http://localhost:5173"
 
     @field_validator("secret_key")
     @classmethod
