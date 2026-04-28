@@ -11,6 +11,7 @@ interface StoredFilters {
   due_date_to?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
+  group_by?: string
 }
 
 interface StoredUiState {
@@ -127,7 +128,8 @@ export function useTaskFilter(
     const hasSort =
       (filters.sort_by && filters.sort_by !== 'created_at' && filters.sort_by !== defaults.sort_by) ||
       (filters.sort_order === 'asc' && filters.sort_order !== defaults.sort_order)
-    return !!(hasNonDefault || hasSort)
+    const hasGroupBy = !!filters.group_by
+    return !!(hasNonDefault || hasSort || hasGroupBy)
   }, [filters])
 
   const activeFilterCount = useMemo(() => {
@@ -143,6 +145,7 @@ export function useTaskFilter(
     if (filters.sort_order === 'asc' && filters.sort_order !== defaults.sort_order) count++
     if (filters.due_date_from && filters.due_date_from !== defaults.due_date_from) count++
     if (filters.due_date_to && filters.due_date_to !== defaults.due_date_to) count++
+    if (filters.group_by) count++
     return count
   }, [filters])
 
