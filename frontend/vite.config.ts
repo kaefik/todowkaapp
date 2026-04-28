@@ -57,6 +57,22 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.match(/\/(react|react-dom|react-router-dom|scheduler)\//)) return 'vendor-react'
+            if (id.match(/\/@dnd-kit\//)) return 'vendor-ui'
+            if (id.match(/\/(zustand|dexie|dexie-react-hooks)\//)) return 'vendor-data'
+            if (id.match(/\/(i18next|react-i18next)\//)) return 'vendor-i18n'
+            if (id.match(/\/(react-hook-form|@hookform|zod)\//)) return 'vendor-forms'
+            if (id.match(/\/(react-colorful|uuid)\//)) return 'vendor-utils'
+          }
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/api': {

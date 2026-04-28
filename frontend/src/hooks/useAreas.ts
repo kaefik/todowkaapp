@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 
+import { httpClient } from '../api/httpClient'
 import { db, activeTable } from '../db/database'
 import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
@@ -164,7 +165,6 @@ export async function reorderAreas(items: { id: string; sort_order: number }[]):
   }
 
   try {
-    const { httpClient } = await import('../api/httpClient')
     await httpClient.put('/areas/reorder', {
       items: items.map(i => ({ id: i.id, sort_order: i.sort_order })),
     })
