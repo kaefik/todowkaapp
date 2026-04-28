@@ -58,8 +58,8 @@ export function SortGroupPopover({ filters, onUpdateFilter }: SortGroupPopoverPr
   ]
 
   const hasGroup = filters.group_by !== undefined
-  const hasCustomSort = filters.sort_by !== undefined && filters.sort_by !== 'created_at'
-  const isActive = hasGroup || hasCustomSort
+  const hasSort = filters.sort_by !== undefined
+  const isActive = hasGroup || hasSort
 
   return (
     <div className="relative" ref={popoverRef}>
@@ -107,8 +107,8 @@ export function SortGroupPopover({ filters, onUpdateFilter }: SortGroupPopoverPr
             {SORT_OPTIONS.map((opt) => (
               <Chip
                 key={opt.value}
-                active={(filters.sort_by || 'created_at') === opt.value}
-                onClick={() => onUpdateFilter('sort_by', opt.value as string | undefined)}
+                active={filters.sort_by === opt.value}
+                onClick={() => onUpdateFilter('sort_by', filters.sort_by === opt.value ? undefined : opt.value)}
               >
                 {t(opt.labelKey)}
               </Chip>
@@ -122,14 +122,14 @@ export function SortGroupPopover({ filters, onUpdateFilter }: SortGroupPopoverPr
           </div>
           <div className="flex gap-1.5">
             <Chip
-              active={filters.sort_order !== 'asc'}
-              onClick={() => onUpdateFilter('sort_order', 'desc')}
+              active={filters.sort_order === 'desc'}
+              onClick={() => onUpdateFilter('sort_order', filters.sort_order === 'desc' ? undefined : 'desc' as 'asc' | 'desc' | undefined)}
             >
               ↓ {t('sortDesc')}
             </Chip>
             <Chip
               active={filters.sort_order === 'asc'}
-              onClick={() => onUpdateFilter('sort_order', 'asc')}
+              onClick={() => onUpdateFilter('sort_order', filters.sort_order === 'asc' ? undefined : 'asc' as 'asc' | 'desc' | undefined)}
             >
               ↑ {t('sortAsc')}
             </Chip>
