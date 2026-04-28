@@ -191,5 +191,20 @@
   "checklistWarning": "У задачи есть {{count}} пунктов чеклиста. Все будут перемещены в корзину.",
   "activeHeading": "Активные",
   "noTasksHint": "Добавьте первую задачу выше!",
-  "deadlineTime": "Время (необязательно)"
+  "deadlineTime": "Время (необязательно)",
+  "groupBy": "Группировать",
+  "groupNone": "Без группировки",
+  "groupProject": "По проекту",
+  "groupArea": "По области",
+  "groupContext": "По контексту",
+  "groupDueDate": "По дедлайну",
+  "groupGtdStatus": "По GTD-статусу",
+  "groupOverdue": "Просрочено",
+  "groupToday": "Сегодня",
+  "groupTomorrow": "Завтра",
+  "groupNext7Days": "Ближайшие 7 дней",
+  "groupLater": "Позже",
+  "groupNoDueDate": "Без дедлайна",
+  "sortUpdated": "По дате обновления",
+  "sortCompletedAt": "По дате выполнения"
 }

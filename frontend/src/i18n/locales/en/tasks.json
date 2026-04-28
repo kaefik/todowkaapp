@@ -191,5 +191,20 @@
   "checklistWarning": "The task has {{count}} checklist item(s). All will be moved to trash.",
   "activeHeading": "Active",
   "noTasksHint": "Add your first task above!",
-  "deadlineTime": "Time (optional)"
+  "deadlineTime": "Time (optional)",
+  "groupBy": "Group by",
+  "groupNone": "No grouping",
+  "groupProject": "By project",
+  "groupArea": "By area",
+  "groupContext": "By context",
+  "groupDueDate": "By due date",
+  "groupGtdStatus": "By GTD status",
+  "groupOverdue": "Overdue",
+  "groupToday": "Today",
+  "groupTomorrow": "Tomorrow",
+  "groupNext7Days": "Next 7 days",
+  "groupLater": "Later",
+  "groupNoDueDate": "No deadline",
+  "sortUpdated": "By updated date",
+  "sortCompletedAt": "By completed date"
 }
