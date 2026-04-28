@@ -1,5 +1,5 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { Outlet, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useGtdCounts } from '../hooks/useGtdCounts'
@@ -155,7 +155,17 @@ export function AppLayout() {
   const { isAuthenticated, user } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { t } = useTranslation('nav')
+
+  useEffect(() => {
+    const editTaskId = searchParams.get('editTaskId')
+    if (editTaskId && isAuthenticated && location.pathname !== '/tasks') {
+      navigate(`/tasks?editTaskId=${editTaskId}`, { replace: true })
+    }
+  }, [searchParams, isAuthenticated, location.pathname, navigate])
 
   if (!isAuthenticated) {
     return (

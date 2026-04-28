@@ -162,14 +162,24 @@ function TasksContent() {
 
   useEffect(() => {
     const editTaskId = searchParams.get('editTaskId')
-    if (editTaskId && !isLoading && tasks.length > 0 && !editingTask) {
-      const task = tasks.find((t) => t.id === editTaskId)
-      if (task) {
-        setEditingTask(task)
-        setSearchParams({}, { replace: true })
-      }
+    if (editTaskId && !editingTask) {
+      let cancelled = false
+      ;(async () => {
+        const { db } = await import('../db/database')
+        const dbTask = await db.tasks.get(editTaskId)
+        if (cancelled) return
+        if (dbTask && dbTask._syncStatus !== 'deleted') {
+          const { dbTaskToUi } = await import('../db/mappers')
+          const uiTask = await dbTaskToUi(dbTask)
+          if (!cancelled) {
+            setEditingTask(uiTask)
+            setSearchParams({}, { replace: true })
+          }
+        }
+      })()
+      return () => { cancelled = true }
     }
-  }, [searchParams, isLoading, tasks, editingTask, setSearchParams])
+  }, [searchParams, editingTask, setSearchParams])
 
   const formatDueDate = (dueDate: string | null): { text: string; overdue: boolean } => {
     if (!dueDate) return { text: t('noDueDate'), overdue: false }
