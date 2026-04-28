@@ -29,6 +29,15 @@ function todayLocalDateStr(): string {
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
 }
+
+function tomorrowLocalDateStr(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -182,6 +191,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     reminder_offsets: null,
   })
   const [isTodayDue, setIsTodayDue] = useState(false)
+  const [isTomorrowDue, setIsTomorrowDue] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [newChecklistTitle, setNewChecklistTitle] = useState('')
   const [isAddingChecklist, setIsAddingChecklist] = useState(false)
@@ -218,6 +228,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       const dueDateStr = toLocalDateStr(task.due_date)
       const dueTimeStr = toLocalTimeStr(task.due_date)
       const today = todayLocalDateStr()
+      const tomorrow = tomorrowLocalDateStr()
 
       reset({
         title: task.title,
@@ -241,6 +252,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
         reminder_offsets: task.reminder_offsets,
       })
       setIsTodayDue(dueDateStr === today)
+      setIsTomorrowDue(dueDateStr === tomorrow)
       setNewChecklistTitle('')
     }
   }, [task, isOpen, reset])
@@ -267,15 +279,27 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const handleTodayToggle = (checked: boolean) => {
     setIsTodayDue(checked)
     if (checked) {
+      setIsTomorrowDue(false)
       const today = todayLocalDateStr()
       reset(prev => ({ ...prev, due_date: today }))
+    }
+  }
+
+  const handleTomorrowToggle = (checked: boolean) => {
+    setIsTomorrowDue(checked)
+    if (checked) {
+      setIsTodayDue(false)
+      const tomorrow = tomorrowLocalDateStr()
+      reset(prev => ({ ...prev, due_date: tomorrow }))
     }
   }
 
   const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = e.target.value
     const today = todayLocalDateStr()
+    const tomorrow = tomorrowLocalDateStr()
     setIsTodayDue(newDate === today)
+    setIsTomorrowDue(newDate === tomorrow)
     if (!newDate && recurrenceData.recurrence_type) {
       setRecurrenceData({
         recurrence_type: null,
@@ -562,6 +586,15 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                   className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">{t('today')}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={isTomorrowDue}
+                  onChange={(e) => handleTomorrowToggle(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400 bg-white dark:bg-gray-700"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">{t('tomorrow')}</span>
               </label>
               <input
                 {...register('due_date', {

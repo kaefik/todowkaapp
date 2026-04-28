@@ -32,6 +32,7 @@
   "notes": "Notes",
   "notesOptional": "Task notes (optional)",
   "today": "Today",
+  "tomorrow": "Tomorrow",
   "checklist": "Checklist",
   "checklistCount": "Checklist ({{completed}}/{{total}})",
   "newChecklistItem": "New item...",

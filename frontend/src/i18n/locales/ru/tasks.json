@@ -32,6 +32,7 @@
   "notes": "Заметки",
   "notesOptional": "Заметки к задаче (необязательно)",
   "today": "Сегодня",
+  "tomorrow": "Завтра",
   "checklist": "Чеклист",
   "checklistCount": "Чеклист ({{completed}}/{{total}})",
   "newChecklistItem": "Новый пункт...",
