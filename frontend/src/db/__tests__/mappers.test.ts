@@ -6,6 +6,7 @@ const {
   mockChecklistItemsWhere,
   mockProjectsGet,
   mockContextsGet,
+  mockAreasGet,
 } = vi.hoisted(() => {
   const mockTagsWhere = {
     anyOf: vi.fn().mockReturnThis(),
@@ -18,7 +19,8 @@ const {
   }
   const mockProjectsGet = vi.fn().mockResolvedValue(undefined)
   const mockContextsGet = vi.fn().mockResolvedValue(undefined)
-  return { mockTagsWhere, mockChecklistItemsWhere, mockProjectsGet, mockContextsGet }
+  const mockAreasGet = vi.fn().mockResolvedValue(undefined)
+  return { mockTagsWhere, mockChecklistItemsWhere, mockProjectsGet, mockContextsGet, mockAreasGet }
 })
 
 vi.mock('../database', () => ({
@@ -27,6 +29,7 @@ vi.mock('../database', () => ({
     checklistItems: { where: vi.fn().mockReturnValue(mockChecklistItemsWhere) },
     projects: { get: (...args: unknown[]) => mockProjectsGet(...args) },
     contexts: { get: (...args: unknown[]) => mockContextsGet(...args) },
+    areas: { get: (...args: unknown[]) => mockAreasGet(...args) },
   },
 }))
 
@@ -98,6 +101,7 @@ beforeEach(() => {
   mockChecklistItemsWhere.toArray.mockResolvedValue([])
   mockProjectsGet.mockResolvedValue(undefined)
   mockContextsGet.mockResolvedValue(undefined)
+  mockAreasGet.mockResolvedValue(undefined)
 })
 
 describe('apiTaskToDb', () => {
