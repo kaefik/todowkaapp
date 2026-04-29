@@ -180,6 +180,13 @@ function TasksContent() {
     return () => { cancelled = true }
   }, [searchParams, editingTask, setSearchParams])
 
+  useEffect(() => {
+    const viewTaskIdParam = searchParams.get('viewTaskId')
+    if (!viewTaskIdParam || viewingTaskId) return
+    setViewingTaskId(viewTaskIdParam)
+    setSearchParams({}, { replace: true })
+  }, [searchParams, viewingTaskId, setSearchParams])
+
   const formatDueDate = (dueDate: string | null): { text: string; overdue: boolean } => {
     if (!dueDate) return { text: t('noDueDate'), overdue: false }
 

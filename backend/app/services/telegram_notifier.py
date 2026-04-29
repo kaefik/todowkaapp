@@ -74,7 +74,7 @@ class TelegramNotifierService:
 
     @staticmethod
     def _build_task_link(task_id, frontend_url: str) -> str:
-        return f'<a href="{frontend_url}/tasks?editTaskId={task_id}">🔗 Открыть задачу</a>'
+        return f'<a href="{frontend_url}/tasks?viewTaskId={task_id}">🔗 Открыть задачу</a>'
 
     @staticmethod
     def format_full_task_info(task: 'Task', user_tz: ZoneInfo, frontend_url: str | None = None) -> str:
