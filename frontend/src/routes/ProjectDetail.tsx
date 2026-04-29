@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useProjects } from '../hooks/useProjects'
@@ -6,6 +6,7 @@ import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { useTaskFilter } from '../hooks/useTaskFilter'
 import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { notifyTasksChanged } from '../hooks/useGtdCounts'
 
 const NO_PROJECT_ID = 'no-project'
@@ -65,6 +66,8 @@ export function ProjectDetail() {
     [tasks]
   )
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
   const handleAddTask = async (data: { title: string; description?: string }) => {
     if (isNoProject) {
       await addTask({ ...data, gtd_status: 'someday' })
@@ -74,9 +77,22 @@ export function ProjectDetail() {
   }
 
   const handleDeleteTask = async (taskId: string) => {
-    await moveTask(taskId, 'trash')
+    setPendingDeleteId(taskId)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
+    await moveTask(pendingDeleteId, 'trash')
+    setPendingDeleteId(null)
+    refetch()
     notifyTasksChanged()
   }
+
+  const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
+  const checklistWarning = pendingDeleteTask && pendingDeleteTask.checklist_total > 0
+    ? ` ${t('checklistWillBeTrashed')}`
+    : ''
+  const deleteMessage = t('confirmTrashBody') + checklistWarning
 
   const handleSaveTask = async (taskId: string, data: UpdateTask) => {
     await updateTask(taskId, data)
@@ -203,6 +219,16 @@ export function ProjectDetail() {
         emptyMessage={isNoProject ? t('noProjectDescription') : t('noProjects')}
         showGtdStatus
         groupBy={filters.group_by}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmTrash')}
+        message={deleteMessage}
+        confirmText={t('deleteBtn')}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
       />
     </div>
   )
