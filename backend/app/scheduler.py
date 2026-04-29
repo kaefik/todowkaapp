@@ -101,6 +101,15 @@ class TaskScheduler:
                 max_instances=1,
             )
 
+            self.scheduler.add_job(
+                _job_send_backup_schedules,
+                'interval',
+                minutes=1,
+                id='send_backup_schedules',
+                replace_existing=True,
+                max_instances=1,
+            )
+
             self.scheduler.start()
             logger.info("Scheduler started")
 
@@ -474,3 +483,19 @@ async def _job_poll_telegram_bots():
         name="tg-poll",
     )
     _polling_thread.start()
+
+
+async def _job_send_backup_schedules():
+    logger.info("Running job: send_backup_schedules")
+
+    try:
+        from app.services.backup_schedule_service import BackupScheduleService
+
+        async with AsyncSessionLocal() as session:
+            service = BackupScheduleService(session)
+            sent_count = await service.process_due_backups()
+            await session.commit()
+            if sent_count > 0:
+                logger.info(f"Sent {sent_count} scheduled backups")
+    except Exception as e:
+        logger.error(f"Error in send_backup_schedules: {e}")
