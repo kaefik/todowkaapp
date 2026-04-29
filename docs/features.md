@@ -299,6 +299,14 @@
 - Миграция: `alembic/versions/20260428_1735_add_capitalize_first_to_user_11e915d16cba.py`
 - Файлы: `backend/app/models/user.py`, `backend/app/schemas/user.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
 
+#### Скрытие счётчиков задач в сайдбаре ✅ (Реализовано 29.04.2026)
+- Переключатель вкл/выкл отображения количества задач рядом с названиями разделов в боковом меню
+- По умолчанию включено — счётчики видны
+- Настраиваемый переключатель: Настройки → вкладка «Внешний вид» → «Количество задач в разделах»
+- Хранение: в localStorage (ключ `show-task-counts`), только на клиенте
+- Применяется ко всем счётчикам: GTD-секции (Inbox, Active, Today, Tomorrow, Next, Waiting, Someday), Completed, Trash
+- Файлы: `frontend/src/routes/Settings.tsx`, `frontend/src/components/AppLayout.tsx`
+
 #### Пользовательский интерфейс
 - Адаптивный дизайн для всех устройств (десктоп, планшет, телефон)
 - Чистый и интуитивно понятный интерфейс

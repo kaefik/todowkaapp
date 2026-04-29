@@ -150,5 +150,7 @@
   "telegramNotificationsDisabled": "Telegram notifications disabled",
   "telegramRemoveToken": "Remove token",
   "telegramTokenRemoved": "Telegram bot disconnected",
-  "telegramErrorSaving": "Failed to save Telegram settings"
+  "telegramErrorSaving": "Failed to save Telegram settings",
+  "showTaskCountsLabel": "Task counts in sections",
+  "showTaskCountsHint": "Show the task count next to section names in the sidebar"
 }

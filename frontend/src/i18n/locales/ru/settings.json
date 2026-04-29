@@ -150,5 +150,7 @@
   "telegramNotificationsDisabled": "Telegram-уведомления отключены",
   "telegramRemoveToken": "Удалить токен",
   "telegramTokenRemoved": "Telegram-бот отключён",
-  "telegramErrorSaving": "Ошибка сохранения настроек Telegram"
+  "telegramErrorSaving": "Ошибка сохранения настроек Telegram",
+  "showTaskCountsLabel": "Количество задач в разделах",
+  "showTaskCountsHint": "Показывать счётчик задач рядом с названием раздела в боковом меню"
 }

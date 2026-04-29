@@ -39,6 +39,7 @@ function SettingsContent() {
     'ui-settings-active-tab',
     'general'
   )
+  const [showTaskCounts, setShowTaskCounts] = useLocalStorage('show-task-counts', true)
 
   const savedTheme = localStorage.getItem('theme') as Theme | null
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -584,6 +585,35 @@ function SettingsContent() {
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                     user?.capitalize_first !== false ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {t('showTaskCountsLabel')}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('showTaskCountsHint')}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTaskCounts(!showTaskCounts)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                  showTaskCounts
+                    ? 'bg-indigo-600 dark:bg-indigo-500'
+                    : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={showTaskCounts}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showTaskCounts ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>

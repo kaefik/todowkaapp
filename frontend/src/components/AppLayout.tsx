@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useGtdCounts } from '../hooks/useGtdCounts'
+import { useLocalStorage } from '../hooks/useLocalStorage'
 import { InstallPrompt } from './InstallPrompt'
 import { NotificationBell } from './NotificationBell'
 import { StatusLight } from './StatusLight'
@@ -13,6 +14,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { counts } = useGtdCounts()
   const { user, logout } = useAuthStore()
   const { t } = useTranslation('nav')
+  const [showTaskCounts] = useLocalStorage('show-task-counts', true)
 
   const gtdItems = [
     { path: '/inbox', label: t('inbox'), count: counts.inbox },
@@ -46,7 +48,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             }`}
           >
             <span>{item.label}</span>
-            {item.count > 0 && (
+            {showTaskCounts && item.count > 0 && (
               <span className={`inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full ${
                 isActive(item.path)
                   ? 'bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300'
@@ -73,7 +75,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           }`}
         >
           <span>{t('completed')}</span>
-          {counts.completed > 0 && (
+          {showTaskCounts && counts.completed > 0 && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
               {counts.completed}
             </span>
@@ -89,7 +91,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           }`}
         >
           <span>{t('trash')}</span>
-          {counts.trash > 0 && (
+          {showTaskCounts && counts.trash > 0 && (
             <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
               {counts.trash}
             </span>
