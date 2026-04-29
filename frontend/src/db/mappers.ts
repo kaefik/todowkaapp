@@ -127,7 +127,7 @@ export async function dbTasksToUiBatch(tasks: DbTask[]): Promise<UiTask[]> {
 
 export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
   const results = await dbTasksToUiBatch([task])
-  return results[0]
+  return results[0]!
 }
 
 export function apiTaskToDb(
