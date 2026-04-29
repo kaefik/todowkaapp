@@ -306,8 +306,7 @@ export async function pull(userId: string): Promise<void> {
   const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
   await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint, since)
-    const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
-    await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
+    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
   }))
   await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
 }
@@ -317,8 +316,7 @@ export async function selectivePull(userId: string, resourceTypes: ResourceType[
   const resources = RESOURCES.filter(r => resourceTypes.includes(r.entityType))
   await Promise.all(resources.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint, since)
-    const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
-    await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
+    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
   }))
   await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
 }
@@ -432,6 +430,12 @@ function deduplicateMutations(
   }
 
   return { toSend, toDelete }
+}
+
+export async function deleteLocalEntity(entityType: EntityType, entityId: string): Promise<void> {
+  const table = getTableForType(entityType)
+  if (!table) return
+  await table.delete(entityId).catch(() => {})
 }
 
 function getTableForType(entityType: EntityType) {

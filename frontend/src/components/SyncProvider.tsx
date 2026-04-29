@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
-import { pull, push, selectivePull, getResourceTypeFromSSE, type EntityType } from '../db/syncEngine'
+import { pull, push, selectivePull, deleteLocalEntity, getResourceTypeFromSSE, type EntityType } from '../db/syncEngine'
 import { useAuthStore } from '../stores/authStore'
 import { db } from '../db/database'
 import { useOnlineStatus } from '../db/hooks'
@@ -99,10 +99,12 @@ class SyncSSEListener {
   private retryDelay = 2000
   private readonly maxRetryDelay = 30000
   private onPull: ((eventType: string) => void) | null = null
+  private onDelete: ((entityType: EntityType, entityId: string) => void) | null = null
 
-  connect(onPull: (eventType: string) => void) {
+  connect(onPull: (eventType: string) => void, onDelete: (entityType: EntityType, entityId: string) => void) {
     this.disconnect()
     this.onPull = onPull
+    this.onDelete = onDelete
     this.retryDelay = 2000
     this.open()
   }
@@ -127,14 +129,20 @@ class SyncSSEListener {
     ]
     for (const evt of events) {
       this.es!.addEventListener(evt, (event) => {
-        const resourceType = evt.split('_')[0] as EntityType
+        const isDelete = evt.endsWith('_deleted')
+        const parts = evt.split('_')
+        const resourceType = getResourceTypeFromSSE(evt)
         let entityId: string | undefined
         try {
           const data = JSON.parse((event as MessageEvent).data)
-          entityId = data[`${resourceType}_id`]
+          entityId = data[`${parts[0]}_id`] ?? data[`${resourceType}_id`]
         } catch {}
-        if (!isPushEcho(resourceType, entityId)) {
-          this.onPull?.(evt)
+        if (!isPushEcho(resourceType ?? 'task', entityId)) {
+          if (isDelete && entityId && resourceType) {
+            this.onDelete?.(resourceType, entityId)
+          } else {
+            this.onPull?.(evt)
+          }
         }
       })
     }
@@ -254,9 +262,14 @@ export function SyncProvider({ children }: SyncProviderProps) {
       schedulePush()
     })
 
-    syncSSE.connect((eventType: string) => {
-      if (userRef.current) schedulePull(userRef.current.id, eventType)
-    })
+    syncSSE.connect(
+      (eventType: string) => {
+        if (userRef.current) schedulePull(userRef.current.id, eventType)
+      },
+      (entityType: EntityType, entityId: string) => {
+        deleteLocalEntity(entityType, entityId)
+      }
+    )
 
     return () => {
       clearInterval(interval)
