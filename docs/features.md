@@ -337,16 +337,29 @@
   - Файлы: `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
   - API: PATCH /api/users/me (с полем timezone в UserUpdate)
 
-#### Закреплённая шапка и поиск по задачам ✅ (Реализовано 22.04.2026)
+#### Закреплённая шапка и глобальный поиск ✅ (Реализовано 22.04.2026, обновлено 29.04.2026)
 - Sticky header на мобильных устройствах — шапка всегда видна при прокрутке
 - Десктопная верхняя панель с логотипом, полем поиска, уведомлениями и профилем
 - Десктопный sidebar сдвигается ниже шапки (top-16)
-- Полноэкранный SearchOverlay с live-поиском по задачам (debounce 300ms)
-- Поиск использует существующий API: `GET /api/tasks?search=...&limit=20`
-- Клик по результату поиска → переход на проект задачи
+- Полноэкранный SearchOverlay с live-поиском по задачам, проектам, областям, контекстам и тегам (debounce 300ms)
+- 5 параллельных запросов к API: `GET /api/tasks?search=...`, `GET /api/projects?search=...`, `GET /api/areas?search=...`, `GET /api/contexts?search=...`, `GET /api/tags?search=...`
+- Результаты сгруппированы по типу сущности с заголовками секций
+- Задачи: ссылка на проект задачи, отображение GTD-статуса
+- Проекты/области: цветной маркер + ссылка на детальную страницу
+- Контексты/теги: цветной маркер + ссылка на страницу списка
+- Мобильный UX: overlay ближе к верху экрана (mt-4), увеличенная область прокрутки (60vh)
 - Закрытие поиска: Escape или клик по backdrop
 - Поддержка тёмной темы
-- Файлы: `frontend/src/components/AppLayout.tsx`, `frontend/src/components/SearchOverlay.tsx`
+- **Unicode case-insensitive поиск:** регистрация Python `str.lower()` как SQLite `LOWER` + `re.search()` как `REGEXP` — корректная работа с кириллицей и любым Unicode
+- **Настройки поиска** (Настройки → Внешний вид → Поиск):
+  - Чувствительность к регистру (default: выкл — поиск «выдать» найдёт «Выдать»)
+  - Только целые слова (default: выкл — ищет вхождение подстроки, вкл — только полные слова через REGEXP `\b`)
+  - Хранение: localStorage (ключи `search-case-sensitive`, `search-whole-word`)
+  - Параметры передаются в API: `?case_sensitive=true&whole_word=true`
+- Backend: параметр `search` (ILIKE/REGEXP) в `GET /projects`, `GET /areas`, `GET /contexts`, `GET /tags`
+- Backend: параметры `case_sensitive` и `whole_word` во все 5 search API
+- Утилита: `backend/app/services/search.py` — `search_condition()` для генерации WHERE-условий
+- Файлы: `frontend/src/components/SearchOverlay.tsx`, `frontend/src/components/AppLayout.tsx`, `frontend/src/routes/Settings.tsx`, `backend/app/database.py`, `backend/app/services/search.py`, `backend/app/services/project_service.py`, `backend/app/services/area_service.py`, `backend/app/services/context_service.py`, `backend/app/services/tag_service.py`, `backend/app/services/task_service.py`, `backend/app/api/projects.py`, `backend/app/api/areas.py`, `backend/app/api/contexts.py`, `backend/app/api/tags.py`, `backend/app/api/tasks.py`
 
 #### Сохранение состояния UI между сессиями ✅ (Реализовано 13.04.2026)
 - Автоматическое сохранение всех состояний UI в localStorage

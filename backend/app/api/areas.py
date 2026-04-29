@@ -30,12 +30,16 @@ async def _publish_area_event(user_id: str, area_id: str, action: str):
 async def list_areas(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    search: str | None = Query(default=None),
+    case_sensitive: bool = Query(default=False),
+    whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> AreaListResponse:
     service = AreaService(db)
     areas, total = await service.get_areas(
-        user_id=current_user.id, limit=limit, offset=offset
+        user_id=current_user.id, limit=limit, offset=offset, search=search,
+        case_sensitive=case_sensitive, whole_word=whole_word,
     )
     return AreaListResponse(items=areas, total=total)
 

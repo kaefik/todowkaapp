@@ -10,6 +10,7 @@ from app.models.tag import Tag
 from app.models.task import GtdStatus, Task
 from app.models.user import User
 from app.schemas.task import TaskCreate, TaskUpdate
+from app.services.search import search_condition
 
 
 class TaskService:
@@ -35,6 +36,8 @@ class TaskService:
         limit: int = 100,
         offset: int = 0,
         no_project: bool = False,
+        case_sensitive: bool = False,
+        whole_word: bool = False,
     ) -> tuple[list[Task], int]:
         base_where = [Task.user_id == user_id]
 
@@ -56,9 +59,12 @@ class TaskService:
             base_where.append(Task.due_date <= due_date_to)
         if search is not None:
             base_where.append(
-                (Task.title.ilike(f'%{search}%'))
-                | (Task.description.ilike(f'%{search}%'))
-                | (Task.notes.ilike(f'%{search}%'))
+                search_condition(
+                    [Task.title, Task.description, Task.notes],
+                    search,
+                    case_sensitive=case_sensitive,
+                    whole_word=whole_word,
+                )
             )
 
         if tag_id is not None:

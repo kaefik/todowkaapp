@@ -94,6 +94,8 @@
   "gtdCompleted": "Completed",
   "gtdTrash": "Trash",
   "searchTasks": "Search tasks...",
+  "searchAll": "Search...",
+  "searchSectionTasks": "Tasks",
   "descriptionLabel": "Description",
   "editBtn": "Edit",
   "deleteBtn": "Delete",

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.project import Project
 from app.models.task import Task
 from app.schemas.project import ProjectCreate, ProjectProgress, ProjectUpdate
+from app.services.search import search_condition
 
 
 class ProjectService:
@@ -45,16 +46,28 @@ class ProjectService:
         )
 
     async def get_projects(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
+        self, user_id: UUID, limit: int = 100, offset: int = 0, search: str | None = None,
+        case_sensitive: bool = False, whole_word: bool = False,
     ) -> tuple[list[Project], int]:
+        base_where = [Project.user_id == user_id]
+        if search is not None:
+            base_where.append(
+                search_condition(
+                    [Project.name, Project.description],
+                    search,
+                    case_sensitive=case_sensitive,
+                    whole_word=whole_word,
+                )
+            )
+
         count_result = await self.db.execute(
-            select(func.count(Project.id)).where(Project.user_id == user_id)
+            select(func.count(Project.id)).where(*base_where)
         )
         total = count_result.scalar() or 0
 
         result = await self.db.execute(
             select(Project)
-            .where(Project.user_id == user_id)
+            .where(*base_where)
             .order_by(Project.sort_order.asc(), Project.created_at.desc())
             .limit(limit)
             .offset(offset)

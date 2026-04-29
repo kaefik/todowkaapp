@@ -152,5 +152,10 @@
   "telegramTokenRemoved": "Telegram bot disconnected",
   "telegramErrorSaving": "Failed to save Telegram settings",
   "showTaskCountsLabel": "Task counts in sections",
-  "showTaskCountsHint": "Show the task count next to section names in the sidebar"
+  "showTaskCountsHint": "Show the task count next to section names in the sidebar",
+  "searchSettingsTitle": "Search",
+  "searchCaseSensitiveLabel": "Case sensitive",
+  "searchCaseSensitiveHint": "Match exact letter case when searching (e.g. «Buy» and «buy» are different queries)",
+  "searchWholeWordLabel": "Whole words only",
+  "searchWholeWordHint": "Match complete words only, without partial matches"
 }

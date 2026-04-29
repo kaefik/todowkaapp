@@ -24,12 +24,16 @@ async def _publish_tag_event(user_id: str, tag_id: str, action: str):
 async def list_tags(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    search: str | None = Query(default=None),
+    case_sensitive: bool = Query(default=False),
+    whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TagListResponse:
     service = TagService(db)
     tags, total = await service.get_tags(
-        user_id=current_user.id, limit=limit, offset=offset
+        user_id=current_user.id, limit=limit, offset=offset, search=search,
+        case_sensitive=case_sensitive, whole_word=whole_word,
     )
     return TagListResponse(items=tags, total=total)
 

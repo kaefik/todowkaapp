@@ -94,6 +94,8 @@
   "gtdCompleted": "Выполнено",
   "gtdTrash": "Корзина",
   "searchTasks": "Поиск задач...",
+  "searchAll": "Поиск...",
+  "searchSectionTasks": "Задачи",
   "descriptionLabel": "Описание",
   "editBtn": "Ред.",
   "deleteBtn": "Удалить",

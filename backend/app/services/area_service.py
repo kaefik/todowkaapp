@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area import Area
 from app.schemas.area import AreaCreate, AreaUpdate
+from app.services.search import search_condition
 
 
 class AreaService:
@@ -14,16 +15,28 @@ class AreaService:
         self.db = db
 
     async def get_areas(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
+        self, user_id: UUID, limit: int = 100, offset: int = 0, search: str | None = None,
+        case_sensitive: bool = False, whole_word: bool = False,
     ) -> tuple[list[Area], int]:
+        base_where = [Area.user_id == user_id]
+        if search is not None:
+            base_where.append(
+                search_condition(
+                    [Area.name, Area.description],
+                    search,
+                    case_sensitive=case_sensitive,
+                    whole_word=whole_word,
+                )
+            )
+
         count_result = await self.db.execute(
-            select(func.count(Area.id)).where(Area.user_id == user_id)
+            select(func.count(Area.id)).where(*base_where)
         )
         total = count_result.scalar() or 0
 
         result = await self.db.execute(
             select(Area)
-            .where(Area.user_id == user_id)
+            .where(*base_where)
             .order_by(Area.sort_order.asc(), Area.created_at.desc())
             .limit(limit)
             .offset(offset)

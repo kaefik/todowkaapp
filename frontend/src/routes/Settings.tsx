@@ -40,6 +40,8 @@ function SettingsContent() {
     'general'
   )
   const [showTaskCounts, setShowTaskCounts] = useLocalStorage('show-task-counts', true)
+  const [searchCaseSensitive, setSearchCaseSensitive] = useLocalStorage('search-case-sensitive', false)
+  const [searchWholeWord, setSearchWholeWord] = useLocalStorage('search-whole-word', false)
 
   const savedTheme = localStorage.getItem('theme') as Theme | null
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -617,6 +619,69 @@ function SettingsContent() {
                   }`}
                 />
               </button>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">{t('searchSettingsTitle')}</h3>
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {t('searchCaseSensitiveLabel')}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('searchCaseSensitiveHint')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSearchCaseSensitive(!searchCaseSensitive)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      searchCaseSensitive
+                        ? 'bg-indigo-600 dark:bg-indigo-500'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={searchCaseSensitive}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        searchCaseSensitive ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {t('searchWholeWordLabel')}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('searchWholeWordHint')}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSearchWholeWord(!searchWholeWord)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      searchWholeWord
+                        ? 'bg-indigo-600 dark:bg-indigo-500'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                    }`}
+                    role="switch"
+                    aria-checked={searchWholeWord}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        searchWholeWord ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </>

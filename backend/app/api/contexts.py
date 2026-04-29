@@ -24,12 +24,16 @@ async def _publish_context_event(user_id: str, context_id: str, action: str):
 async def list_contexts(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    search: str | None = Query(default=None),
+    case_sensitive: bool = Query(default=False),
+    whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> ContextListResponse:
     service = ContextService(db)
     contexts, total = await service.get_contexts(
-        user_id=current_user.id, limit=limit, offset=offset
+        user_id=current_user.id, limit=limit, offset=offset, search=search,
+        case_sensitive=case_sensitive, whole_word=whole_word,
     )
     return ContextListResponse(items=contexts, total=total)
 

@@ -152,5 +152,10 @@
   "telegramTokenRemoved": "Telegram-бот отключён",
   "telegramErrorSaving": "Ошибка сохранения настроек Telegram",
   "showTaskCountsLabel": "Количество задач в разделах",
-  "showTaskCountsHint": "Показывать счётчик задач рядом с названием раздела в боковом меню"
+  "showTaskCountsHint": "Показывать счётчик задач рядом с названием раздела в боковом меню",
+  "searchSettingsTitle": "Поиск",
+  "searchCaseSensitiveLabel": "Чувствительность к регистру",
+  "searchCaseSensitiveHint": "Учитывать регистр букв при поиске (например, «Выдать» и «выдать» — разные запросы)",
+  "searchWholeWordLabel": "Только целые слова",
+  "searchWholeWordHint": "Искать только полные совпадения слов, без частичных вхождений"
 }

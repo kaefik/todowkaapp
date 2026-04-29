@@ -61,6 +61,8 @@ async def list_tasks(
     sort_by: str = Query(default='created_at'),
     sort_order: str = Query(default='desc'),
     no_project: bool = Query(default=False),
+    case_sensitive: bool = Query(default=False),
+    whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> TaskListResponse:
@@ -90,6 +92,8 @@ async def list_tasks(
         limit=limit,
         offset=offset,
         no_project=no_project,
+        case_sensitive=case_sensitive,
+        whole_word=whole_word,
     )
     checklist_service = ChecklistService(db)
     items = []

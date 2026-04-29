@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tag import Tag, task_tags
 from app.models.task import Task
 from app.schemas.tag import TagCreate, TagUpdate
+from app.services.search import search_condition
 
 
 class TagService:
@@ -15,16 +16,28 @@ class TagService:
         self.db = db
 
     async def get_tags(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
+        self, user_id: UUID, limit: int = 100, offset: int = 0, search: str | None = None,
+        case_sensitive: bool = False, whole_word: bool = False,
     ) -> tuple[list[Tag], int]:
+        base_where = [Tag.user_id == user_id]
+        if search is not None:
+            base_where.append(
+                search_condition(
+                    [Tag.name],
+                    search,
+                    case_sensitive=case_sensitive,
+                    whole_word=whole_word,
+                )
+            )
+
         count_result = await self.db.execute(
-            select(func.count(Tag.id)).where(Tag.user_id == user_id)
+            select(func.count(Tag.id)).where(*base_where)
         )
         total = count_result.scalar() or 0
 
         result = await self.db.execute(
             select(Tag)
-            .where(Tag.user_id == user_id)
+            .where(*base_where)
             .order_by(Tag.name.asc())
             .limit(limit)
             .offset(offset)
