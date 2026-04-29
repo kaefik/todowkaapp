@@ -155,8 +155,16 @@
       - Причина 1: `_job_startup_recovery` обрабатывал ВСЕ повторяющиеся задачи (без фильтра `Task.is_completed`), а не только выполненные
       - Причина 2: `catch_up_missed_tasks` безусловно обновлял `task.due_date` в ветке `else` даже для невыполненных задач
       - Фикс 1: добавлен `Task.is_completed` в запрос `_job_startup_recovery` (синхронизировано с `_job_generate_recurring_tasks`)
-      - Фикс 2: в `catch_up_missed_tasks` ветка `else` обновляет `due_date` только для выполненных задач
+      - Фикс 2: в `catch_up_missed_tasks` ветка `else` обновляет `due_date` только если были реально созданы catch-up задачи (`generated_tasks` не пуст)
+      - Использование `max_days` параметра вместо захардкоженного `7`
       - Файлы: `backend/app/scheduler.py`, `backend/app/services/recurrence_service.py`
+   - Исправление бага отсутствия новой задачи после выполнения рекуррентной ✅ (29.04.2026):
+      - При отметке повторяющейся задачи выполненной новая задача создавалась в БД, но не появлялась на фронтенде
+      - Причина 1 (фронтенд): `isPushEcho` проверял тип сущности (`task:`), а не конкретный ID → SSE-triggered pull блокировался
+      - Причина 2 (бекенд): `toggle_task`/`move_task` не публиковали SSE-события для новой задачи и уведомления
+      - Фикс 1: `isPushEcho` теперь принимает `entityId` и проверяет конкретную сущность, SSE-обработчик извлекает ID из данных события
+      - Фикс 2: `toggle_task`/`move_task` публикуют SSE `task_updated` для новой задачи (через `event_bus`) и `notification_created` для уведомления
+      - Файлы: `frontend/src/components/SyncProvider.tsx`, `backend/app/services/task_service.py`
 - Автоматическая фиксация времени выполнения задачи (completed_at)
 - Удаление задачи с подтверждением через кастомный диалог (ConfirmDialog)
   - Перемещение в корзину: диалог "Переместить в корзину?"

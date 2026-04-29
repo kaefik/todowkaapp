@@ -281,12 +281,30 @@ class TaskService:
                 await self.db.flush()
 
                 if self.reminder_service and new_task and user:
-                    await self.reminder_service.create_notification(
+                    notification = await self.reminder_service.create_notification(
                         user=user,
                         task=new_task,
                         type='recurrence_created',
                         message=f'Создана повторяющаяся задача: "{new_task.title}"'
                     )
+
+                    from app.event_bus import event_bus
+                    await event_bus.publish(f"{user.id}:sync", "task_updated", {
+                        "task_id": str(new_task.id),
+                        "action": "created",
+                    })
+                    await event_bus.publish(f"{user.id}:notifications", "notification_created", {
+                        "notification_id": str(notification.id),
+                        "type": notification.type,
+                        "message": notification.message,
+                        "task_id": str(new_task.id),
+                        "notification_data": {
+                            "id": str(notification.id),
+                            "message": notification.message,
+                            "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                            "due_date": new_task.due_date.isoformat() if new_task.due_date else None,
+                        },
+                    })
 
         return await self.get_task(user_id, task_id)
 
@@ -336,12 +354,30 @@ class TaskService:
                 await self.db.flush()
 
                 if self.reminder_service and new_task and user:
-                    await self.reminder_service.create_notification(
+                    notification = await self.reminder_service.create_notification(
                         user=user,
                         task=new_task,
                         type='recurrence_created',
                         message=f'Создана повторяющаяся задача: "{new_task.title}"'
                     )
+
+                    from app.event_bus import event_bus
+                    await event_bus.publish(f"{user.id}:sync", "task_updated", {
+                        "task_id": str(new_task.id),
+                        "action": "created",
+                    })
+                    await event_bus.publish(f"{user.id}:notifications", "notification_created", {
+                        "notification_id": str(notification.id),
+                        "type": notification.type,
+                        "message": notification.message,
+                        "task_id": str(new_task.id),
+                        "notification_data": {
+                            "id": str(notification.id),
+                            "message": notification.message,
+                            "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                            "due_date": new_task.due_date.isoformat() if new_task.due_date else None,
+                        },
+                    })
 
         return await self.get_task(user_id, task_id)
 

@@ -237,7 +237,7 @@ class RecurrenceService:
         generated_tasks = []
         current_date = task.due_date.replace(tzinfo=None) if task.due_date.tzinfo else task.due_date
         now = datetime.now()
-        max_date = now + timedelta(days=7)
+        max_date = now + timedelta(days=max_days)
 
         while current_date < max_date:
             next_date = self.calculate_next_due_date(task)
@@ -289,7 +289,7 @@ class RecurrenceService:
                 task.due_date = next_date
                 current_date = next_date
             else:
-                if task.is_completed:
+                if task.is_completed and generated_tasks:
                     task.due_date = next_date
                 break
 

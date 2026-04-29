@@ -23,12 +23,15 @@ function markPushEcho(entityType: string, entityId: string) {
   pushEchoEntities.set(`${entityType}:${entityId}`, Date.now())
 }
 
-function isPushEcho(entityType: string): boolean {
+function isPushEcho(entityType: string, entityId?: string): boolean {
   const now = Date.now()
   for (const [key, ts] of pushEchoEntities) {
     if (now - ts > PUSH_ECHO_WINDOW_MS) {
       pushEchoEntities.delete(key)
     }
+  }
+  if (entityId) {
+    return pushEchoEntities.has(`${entityType}:${entityId}`)
   }
   for (const key of pushEchoEntities.keys()) {
     if (key.startsWith(`${entityType}:`)) return true
@@ -123,9 +126,14 @@ class SyncSSEListener {
       'verb_template_created', 'verb_template_updated', 'verb_template_deleted',
     ]
     for (const evt of events) {
-      this.es!.addEventListener(evt, () => {
+      this.es!.addEventListener(evt, (event) => {
         const resourceType = evt.split('_')[0] as EntityType
-        if (!isPushEcho(resourceType)) {
+        let entityId: string | undefined
+        try {
+          const data = JSON.parse((event as MessageEvent).data)
+          entityId = data[`${resourceType}_id`]
+        } catch {}
+        if (!isPushEcho(resourceType, entityId)) {
           this.onPull?.(evt)
         }
       })
