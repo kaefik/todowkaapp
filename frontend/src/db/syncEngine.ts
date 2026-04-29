@@ -548,9 +548,21 @@ async function executeMutationGroup(
 
           if (err.status === 409) {
             if (mutation.action === 'create') {
-              const table = getTableForType(mutation.entityType)
-              await table.delete(mutation.entityId).catch(() => {})
               await db.mutations.delete(mutation.id)
+              try {
+                const resource = RESOURCES.find(r => r.entityType === mutation.entityType)
+                if (resource) {
+                  const items = await fetchAllPages(resource.endpoint)
+                  const userId = useAuthStore.getState().user?.id
+                  if (userId) {
+                    await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+                  }
+                }
+                await getTableForType(mutation.entityType).delete(mutation.entityId).catch(() => {})
+              } catch (e) {
+                console.warn(`[SyncEngine] 409 recovery failed for ${mutation.entityType}/${mutation.entityId}:`, e)
+                await getTableForType(mutation.entityType).delete(mutation.entityId).catch(() => {})
+              }
               success = true
               break
             }
@@ -572,9 +584,16 @@ async function executeMutationGroup(
               await sleep(1000 * Math.pow(2, attempt))
               continue
             }
-            console.error(`[SyncEngine] 500 after 3 retries for ${mutation.entityType}/${mutation.entityId}`)
+            const newRetryCount = mutation.retryCount + 1
+            if (newRetryCount >= 10) {
+              console.error(`[SyncEngine] 500: max retries reached, discarding ${mutation.action} ${mutation.entityType}/${mutation.entityId}`)
+              await db.mutations.delete(mutation.id)
+              success = true
+              break
+            }
+            console.error(`[SyncEngine] 500 after 3 retries for ${mutation.entityType}/${mutation.entityId} (total: ${newRetryCount})`)
             await db.mutations.update(mutation.id, {
-              retryCount: mutation.retryCount + 1,
+              retryCount: newRetryCount,
               lastError: err.message,
             })
             break
