@@ -310,6 +310,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     await db.tasks.update(id, {
       isCompleted: !existing.isCompleted,
       completedAt: existing.isCompleted ? null : now,
+      gtdStatus: !existing.isCompleted ? 'completed' : 'inbox',
       updatedAt: now,
       _syncStatus: 'modified',
     })
