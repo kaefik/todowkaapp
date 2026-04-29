@@ -159,5 +159,15 @@
   "searchCaseSensitiveLabel": "Case sensitive",
   "searchCaseSensitiveHint": "Match exact letter case when searching (e.g. «Buy» and «buy» are different queries)",
   "searchWholeWordLabel": "Whole words only",
-  "searchWholeWordHint": "Match complete words only, without partial matches"
+  "searchWholeWordHint": "Match complete words only, without partial matches",
+  "exportData": "Export data",
+  "importData": "Import data",
+  "exportDescription": "Download all your data as a JSON file",
+  "importDescription": "Upload data from a JSON file. Existing records will be updated, new ones will be added.",
+  "exporting": "Exporting...",
+  "importing": "Importing...",
+  "exportSuccess": "Data exported successfully",
+  "importSuccess": "Imported: tasks — {{tasks}}, projects — {{projects}}",
+  "importError": "Failed to import data",
+  "confirmImport": "Import data? Existing records will be updated."
 }

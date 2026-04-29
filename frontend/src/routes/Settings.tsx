@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useLocalStorage } from '../hooks/useLocalStorage'
@@ -8,6 +8,8 @@ import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 import { VerbSettings } from '../components/VerbSettings'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
+import { exportImportApi } from '../api/exportImport'
+import { performInitialSync } from '../db/init'
 
 type Theme = 'light' | 'dark'
 type Tab = 'general' | 'appearance' | 'profile' | 'security' | 'verbs' | 'users'
@@ -71,6 +73,9 @@ function SettingsContent() {
   const [telegramValidationResult, setTelegramValidationResult] = useState<{ valid: boolean; bot_username?: string; bot_name?: string } | null>(null)
   const [telegramSaving, setTelegramSaving] = useState(false)
   const [telegramMessage, setTelegramMessage] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [exportLoading, setExportLoading] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -123,6 +128,41 @@ function SettingsContent() {
       addToast({ title: t('errorSaving'), body: '', type: 'error' })
     } finally {
       setSectionSaving(false)
+    }
+  }
+
+  const handleExport = async () => {
+    setExportLoading(true)
+    try {
+      await exportImportApi.exportData()
+      addToast({ title: t('exportSuccess'), body: '', type: 'success' })
+    } catch {
+      addToast({ title: t('importError'), body: '', type: 'error' })
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
+  const handleImport = async (file: File) => {
+    if (!confirm(t('confirmImport'))) return
+    setImportLoading(true)
+    try {
+      const report = await exportImportApi.importData(file)
+      addToast({
+        title: t('importSuccess', {
+          tasks: report.imported.tasks || 0,
+          projects: report.imported.projects || 0,
+        }),
+        body: '',
+        type: 'success',
+      })
+      if (user?.id) {
+        await performInitialSync(user.id)
+      }
+    } catch {
+      addToast({ title: t('importError'), body: '', type: 'error' })
+    } finally {
+      setImportLoading(false)
     }
   }
 
@@ -505,6 +545,43 @@ function SettingsContent() {
                   className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
                 >
                   {t('resetUiButton')}
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  {t('exportDescription')}
+                </p>
+                <button
+                  onClick={handleExport}
+                  disabled={exportLoading}
+                  className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50"
+                >
+                  {exportLoading ? t('exporting') : t('exportData')}
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  {t('importDescription')}
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleImport(file)
+                    e.target.value = ''
+                  }}
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importLoading}
+                  className="px-4 py-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-300 dark:border-indigo-700 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50"
+                >
+                  {importLoading ? t('importing') : t('importData')}
                 </button>
               </div>
             </div>
