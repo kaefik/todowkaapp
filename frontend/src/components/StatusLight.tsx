@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSyncStatus } from './SyncContext'
-import { useNotificationStore } from '../stores/notificationStore'
 import { useAuthStore } from '../stores/authStore'
 
 type Status = 'online' | 'offline' | 'syncing' | 'error' | 'queued' | 'loading'
@@ -130,7 +129,6 @@ function useBackendAlive(): boolean | null {
 
 function useConnectionStatus(): Status {
   const { isOnline, pendingCount, isSyncing } = useSyncStatus()
-  const sseState = useNotificationStore((s) => s.sseState)
   const backendAlive = useBackendAlive()
 
   if (!isOnline) return 'offline'
@@ -138,7 +136,6 @@ function useConnectionStatus(): Status {
   if (!backendAlive) return 'error'
   if (isSyncing) return 'syncing'
   if (pendingCount > 0) return 'queued'
-  if (sseState === 'error') return 'syncing'
   return 'online'
 }
 

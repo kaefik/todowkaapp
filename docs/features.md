@@ -286,12 +286,13 @@
 - Реализация на фронтенде: `useTasks.updateTask()` и `TaskEditModal.onSubmit()` автоматически переводят `inbox` → `active`
 - Файлы: `backend/app/models/task.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useGtdCounts.ts`, `frontend/src/components/AppLayout.tsx`, `frontend/src/components/TaskEditModal.tsx`, `frontend/src/components/TaskFilterPanel.tsx`, `frontend/src/router.tsx`, `frontend/src/routes/Active.tsx`
 
-#### Индикатор состояния соединения ✅ (Реализовано 16.04.2026, обновлено 22.04.2026)
+#### Индикатор состояния соединения ✅ (Реализовано 16.04.2026, обновлено 29.04.2026)
 - Светофор-индикатор (StatusLight) рядом с названием «Todowka» в хедере и сайдбаре
 - 6 состояний: загрузка (серый), онлайн (зелёный), офлайн (жёлтый), синхронизация (синий, пульсирует), ошибка (красный, пульсирует), очередь (оранжевый, пульсирует)
 - Tooltip при наведении с текстовым описанием состояния
 - Анимация пульсации для активных состояний (загрузка, синхронизация, ошибка, очередь)
-- Комбинирует данные из useSyncStatus (isOnline/pendingCount/isSyncing из SyncProvider), useNotificationStore (SSE error) и BackendHealthChecker (/health ping)
+- Комбинирует данные из useSyncStatus (isOnline/pendingCount/isSyncing из SyncProvider) и BackendHealthChecker (/health ping)
+- SSE-реконнект больше не вызывает ложный синий статус — индикатор показывает синий только при реальной синхронизации
 - Компонент: `frontend/src/components/StatusLight.tsx`
 - Интегрировано в AppLayout (мобильный хедер, мобильный сайдбар, десктопный сайдбар)
 
@@ -407,17 +408,23 @@
 - Компонент: `frontend/src/components/ColorPickerField.tsx`
 - Библиотека: `react-colorful`
 
-#### Local-first офлайн-режим на Dexie.js ✅ (Реализовано 18.04.2026, обновлено 22.04.2026)
+#### Local-first офлайн-режим на Dexie.js ✅ (Реализовано 18.04.2026, обновлено 29.04.2026)
 - Dexie.js (IndexedDB) — единственный источник истины на клиенте, React Query удалён
 - Full offline CRUD: задачи, проекты, области, контексты, теги — все операции работают без сети
 - SyncEngine: initialSync при логине, фоновый pull каждые 15 мин, push при восстановлении сети
-- **Реактивная отправка (push):** Dexie-хук на таблицу `mutations` автоматически запускает `push()` через 2 сек debounce после любого локального изменения — данные уходят на сервер без обновления страницы
-- **Реактивное получение (pull):** SyncSSEListener подписывается на `/api/sse/sync` и запускает `pull()` через 1.5 сек debounce при получении SSE-событий об изменениях на сервере (task_updated, task_created и др.)
+- **Реактивная отправка (push):** Dexie-хук на таблицу `mutations` автоматически запускает `push()` через 1.5 сек debounce после любого локального изменения — данные уходят на сервер без обновления страницы
+- **Реактивное получение (pull):** SyncSSEListener подписывается на `/api/sse/sync` и запускает `selectivePull()` через 3 сек debounce при получении SSE-событий об изменениях на сервере
+- **Эхо-подавление:** после push система запоминает отправленные entityType+entityId на 5 сек и пропускает SSE-события для этих сущностей — устраняет бессмысленный pull собственных изменений
+- **Выборочный pull:** SSE-событие `task_updated` триггерит pull только tasks, `project_updated` — только projects, и т.д. Полный pull — только по таймеру (15 мин) и при восстановлении онлайна
+- **Инкрементальный pull:** параметр `updated_since` во всех list-эндпоинтах бэкенда — сервер возвращает только записи, изменённые после указанной даты. lastPullAt хранится в syncMeta таблице Dexie
 - LWW (Last-Writer-Wins) conflict resolution: серверная версия приоритетнее при равных updatedAt
 - Soft-delete: записи помечаются `_syncStatus='deleted'`, исключаются из запросов
 - Мутации записываются в таблицу `mutations` для offline-очереди, отправляются при reconnect
 - Дедупликация мутаций: payload нескольких update-мутаций для одной сущности объединяются (merge), а не отбрасываются; update + toggle/move отправляются вместе
+- **Batch-маппинг задач:** `dbTasksToUiBatch` загружает все теги/чеклисты/проекты/контексты/области 5 параллельными запросами вместо N+1 индивидуальных — при 100 задачах 500+ запросов → 5
+- **Оптимизированные GTD-счётчики:** `useGtdCounts` делает 1 запрос к IndexedDB вместо 9 отдельных
 - Backend: принимает client-provided UUID (id в TaskCreate/ProjectCreate/AreaCreate/ContextCreate/TagCreate)
+- Backend: параметр `updated_since` в GET /tasks, GET /projects, GET /areas, GET /contexts, GET /tags, GET /verb-templates, GET /tasks/checklist/all
 - Автоматическая очистка Dexie при logout (по userId)
 - `httpClient.ts` упрощён: убраны offline queue, GET cache, toasts — только JWT auth + 401 refresh
 - Файлы: `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/db/conflictResolution.ts`, `frontend/src/db/mappers.ts`, `frontend/src/db/hooks.ts`, `frontend/src/db/init.ts`, `frontend/src/db/migration.ts`

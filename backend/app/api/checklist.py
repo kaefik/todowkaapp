@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -22,9 +22,16 @@ checklist_router = APIRouter(prefix="/tasks", tags=["checklist"])
 async def list_all_checklist_items(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    updated_since: str | None = Query(default=None),
 ) -> ChecklistItemListResponse:
+    from datetime import datetime as dt
+
+    parsed_updated_since = None
+    if updated_since:
+        parsed_updated_since = dt.fromisoformat(updated_since)
+
     service = ChecklistService(db)
-    items = await service.get_all_for_user(current_user.id)
+    items = await service.get_all_for_user(current_user.id, updated_since=parsed_updated_since)
     return ChecklistItemListResponse(
         items=[ChecklistItemResponse.model_validate(item) for item in items],
         total=len(items),

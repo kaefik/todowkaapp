@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import i18n from '../i18n'
 
 import { db, activeTasks } from '../db/database'
-import { dbTaskToUi, type UiTask } from '../db/mappers'
+import { dbTasksToUiBatch, dbTaskToUi, type UiTask } from '../db/mappers'
 import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 import type { Tag } from './useTags'
@@ -184,7 +184,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
     async () => {
       if (!user) return []
       const dbRecords = await activeTasks(user.id).toArray()
-      const uiTasks = await Promise.all(dbRecords.map(dbTaskToUi))
+      const uiTasks = await dbTasksToUiBatch(dbRecords)
       return applyFilters(uiTasks, filters)
     },
     [user?.id]

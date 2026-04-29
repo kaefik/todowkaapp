@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -17,7 +18,7 @@ class TagService:
 
     async def get_tags(
         self, user_id: UUID, limit: int = 100, offset: int = 0, search: str | None = None,
-        case_sensitive: bool = False, whole_word: bool = False,
+        case_sensitive: bool = False, whole_word: bool = False, updated_since: datetime | None = None,
     ) -> tuple[list[Tag], int]:
         base_where = [Tag.user_id == user_id]
         if search is not None:
@@ -29,6 +30,8 @@ class TagService:
                     whole_word=whole_word,
                 )
             )
+        if updated_since is not None:
+            base_where.append(Tag.updated_at >= updated_since)
 
         count_result = await self.db.execute(
             select(func.count(Tag.id)).where(*base_where)

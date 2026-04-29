@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react'
-import { pull, push } from '../db/syncEngine'
+import { pull, push, selectivePull, getResourceTypeFromSSE, type EntityType } from '../db/syncEngine'
 import { useAuthStore } from '../stores/authStore'
 import { db } from '../db/database'
 import { useOnlineStatus } from '../db/hooks'
 import { SyncContext } from './SyncContext'
 
 const PULL_INTERVAL = 15 * 60 * 1000
-const PUSH_DEBOUNCE_MS = 2000
-const PULL_DEBOUNCE_MS = 1500
+const PUSH_DEBOUNCE_MS = 1500
+const PULL_DEBOUNCE_MS = 3000
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pullTimer: ReturnType<typeof setTimeout> | null = null
@@ -15,6 +15,26 @@ let pushingRefGlobal = false
 let pullingRefGlobal = false
 let setIsSyncingFn: ((v: boolean) => void) | null = null
 let setLastSyncAtFn: ((d: Date) => void) | null = null
+
+const pushEchoEntities = new Map<string, number>()
+const PUSH_ECHO_WINDOW_MS = 5000
+
+function markPushEcho(entityType: string, entityId: string) {
+  pushEchoEntities.set(`${entityType}:${entityId}`, Date.now())
+}
+
+function isPushEcho(entityType: string): boolean {
+  const now = Date.now()
+  for (const [key, ts] of pushEchoEntities) {
+    if (now - ts > PUSH_ECHO_WINDOW_MS) {
+      pushEchoEntities.delete(key)
+    }
+  }
+  for (const key of pushEchoEntities.keys()) {
+    if (key.startsWith(`${entityType}:`)) return true
+  }
+  return false
+}
 
 function updateSyncing() {
   setIsSyncingFn?.(pushingRefGlobal || pullingRefGlobal)
@@ -27,8 +47,13 @@ function schedulePush() {
     pushingRefGlobal = true
     updateSyncing()
     try {
-      await push()
+      const sent = await push()
       setLastSyncAtFn?.(new Date())
+      if (sent) {
+        for (const { entityType, entityId } of sent) {
+          markPushEcho(entityType, entityId)
+        }
+      }
     } catch (err) {
       console.warn('[SyncProvider] Debounced push failed:', err)
     } finally {
@@ -38,14 +63,23 @@ function schedulePush() {
   }, PUSH_DEBOUNCE_MS)
 }
 
-function schedulePull(userId: string) {
+function schedulePull(userId: string, eventType?: string) {
   if (pullTimer) clearTimeout(pullTimer)
   pullTimer = setTimeout(async () => {
     if (pullingRefGlobal) return
     pullingRefGlobal = true
     updateSyncing()
     try {
-      await pull(userId)
+      if (eventType) {
+        const resourceType = getResourceTypeFromSSE(eventType)
+        if (resourceType) {
+          await selectivePull(userId, [resourceType])
+        } else {
+          await pull(userId)
+        }
+      } else {
+        await pull(userId)
+      }
       setLastSyncAtFn?.(new Date())
     } catch (err) {
       console.warn('[SyncProvider] Debounced pull failed:', err)
@@ -61,9 +95,9 @@ class SyncSSEListener {
   private retryTimeout: ReturnType<typeof setTimeout> | null = null
   private retryDelay = 2000
   private readonly maxRetryDelay = 30000
-  private onPull: (() => void) | null = null
+  private onPull: ((eventType: string) => void) | null = null
 
-  connect(onPull: () => void) {
+  connect(onPull: (eventType: string) => void) {
     this.disconnect()
     this.onPull = onPull
     this.retryDelay = 2000
@@ -90,7 +124,10 @@ class SyncSSEListener {
     ]
     for (const evt of events) {
       this.es!.addEventListener(evt, () => {
-        this.onPull?.()
+        const resourceType = evt.split('_')[0] as EntityType
+        if (!isPushEcho(resourceType)) {
+          this.onPull?.(evt)
+        }
       })
     }
 
@@ -155,8 +192,13 @@ export function SyncProvider({ children }: SyncProviderProps) {
     pushingRefGlobal = true
     updateSyncing()
     try {
-      await push()
+      const sent = await push()
       if (isMountedRef.current) setLastSyncAt(new Date())
+      if (sent) {
+        for (const { entityType, entityId } of sent) {
+          markPushEcho(entityType, entityId)
+        }
+      }
     } catch (err) {
       console.warn('[SyncProvider] Push failed:', err)
     } finally {
@@ -189,7 +231,7 @@ export function SyncProvider({ children }: SyncProviderProps) {
     }
 
     countPending()
-    const interval = setInterval(countPending, 5000)
+    const interval = setInterval(countPending, 15000)
 
     doPush()
     doPull()
@@ -204,8 +246,8 @@ export function SyncProvider({ children }: SyncProviderProps) {
       schedulePush()
     })
 
-    syncSSE.connect(() => {
-      if (userRef.current) schedulePull(userRef.current.id)
+    syncSSE.connect((eventType: string) => {
+      if (userRef.current) schedulePull(userRef.current.id, eventType)
     })
 
     return () => {

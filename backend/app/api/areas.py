@@ -35,11 +35,19 @@ async def list_areas(
     whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    updated_since: str | None = Query(default=None),
 ) -> AreaListResponse:
+    from datetime import datetime as dt
+
+    parsed_updated_since = None
+    if updated_since:
+        parsed_updated_since = dt.fromisoformat(updated_since)
+
     service = AreaService(db)
     areas, total = await service.get_areas(
         user_id=current_user.id, limit=limit, offset=offset, search=search,
         case_sensitive=case_sensitive, whole_word=whole_word,
+        updated_since=parsed_updated_since,
     )
     return AreaListResponse(items=areas, total=total)
 

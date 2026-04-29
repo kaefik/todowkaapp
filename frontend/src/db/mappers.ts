@@ -32,77 +32,102 @@ export interface UiTask {
   updated_at: string
 }
 
+export async function dbTasksToUiBatch(tasks: DbTask[]): Promise<UiTask[]> {
+  if (tasks.length === 0) return []
+
+  const allTagIds = [...new Set(tasks.flatMap(t => t.tagIds))]
+  const allProjectIds = [...new Set(tasks.map(t => t.projectId).filter(Boolean))] as string[]
+  const allContextIds = [...new Set(tasks.map(t => t.contextId).filter(Boolean))] as string[]
+  const allAreaIds = [...new Set(tasks.map(t => t.areaId).filter(Boolean))] as string[]
+  const allTaskIds = tasks.map(t => t.id)
+
+  const [tagRecords, checklistItems, projects, contexts, areas] = await Promise.all([
+    allTagIds.length > 0
+      ? db.tags.where('id').anyOf(allTagIds).filter(t => t._syncStatus !== 'deleted').toArray()
+      : Promise.resolve([]),
+    allTaskIds.length > 0
+      ? db.checklistItems.where('taskId').anyOf(allTaskIds).filter(i => i._syncStatus !== 'deleted').toArray()
+      : Promise.resolve([]),
+    allProjectIds.length > 0
+      ? db.projects.where('id').anyOf(allProjectIds).toArray()
+      : Promise.resolve([]),
+    allContextIds.length > 0
+      ? db.contexts.where('id').anyOf(allContextIds).toArray()
+      : Promise.resolve([]),
+    allAreaIds.length > 0
+      ? db.areas.where('id').anyOf(allAreaIds).toArray()
+      : Promise.resolve([]),
+  ])
+
+  const tagsMap = new Map(tagRecords.map(t => [t.id, t]))
+  const projectsMap = new Map(projects.filter(p => p._syncStatus !== 'deleted').map(p => [p.id, p]))
+  const contextsMap = new Map(contexts.filter(c => c._syncStatus !== 'deleted').map(c => [c.id, c]))
+  const areasMap = new Map(areas.filter(a => a._syncStatus !== 'deleted').map(a => [a.id, a]))
+
+  const checklistByTask = new Map<string, { total: number; completed: number }>()
+  for (const item of checklistItems) {
+    const existing = checklistByTask.get(item.taskId) ?? { total: 0, completed: 0 }
+    existing.total++
+    if (item.isCompleted) existing.completed++
+    checklistByTask.set(item.taskId, existing)
+  }
+
+  return tasks.map(task => {
+    const taskTags = task.tagIds
+      .map(id => tagsMap.get(id))
+      .filter(Boolean)
+      .map(t => ({
+        id: t!.id, name: t!.name, color: t!.color,
+        user_id: t!.userId, created_at: t!.createdAt, updated_at: t!.updatedAt,
+      }))
+
+    const p = task.projectId ? projectsMap.get(task.projectId) : null
+    const project = p ? { id: p.id, name: p.name, color: p.color, is_active: p.isActive } : null
+
+    const c = task.contextId ? contextsMap.get(task.contextId) : null
+    const context = c ? { id: c.id, name: c.name, color: c.color, icon: c.icon } : null
+
+    const a = task.areaId ? areasMap.get(task.areaId) : null
+    const area = a ? { id: a.id, name: a.name, color: a.color } : null
+
+    const checklist = checklistByTask.get(task.id) ?? { total: 0, completed: 0 }
+
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      completed: task.isCompleted,
+      gtd_status: task.gtdStatus,
+      context_id: task.contextId,
+      area_id: task.areaId,
+      project_id: task.projectId,
+      project,
+      context,
+      area,
+      position: task.position,
+      due_date: task.dueDate,
+      notes: task.notes,
+      recurrence_type: task.recurrenceType,
+      recurrence_config: task.recurrenceConfig ? JSON.parse(task.recurrenceConfig) : null,
+      recurrence_end_date: task.recurrenceEndDate,
+      reminder_time: task.reminderTime,
+      reminder_offsets: task.reminderOffsets ? JSON.parse(task.reminderOffsets) : null,
+      reminder_fired: task.reminderFired,
+      deadline_notified: task.deadlineNotified,
+      is_recurring: task.isRecurring,
+      tags: taskTags,
+      checklist_total: checklist.total,
+      checklist_completed: checklist.completed,
+      user_id: task.userId,
+      created_at: task.createdAt,
+      updated_at: task.updatedAt,
+    }
+  })
+}
+
 export async function dbTaskToUi(task: DbTask): Promise<UiTask> {
-  let tags: Tag[] = []
-  if (task.tagIds.length > 0) {
-    const tagRecords = await db.tags.where('id').anyOf(task.tagIds).toArray()
-    tags = tagRecords
-      .filter(t => t._syncStatus !== 'deleted')
-      .map(t => ({ id: t.id, name: t.name, color: t.color, user_id: t.userId, created_at: t.createdAt, updated_at: t.updatedAt }))
-  }
-
-  const checklistItems = await db.checklistItems
-    .where('taskId')
-    .equals(task.id)
-    .filter(i => i._syncStatus !== 'deleted')
-    .toArray()
-  const checklistTotal = checklistItems.length
-  const checklistCompleted = checklistItems.filter(i => i.isCompleted).length
-
-  let project = null
-  if (task.projectId) {
-    const p = await db.projects.get(task.projectId)
-    if (p && p._syncStatus !== 'deleted') {
-      project = { id: p.id, name: p.name, color: p.color, is_active: p.isActive }
-    }
-  }
-
-  let context = null
-  if (task.contextId) {
-    const c = await db.contexts.get(task.contextId)
-    if (c && c._syncStatus !== 'deleted') {
-      context = { id: c.id, name: c.name, color: c.color, icon: c.icon }
-    }
-  }
-
-  let area = null
-  if (task.areaId) {
-    const a = await db.areas.get(task.areaId)
-    if (a && a._syncStatus !== 'deleted') {
-      area = { id: a.id, name: a.name, color: a.color }
-    }
-  }
-
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    completed: task.isCompleted,
-    gtd_status: task.gtdStatus,
-    context_id: task.contextId,
-    area_id: task.areaId,
-    project_id: task.projectId,
-    project,
-    context,
-    area,
-    position: task.position,
-    due_date: task.dueDate,
-    notes: task.notes,
-    recurrence_type: task.recurrenceType,
-    recurrence_config: task.recurrenceConfig ? JSON.parse(task.recurrenceConfig) : null,
-    recurrence_end_date: task.recurrenceEndDate,
-    reminder_time: task.reminderTime,
-    reminder_offsets: task.reminderOffsets ? JSON.parse(task.reminderOffsets) : null,
-    reminder_fired: task.reminderFired,
-    deadline_notified: task.deadlineNotified,
-    is_recurring: task.isRecurring,
-    tags,
-    checklist_total: checklistTotal,
-    checklist_completed: checklistCompleted,
-    user_id: task.userId,
-    created_at: task.createdAt,
-    updated_at: task.updatedAt,
-  }
+  const results = await dbTasksToUiBatch([task])
+  return results[0]
 }
 
 export function apiTaskToDb(

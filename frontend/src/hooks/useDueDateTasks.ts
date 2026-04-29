@@ -1,7 +1,7 @@
 import Dexie from 'dexie'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, activeTasks } from '../db/database'
-import { dbTaskToUi } from '../db/mappers'
+import { dbTasksToUiBatch } from '../db/mappers'
 import { useAuthStore } from '../stores/authStore'
 import type { Task } from './useTasks'
 
@@ -61,7 +61,7 @@ export function useDueDateTasks(dayOffset: number): {
       )
       .toArray()
 
-    const uiTasks = await Promise.all(dbRecords.map(dbTaskToUi))
+    const uiTasks = await dbTasksToUiBatch(dbRecords)
     uiTasks.sort((a, b) => a.position - b.position)
 
     return { tasks: uiTasks as Task[], count: uiTasks.length }

@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import Dexie from 'dexie'
 import { db } from '../db/database'
+import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
 import { getDayBounds } from './useDueDateTasks'
 import type { GtdStatus } from './useTasks'
@@ -30,66 +29,54 @@ interface UseGtdCountsReturn {
 }
 
 const defaultCounts: GtdCounts = {
-  inbox: 0,
-  active: 0,
-  next: 0,
-  waiting: 0,
-  someday: 0,
-  completed: 0,
-  trash: 0,
-  today: 0,
-  tomorrow: 0,
+  inbox: 0, active: 0, next: 0, waiting: 0, someday: 0,
+  completed: 0, trash: 0, today: 0, tomorrow: 0,
 }
-
-const GTD_STATUSES: GtdStatus[] = ['inbox', 'active', 'next', 'waiting', 'someday', 'completed', 'trash']
 
 export function useGtdCounts(): UseGtdCountsReturn {
   const user = useAuthStore(s => s.user)
 
-  const counts = useLiveQuery(async () => {
+  const { data: counts, isLoading } = useDexieQuery(async () => {
     if (!user) return defaultCounts
 
+    const allTasks = await db.tasks
+      .where('userId')
+      .equals(user.id)
+      .filter(t => t._syncStatus !== 'deleted')
+      .toArray()
+
     const result: GtdCounts = { ...defaultCounts }
-    for (const status of GTD_STATUSES) {
-      result[status] = await db.tasks
-        .where('[userId+gtdStatus]')
-        .equals([user.id, status])
-        .filter(t => t._syncStatus !== 'deleted')
-        .count()
+    const statusMap: Record<string, number> = {}
+    for (const t of allTasks) {
+      statusMap[t.gtdStatus] = (statusMap[t.gtdStatus] ?? 0) + 1
     }
+    result.inbox = statusMap['inbox'] ?? 0
+    result.active = statusMap['active'] ?? 0
+    result.next = statusMap['next'] ?? 0
+    result.waiting = statusMap['waiting'] ?? 0
+    result.someday = statusMap['someday'] ?? 0
+    result.completed = statusMap['completed'] ?? 0
+    result.trash = statusMap['trash'] ?? 0
 
     const todayBounds = getDayBounds(user.timezone, 0)
-    result.today = await db.tasks
-      .where('[userId+gtdStatus]')
-      .between([user.id, Dexie.minKey], [user.id, Dexie.maxKey])
-      .filter(t =>
-        t._syncStatus !== 'deleted' &&
-        !t.isCompleted &&
-        t.dueDate !== null &&
-        t.dueDate >= todayBounds.start &&
-        t.dueDate <= todayBounds.end
-      )
-      .count()
-
     const tomorrowBounds = getDayBounds(user.timezone, 1)
-    result.tomorrow = await db.tasks
-      .where('[userId+gtdStatus]')
-      .between([user.id, Dexie.minKey], [user.id, Dexie.maxKey])
-      .filter(t =>
-        t._syncStatus !== 'deleted' &&
-        !t.isCompleted &&
-        t.dueDate !== null &&
-        t.dueDate >= tomorrowBounds.start &&
-        t.dueDate <= tomorrowBounds.end
-      )
-      .count()
+
+    let todayCount = 0
+    let tomorrowCount = 0
+    for (const t of allTasks) {
+      if (t.isCompleted || !t.dueDate) continue
+      if (t.dueDate >= todayBounds.start && t.dueDate <= todayBounds.end) todayCount++
+      if (t.dueDate >= tomorrowBounds.start && t.dueDate <= tomorrowBounds.end) tomorrowCount++
+    }
+    result.today = todayCount
+    result.tomorrow = tomorrowCount
 
     return result
-  }, [user?.id], defaultCounts)
+  }, [user?.id])
 
   const refetch = useCallback(async () => {}, [])
 
-  return { counts: counts ?? defaultCounts, isLoading: counts === undefined, error: null, refetch }
+  return { counts: counts ?? defaultCounts, isLoading, error: null, refetch }
 }
 
 export const GTD_STATUS_LABELS: Record<GtdStatus, string> = {

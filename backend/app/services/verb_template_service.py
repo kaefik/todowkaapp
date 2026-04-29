@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -22,14 +23,18 @@ class VerbTemplateService:
         self.db = db
 
     async def get_verb_templates(
-        self, user_id: UUID, limit: int = 100, offset: int = 0
+        self, user_id: UUID, limit: int = 100, offset: int = 0, updated_since: datetime | None = None,
     ) -> tuple[list[VerbTemplate], int]:
-        count_q = select(func.count()).select_from(VerbTemplate).where(VerbTemplate.user_id == user_id)
+        base_where = [VerbTemplate.user_id == user_id]
+        if updated_since is not None:
+            base_where.append(VerbTemplate.updated_at >= updated_since)
+
+        count_q = select(func.count()).select_from(VerbTemplate).where(*base_where)
         total = (await self.db.execute(count_q)).scalar() or 0
 
         q = (
             select(VerbTemplate)
-            .where(VerbTemplate.user_id == user_id)
+            .where(*base_where)
             .order_by(VerbTemplate.position, VerbTemplate.created_at)
             .limit(limit)
             .offset(offset)

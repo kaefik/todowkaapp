@@ -6,7 +6,28 @@ import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
 import i18n from '../i18n'
 
-type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem'
+export type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem'
+
+export type ResourceType = EntityType
+
+export interface PushedEntity {
+  entityType: EntityType
+  entityId: string
+}
+
+const SSE_TO_RESOURCE: Record<string, ResourceType> = {
+  task_updated: 'task',
+  checklist_updated: 'checklistItem',
+  project_created: 'project', project_updated: 'project', project_deleted: 'project',
+  area_created: 'area', area_updated: 'area', area_deleted: 'area',
+  context_created: 'context', context_updated: 'context', context_deleted: 'context',
+  tag_created: 'tag', tag_updated: 'tag', tag_deleted: 'tag',
+  verb_template_created: 'verbTemplate', verb_template_updated: 'verbTemplate', verb_template_deleted: 'verbTemplate',
+}
+
+export function getResourceTypeFromSSE(eventType: string): ResourceType | null {
+  return SSE_TO_RESOURCE[eventType] ?? null
+}
 
 interface SyncResourceConfig {
   endpoint: string
@@ -131,15 +152,17 @@ const RESOURCES: SyncResourceConfig[] = [
   },
 ]
 
-async function fetchAllPages(endpoint: string): Promise<Record<string, unknown>[]> {
+async function fetchAllPages(endpoint: string, updatedSince?: string | null): Promise<Record<string, unknown>[]> {
   const allItems: Record<string, unknown>[] = []
   let offset = 0
   const limit = 100
 
   while (true) {
-    const response = await httpClient.get<{ items: Record<string, unknown>[]; total: number }>(
-      `${endpoint}?limit=${limit}&offset=${offset}`
-    )
+    let url = `${endpoint}?limit=${limit}&offset=${offset}`
+    if (updatedSince) {
+      url += `&updated_since=${encodeURIComponent(updatedSince)}`
+    }
+    const response = await httpClient.get<{ items: Record<string, unknown>[]; total: number }>(url)
     const { items, total } = response.data
     allItems.push(...items)
     offset += limit
@@ -276,14 +299,28 @@ async function initialSyncInternal(userId: string): Promise<void> {
     const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
     await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
   }))
+  await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
 }
 
 export async function pull(userId: string): Promise<void> {
+  const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
   await Promise.all(RESOURCES.map(async (resource) => {
-    const items = await fetchAllPages(resource.endpoint)
+    const items = await fetchAllPages(resource.endpoint, since)
     const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
     await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
   }))
+  await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
+}
+
+export async function selectivePull(userId: string, resourceTypes: ResourceType[]): Promise<void> {
+  const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
+  const resources = RESOURCES.filter(r => resourceTypes.includes(r.entityType))
+  await Promise.all(resources.map(async (resource) => {
+    const items = await fetchAllPages(resource.endpoint, since)
+    const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
+    await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
+  }))
+  await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
 }
 
 interface MergedMutations {
@@ -425,12 +462,12 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function push(): Promise<void> {
+export async function push(): Promise<PushedEntity[]> {
   const userId = useAuthStore.getState().user?.id
-  if (!userId) return
+  if (!userId) return []
 
   const allMutations = await db.mutations.orderBy('timestamp').toArray()
-  if (allMutations.length === 0) return
+  if (allMutations.length === 0) return []
 
   const { toSend, toDelete } = deduplicateMutations(allMutations)
 
@@ -452,6 +489,18 @@ export async function push(): Promise<void> {
     const batch = groupEntries.slice(i, i + BATCH_SIZE)
     await Promise.allSettled(batch.map(group => executeMutationGroup(group)))
   }
+
+  const pushedEntities: PushedEntity[] = []
+  const seen = new Set<string>()
+  for (const m of toSend) {
+    const key = `${m.entityType}:${m.entityId}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      pushedEntities.push({ entityType: m.entityType, entityId: m.entityId })
+    }
+  }
+
+  return pushedEntities
 }
 
 async function executeMutationGroup(

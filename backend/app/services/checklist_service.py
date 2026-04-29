@@ -13,12 +13,15 @@ class ChecklistService:
     def __init__(self, db: Annotated[AsyncSession, "Async database session"]):
         self.db = db
 
-    async def get_all_for_user(self, user_id: str) -> list[ChecklistItem]:
+    async def get_all_for_user(self, user_id: str, updated_since: datetime | None = None) -> list[ChecklistItem]:
         from app.models.task import Task
+        base_where = [Task.user_id == str(user_id)]
+        if updated_since is not None:
+            base_where.append(ChecklistItem.updated_at >= updated_since)
         result = await self.db.execute(
             select(ChecklistItem)
             .join(Task, ChecklistItem.task_id == Task.id)
-            .where(Task.user_id == str(user_id))
+            .where(*base_where)
             .order_by(ChecklistItem.created_at.asc())
         )
         return list(result.scalars().all())

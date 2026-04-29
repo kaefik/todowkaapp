@@ -4,32 +4,49 @@ import type { DbTask, DbTag, SyncStatus } from '../database'
 const {
   mockTagsWhere,
   mockChecklistItemsWhere,
-  mockProjectsGet,
-  mockContextsGet,
-  mockAreasGet,
+  mockProjectsWhere,
+  mockContextsWhere,
+  mockAreasWhere,
 } = vi.hoisted(() => {
-  const mockTagsWhere = {
-    anyOf: vi.fn().mockReturnThis(),
-    toArray: vi.fn().mockResolvedValue([]),
+  const makeWhereMock = () => {
+    let _items: unknown[] = []
+    let _filterFn: ((item: unknown) => boolean) | null = null
+    const self: Record<string, unknown> = {
+      anyOf: vi.fn().mockImplementation(() => self),
+      filter: vi.fn().mockImplementation((fn: (item: unknown) => boolean) => {
+        _filterFn = fn
+        return self
+      }),
+      toArray: vi.fn().mockImplementation(() => {
+        let result = _items
+        if (_filterFn) result = result.filter(_filterFn)
+        _items = []
+        _filterFn = null
+        return Promise.resolve(result)
+      }),
+      __setItems(items: unknown[]) {
+        _items = items
+        _filterFn = null
+      },
+    }
+    return self as typeof self & { anyOf: ReturnType<typeof vi.fn>; filter: ReturnType<typeof vi.fn>; toArray: ReturnType<typeof vi.fn>; __setItems(items: unknown[]): void }
   }
-  const mockChecklistItemsWhere = {
-    equals: vi.fn().mockReturnThis(),
-    filter: vi.fn().mockReturnThis(),
-    toArray: vi.fn().mockResolvedValue([]),
+  return {
+    mockTagsWhere: makeWhereMock(),
+    mockChecklistItemsWhere: makeWhereMock(),
+    mockProjectsWhere: makeWhereMock(),
+    mockContextsWhere: makeWhereMock(),
+    mockAreasWhere: makeWhereMock(),
   }
-  const mockProjectsGet = vi.fn().mockResolvedValue(undefined)
-  const mockContextsGet = vi.fn().mockResolvedValue(undefined)
-  const mockAreasGet = vi.fn().mockResolvedValue(undefined)
-  return { mockTagsWhere, mockChecklistItemsWhere, mockProjectsGet, mockContextsGet, mockAreasGet }
 })
 
 vi.mock('../database', () => ({
   db: {
     tags: { where: vi.fn().mockReturnValue(mockTagsWhere) },
     checklistItems: { where: vi.fn().mockReturnValue(mockChecklistItemsWhere) },
-    projects: { get: (...args: unknown[]) => mockProjectsGet(...args) },
-    contexts: { get: (...args: unknown[]) => mockContextsGet(...args) },
-    areas: { get: (...args: unknown[]) => mockAreasGet(...args) },
+    projects: { where: vi.fn().mockReturnValue(mockProjectsWhere) },
+    contexts: { where: vi.fn().mockReturnValue(mockContextsWhere) },
+    areas: { where: vi.fn().mockReturnValue(mockAreasWhere) },
   },
 }))
 
@@ -97,11 +114,11 @@ function makeDbTask(overrides: Partial<DbTask> = {}): DbTask {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockTagsWhere.toArray.mockResolvedValue([])
-  mockChecklistItemsWhere.toArray.mockResolvedValue([])
-  mockProjectsGet.mockResolvedValue(undefined)
-  mockContextsGet.mockResolvedValue(undefined)
-  mockAreasGet.mockResolvedValue(undefined)
+  mockTagsWhere.__setItems([])
+  mockChecklistItemsWhere.__setItems([])
+  mockProjectsWhere.__setItems([])
+  mockContextsWhere.__setItems([])
+  mockAreasWhere.__setItems([])
 })
 
 describe('apiTaskToDb', () => {
@@ -185,7 +202,7 @@ describe('dbTaskToUi', () => {
       { id: 'tag1', userId: 'u1', name: 'Tag1', color: 'red', createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', _syncStatus: 'synced', _lastSyncedAt: null },
       { id: 'tag2', userId: 'u1', name: 'Tag2', color: null, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', _syncStatus: 'deleted', _lastSyncedAt: null },
     ]
-    mockTagsWhere.toArray.mockResolvedValueOnce(tagRecords)
+    mockTagsWhere.__setItems(tagRecords)
 
     const ui = await dbTaskToUi(makeDbTask())
     expect(ui.tags).toHaveLength(1)
@@ -194,27 +211,27 @@ describe('dbTaskToUi', () => {
   })
 
   it('joins project from db.projects excluding soft-deleted', async () => {
-    mockProjectsGet.mockResolvedValueOnce({
-      id: 'proj1', name: 'My Project', color: 'blue', isActive: true, _syncStatus: 'synced',
-    })
+    mockProjectsWhere.__setItems([
+      { id: 'proj1', name: 'My Project', color: 'blue', isActive: true, _syncStatus: 'synced' },
+    ])
 
     const ui = await dbTaskToUi(makeDbTask())
     expect(ui.project).toEqual({ id: 'proj1', name: 'My Project', color: 'blue', is_active: true })
   })
 
   it('joins context from db.contexts excluding soft-deleted', async () => {
-    mockContextsGet.mockResolvedValueOnce({
-      id: 'ctx1', name: 'Work', color: 'green', icon: '💼', _syncStatus: 'synced',
-    })
+    mockContextsWhere.__setItems([
+      { id: 'ctx1', name: 'Work', color: 'green', icon: '💼', _syncStatus: 'synced' },
+    ])
 
     const ui = await dbTaskToUi(makeDbTask())
     expect(ui.context).toEqual({ id: 'ctx1', name: 'Work', color: 'green', icon: '💼' })
   })
 
   it('computes checklist_total and checklist_completed dynamically', async () => {
-    mockChecklistItemsWhere.toArray.mockResolvedValueOnce([
-      { id: 'c1', isCompleted: true, _syncStatus: 'synced' } as any,
-      { id: 'c2', isCompleted: false, _syncStatus: 'synced' } as any,
+    mockChecklistItemsWhere.__setItems([
+      { id: 'c1', taskId: 't1', isCompleted: true, _syncStatus: 'synced' } as any,
+      { id: 'c2', taskId: 't1', isCompleted: false, _syncStatus: 'synced' } as any,
     ])
 
     const ui = await dbTaskToUi(makeDbTask())
@@ -223,12 +240,12 @@ describe('dbTaskToUi', () => {
   })
 
   it('excludes soft-deleted projects and contexts', async () => {
-    mockProjectsGet.mockResolvedValueOnce({
-      id: 'proj1', name: 'Deleted', color: null, isActive: false, _syncStatus: 'deleted',
-    })
-    mockContextsGet.mockResolvedValueOnce({
-      id: 'ctx1', name: 'Deleted', color: null, icon: null, _syncStatus: 'deleted',
-    })
+    mockProjectsWhere.__setItems([
+      { id: 'proj1', name: 'Deleted', color: null, isActive: false, _syncStatus: 'deleted' },
+    ])
+    mockContextsWhere.__setItems([
+      { id: 'ctx1', name: 'Deleted', color: null, icon: null, _syncStatus: 'deleted' },
+    ])
 
     const ui = await dbTaskToUi(makeDbTask())
     expect(ui.project).toBeNull()

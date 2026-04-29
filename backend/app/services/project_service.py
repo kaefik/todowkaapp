@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -47,7 +48,7 @@ class ProjectService:
 
     async def get_projects(
         self, user_id: UUID, limit: int = 100, offset: int = 0, search: str | None = None,
-        case_sensitive: bool = False, whole_word: bool = False,
+        case_sensitive: bool = False, whole_word: bool = False, updated_since: datetime | None = None,
     ) -> tuple[list[Project], int]:
         base_where = [Project.user_id == user_id]
         if search is not None:
@@ -59,6 +60,8 @@ class ProjectService:
                     whole_word=whole_word,
                 )
             )
+        if updated_since is not None:
+            base_where.append(Project.updated_at >= updated_since)
 
         count_result = await self.db.execute(
             select(func.count(Project.id)).where(*base_where)

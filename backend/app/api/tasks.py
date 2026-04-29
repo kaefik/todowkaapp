@@ -65,15 +65,19 @@ async def list_tasks(
     whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    updated_since: str | None = Query(default=None),
 ) -> TaskListResponse:
     from datetime import datetime as dt
 
     parsed_due_from = None
     parsed_due_to = None
+    parsed_updated_since = None
     if due_date_from:
         parsed_due_from = dt.fromisoformat(due_date_from)
     if due_date_to:
         parsed_due_to = dt.fromisoformat(due_date_to)
+    if updated_since:
+        parsed_updated_since = dt.fromisoformat(updated_since)
 
     service = TaskService(db)
     tasks, total = await service.get_tasks(
@@ -94,6 +98,7 @@ async def list_tasks(
         no_project=no_project,
         case_sensitive=case_sensitive,
         whole_word=whole_word,
+        updated_since=parsed_updated_since,
     )
     checklist_service = ChecklistService(db)
     items = []

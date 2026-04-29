@@ -32,9 +32,19 @@ async def list_verb_templates(
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    updated_since: str | None = Query(default=None),
 ) -> VerbTemplateListResponse:
+    from datetime import datetime as dt
+
+    parsed_updated_since = None
+    if updated_since:
+        parsed_updated_since = dt.fromisoformat(updated_since)
+
     service = VerbTemplateService(db)
-    items, total = await service.get_verb_templates(user_id=current_user.id, limit=limit, offset=offset)
+    items, total = await service.get_verb_templates(
+        user_id=current_user.id, limit=limit, offset=offset,
+        updated_since=parsed_updated_since,
+    )
     return VerbTemplateListResponse(
         items=[VerbTemplateResponse.model_validate(v) for v in items],
         total=total,

@@ -38,6 +38,7 @@ class TaskService:
         no_project: bool = False,
         case_sensitive: bool = False,
         whole_word: bool = False,
+        updated_since: datetime | None = None,
     ) -> tuple[list[Task], int]:
         base_where = [Task.user_id == user_id]
 
@@ -57,6 +58,8 @@ class TaskService:
             base_where.append(Task.due_date >= due_date_from)
         if due_date_to is not None:
             base_where.append(Task.due_date <= due_date_to)
+        if updated_since is not None:
+            base_where.append(Task.updated_at >= updated_since)
         if search is not None:
             base_where.append(
                 search_condition(

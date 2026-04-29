@@ -37,11 +37,19 @@ async def list_projects(
     whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    updated_since: str | None = Query(default=None),
 ) -> ProjectListResponse:
+    from datetime import datetime as dt
+
+    parsed_updated_since = None
+    if updated_since:
+        parsed_updated_since = dt.fromisoformat(updated_since)
+
     service = ProjectService(db)
     projects, total = await service.get_projects(
         user_id=current_user.id, limit=limit, offset=offset, search=search,
         case_sensitive=case_sensitive, whole_word=whole_word,
+        updated_since=parsed_updated_since,
     )
     items = []
     for project in projects:

@@ -29,11 +29,19 @@ async def list_tags(
     whole_word: bool = Query(default=False),
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
+    updated_since: str | None = Query(default=None),
 ) -> TagListResponse:
+    from datetime import datetime as dt
+
+    parsed_updated_since = None
+    if updated_since:
+        parsed_updated_since = dt.fromisoformat(updated_since)
+
     service = TagService(db)
     tags, total = await service.get_tags(
         user_id=current_user.id, limit=limit, offset=offset, search=search,
         case_sensitive=case_sensitive, whole_word=whole_word,
+        updated_since=parsed_updated_since,
     )
     return TagListResponse(items=tags, total=total)
 

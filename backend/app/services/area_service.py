@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -16,7 +17,7 @@ class AreaService:
 
     async def get_areas(
         self, user_id: UUID, limit: int = 100, offset: int = 0, search: str | None = None,
-        case_sensitive: bool = False, whole_word: bool = False,
+        case_sensitive: bool = False, whole_word: bool = False, updated_since: datetime | None = None,
     ) -> tuple[list[Area], int]:
         base_where = [Area.user_id == user_id]
         if search is not None:
@@ -28,6 +29,8 @@ class AreaService:
                     whole_word=whole_word,
                 )
             )
+        if updated_since is not None:
+            base_where.append(Area.updated_at >= updated_since)
 
         count_result = await self.db.execute(
             select(func.count(Area.id)).where(*base_where)
