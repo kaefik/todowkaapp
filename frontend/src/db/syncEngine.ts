@@ -10,7 +10,7 @@ type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplat
 
 interface SyncResourceConfig {
   endpoint: string
-  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags | typeof db.verbTemplates
+  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags | typeof db.verbTemplates | typeof db.checklistItems
   entityType: EntityType
   transform: (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }
 }
@@ -105,6 +105,24 @@ const RESOURCES: SyncResourceConfig[] = [
       text: item.text as string,
       icon: item.icon as string,
       position: (item.position as number) ?? 0,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+  {
+    endpoint: '/tasks/checklist/all',
+    table: db.checklistItems,
+    entityType: 'checklistItem',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      taskId: item.task_id as string,
+      title: item.title as string,
+      isCompleted: (item.is_completed as boolean) ?? false,
+      position: (item.position as number) ?? 0,
+      completedAt: (item.completed_at as string | null) ?? null,
       createdAt: (item.created_at as string) ?? new Date().toISOString(),
       updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
       _syncStatus: 'synced' as SyncStatus,

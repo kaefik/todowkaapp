@@ -6,11 +6,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.schemas.checklist import ChecklistItemCreate, ChecklistItemResponse, ChecklistItemUpdate
+from app.schemas.checklist import (
+    ChecklistItemCreate,
+    ChecklistItemListResponse,
+    ChecklistItemResponse,
+    ChecklistItemUpdate,
+)
 from app.services.checklist_service import ChecklistService
 from app.services.task_service import TaskService
 
 checklist_router = APIRouter(prefix="/tasks", tags=["checklist"])
+
+
+@checklist_router.get("/checklist/all", response_model=ChecklistItemListResponse)
+async def list_all_checklist_items(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ChecklistItemListResponse:
+    service = ChecklistService(db)
+    items = await service.get_all_for_user(current_user.id)
+    return ChecklistItemListResponse(
+        items=[ChecklistItemResponse.model_validate(item) for item in items],
+        total=len(items),
+    )
 
 
 async def _publish_checklist_event(user_id, task_id: str, action: str):

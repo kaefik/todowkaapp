@@ -33,7 +33,3 @@ class TagResponse(BaseResponseSchema):
 class TagListResponse(BaseModel):
     items: list[TagResponse]
     total: int
-
-
-class TaskTagOperation(BaseModel):
-    tag_id: str = Field(max_length=36)

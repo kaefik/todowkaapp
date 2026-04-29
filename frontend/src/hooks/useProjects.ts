@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
 
-import { httpClient } from '../api/httpClient'
 import { db, activeTable, activeTasks, activeTasksByProject } from '../db/database'
 import { useDexieQuery } from '../db/hooks'
 import { useAuthStore } from '../stores/authStore'
@@ -183,26 +182,23 @@ export async function reorderProjects(items: { id: string; sort_order: number }[
   const user = useAuthStore.getState().user
   if (!user) return
 
+  const now = new Date().toISOString()
   for (const item of items) {
     await db.projects.update(item.id, {
       sortOrder: item.sort_order,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
       _syncStatus: 'modified',
     })
-  }
-
-  try {
-    await httpClient.put('/projects/reorder', {
-      items: items.map(i => ({ id: i.id, sort_order: i.sort_order })),
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'project',
+      entityId: item.id,
+      action: 'update',
+      payload: JSON.stringify({ sort_order: item.sort_order }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
     })
-    for (const item of items) {
-      await db.projects.update(item.id, {
-        _syncStatus: 'synced',
-        _lastSyncedAt: new Date().toISOString(),
-      })
-    }
-  } catch {
-    // will be synced later via SyncEngine push
   }
 }
 

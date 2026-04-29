@@ -381,6 +381,14 @@
 - Хуки: `useDexieQuery`, `useOnlineStatus` (из `frontend/src/db/hooks.ts`), `useSyncStatus` (из SyncProvider)
 - Удалены: React Query (`@tanstack/react-query` и сопутствующие пакеты), `idb`, `queryClient.ts`, `useOfflineQueue.ts`, `useLocalTaskChanges.ts`, `localTaskChanges.ts`, `indexedDB.ts`, `sseSyncManager.ts`, `syncStore.ts`, `useSyncSSE.ts`, `SyncIndicator.tsx`
 - Тесты: `frontend/src/db/__tests__/conflictResolution.test.ts` (7 тестов), `frontend/src/db/__tests__/mappers.test.ts` (11 тестов)
+- Исправления синхронизации ✅ (29.04.2026):
+  - Checklist-синхронизация: глобальный эндпоинт `GET /tasks/checklist/all`, checklistItem добавлен в RESOURCES для pull, все мутации включают `task_id`
+  - Reorder проектов/областей: SSE-событие `reordered`, создание update-мутаций вместо прямого API-вызова
+  - Verb templates SSE: события `verb_template_created/updated/deleted/reordered` во все эндпоинты + SSE-слушатели
+  - Stop recurrence: обновление IndexedDB + мутация вместо прямого API-вызова
+  - Удалены мёртвые SSE-слушатели (task_created, task_deleted, task_moved, task_toggled, task_reordered, recurrence_stopped, trash_cleared)
+  - Удалены неиспользуемые эндпоинты `add_tag_to_task` / `remove_tag_from_task`
+  - Файлы: `backend/app/api/verb_templates.py`, `backend/app/api/projects.py`, `backend/app/api/areas.py`, `backend/app/api/checklist.py`, `backend/app/services/checklist_service.py`, `backend/app/schemas/checklist.py`, `backend/app/schemas/tag.py`, `backend/app/api/tags.py`, `frontend/src/db/syncEngine.ts`, `frontend/src/db/database.ts`, `frontend/src/components/SyncProvider.tsx`, `frontend/src/hooks/useProjects.ts`, `frontend/src/hooks/useAreas.ts`, `frontend/src/hooks/useRecurrences.ts`, `frontend/src/hooks/useChecklist.ts`, `frontend/src/hooks/useSubtasks.ts`
 
 #### Progressive Web App (PWA)
 - Установка приложения на устройство (настольное или мобильное)

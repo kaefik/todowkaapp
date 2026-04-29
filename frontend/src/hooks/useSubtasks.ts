@@ -49,6 +49,7 @@ export function useSubtasks(taskId: string | null): UseSubtasksReturn {
     await db.checklistItems.add({
       id,
       taskId,
+      userId: '',
       title,
       isCompleted: false,
       position: existing,
@@ -63,7 +64,7 @@ export function useSubtasks(taskId: string | null): UseSubtasksReturn {
       entityType: 'checklistItem',
       entityId: id,
       action: 'create',
-      payload: JSON.stringify({ taskId, title }),
+      payload: JSON.stringify({ task_id: taskId, title, position: existing, id }),
       timestamp: Date.now(),
       retryCount: 0,
       lastError: null,
@@ -84,8 +85,8 @@ export function useSubtasks(taskId: string | null): UseSubtasksReturn {
       id: uuidv4(),
       entityType: 'checklistItem',
       entityId: id,
-      action: 'toggle',
-      payload: null,
+      action: 'update',
+      payload: JSON.stringify({ is_completed: !existing.isCompleted, task_id: existing.taskId }),
       timestamp: Date.now(),
       retryCount: 0,
       lastError: null,
@@ -93,6 +94,7 @@ export function useSubtasks(taskId: string | null): UseSubtasksReturn {
   }
 
   const deleteSubtask = async (id: string) => {
+    const existing = await db.checklistItems.get(id)
     await db.checklistItems.update(id, {
       _syncStatus: 'deleted',
       updatedAt: new Date().toISOString(),
@@ -102,7 +104,7 @@ export function useSubtasks(taskId: string | null): UseSubtasksReturn {
       entityType: 'checklistItem',
       entityId: id,
       action: 'delete',
-      payload: null,
+      payload: JSON.stringify({ task_id: existing?.taskId }),
       timestamp: Date.now(),
       retryCount: 0,
       lastError: null,

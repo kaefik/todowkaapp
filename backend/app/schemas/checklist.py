@@ -30,3 +30,8 @@ class ChecklistItemResponse(BaseResponseSchema):
     model_config = {
         'from_attributes': True
     }
+
+
+class ChecklistItemListResponse(BaseModel):
+    items: list[ChecklistItemResponse]
+    total: int

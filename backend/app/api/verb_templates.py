@@ -18,6 +18,14 @@ from app.services.verb_template_service import VerbTemplateService
 verb_templates_router = APIRouter(prefix='/verb-templates', tags=['verb-templates'])
 
 
+async def _publish_verb_event(user_id: str, verb_id: str, action: str):
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{user_id}:sync", f"verb_template_{action}", {
+        "verb_id": str(verb_id),
+        "action": action,
+    })
+
+
 @verb_templates_router.get('', response_model=VerbTemplateListResponse)
 async def list_verb_templates(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -41,6 +49,7 @@ async def create_verb_template(
 ) -> VerbTemplateResponse:
     service = VerbTemplateService(db)
     verb = await service.create_verb_template(user_id=current_user.id, data=data)
+    await _publish_verb_event(current_user.id, verb.id, "created")
     return VerbTemplateResponse.model_validate(verb)
 
 
@@ -55,6 +64,7 @@ async def update_verb_template(
     verb = await service.update_verb_template(user_id=current_user.id, verb_id=verb_id, data=data)
     if not verb:
         raise HTTPException(status_code=404, detail='Verb template not found')
+    await _publish_verb_event(current_user.id, verb_id, "updated")
     return VerbTemplateResponse.model_validate(verb)
 
 
@@ -68,6 +78,7 @@ async def delete_verb_template(
     deleted = await service.delete_verb_template(user_id=current_user.id, verb_id=verb_id)
     if not deleted:
         raise HTTPException(status_code=404, detail='Verb template not found')
+    await _publish_verb_event(current_user.id, verb_id, "deleted")
 
 
 @verb_templates_router.put('/reorder', response_model=list[VerbTemplateResponse])
@@ -78,6 +89,7 @@ async def reorder_verb_templates(
 ) -> list[VerbTemplateResponse]:
     service = VerbTemplateService(db)
     await service.reorder_verb_templates(user_id=current_user.id, ids=data.ids)
+    await _publish_verb_event(current_user.id, "all", "reordered")
     items, _ = await service.get_verb_templates(user_id=current_user.id)
     return [VerbTemplateResponse.model_validate(v) for v in items]
 

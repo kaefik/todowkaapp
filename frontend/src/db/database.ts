@@ -109,6 +109,7 @@ export interface DbMutation {
 export interface DbChecklistItem {
   id: string
   taskId: string
+  userId: string
   title: string
   isCompleted: boolean
   position: number
@@ -220,6 +221,14 @@ export class TodowkaDB extends Dexie {
       }
       await tx.table('tasks').filter(t => !!t.parentTaskId).modify(t => {
         t._syncStatus = 'deleted'
+      })
+    })
+
+    this.version(7).stores({
+      checklistItems: 'id, taskId, userId, _syncStatus, updatedAt, position',
+    }).upgrade(async tx => {
+      await tx.table('checklistItems').toCollection().modify(item => {
+        item.userId = ''
       })
     })
   }

@@ -80,13 +80,13 @@ class SyncSSEListener {
     }
 
     const events = [
-      'task_updated', 'task_created', 'task_deleted',
-      'task_moved', 'task_toggled', 'task_reordered',
-      'checklist_updated', 'recurrence_stopped', 'trash_cleared',
+      'task_updated',
+      'checklist_updated',
       'project_created', 'project_updated', 'project_deleted',
       'area_created', 'area_updated', 'area_deleted',
       'context_created', 'context_updated', 'context_deleted',
       'tag_created', 'tag_updated', 'tag_deleted',
+      'verb_template_created', 'verb_template_updated', 'verb_template_deleted',
     ]
     for (const evt of events) {
       this.es!.addEventListener(evt, () => {

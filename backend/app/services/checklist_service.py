@@ -13,6 +13,16 @@ class ChecklistService:
     def __init__(self, db: Annotated[AsyncSession, "Async database session"]):
         self.db = db
 
+    async def get_all_for_user(self, user_id: str) -> list[ChecklistItem]:
+        from app.models.task import Task
+        result = await self.db.execute(
+            select(ChecklistItem)
+            .join(Task, ChecklistItem.task_id == Task.id)
+            .where(Task.user_id == str(user_id))
+            .order_by(ChecklistItem.created_at.asc())
+        )
+        return list(result.scalars().all())
+
     async def get_checklist(self, task_id: UUID | str) -> list[ChecklistItem]:
         result = await self.db.execute(
             select(ChecklistItem)

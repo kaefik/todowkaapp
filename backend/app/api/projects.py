@@ -69,6 +69,7 @@ async def reorder_projects(
     service = ProjectService(db)
     items = [{"id": item.id, "sort_order": item.sort_order} for item in data.items]
     await service.reorder_projects(user_id=current_user.id, items=items)
+    await _publish_project_event(current_user.id, "all", "reordered")
     return {"ok": True}
 
 

@@ -1,4 +1,6 @@
 import { useState, useCallback } from 'react'
+import { v4 as uuidv4 } from 'uuid'
+import { db } from '../db/database'
 import { httpClient, ApiError } from '../api/httpClient'
 import type { Task } from './useTasks'
 
@@ -50,8 +52,32 @@ export function useRecurrences(): UseRecurrencesReturn {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await httpClient.post<Task>(`/tasks/${taskId}/stop-recurrence`)
-      return response.data
+      const now = new Date().toISOString()
+      await db.tasks.update(taskId, {
+        recurrenceType: null,
+        recurrenceConfig: null,
+        recurrenceEndDate: null,
+        isRecurring: false,
+        updatedAt: now,
+        _syncStatus: 'modified',
+      })
+      await db.mutations.add({
+        id: uuidv4(),
+        entityType: 'task',
+        entityId: taskId,
+        action: 'update',
+        payload: JSON.stringify({
+          recurrence_type: null,
+          recurrence_config: null,
+          recurrence_end_date: null,
+          is_recurring: false,
+        }),
+        timestamp: Date.now(),
+        retryCount: 0,
+        lastError: null,
+      })
+      const updated = await db.tasks.get(taskId)
+      return updated as unknown as Task
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
