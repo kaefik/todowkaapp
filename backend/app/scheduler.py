@@ -374,7 +374,8 @@ class TaskScheduler:
                 result = await session.execute(
                     select(Task).where(
                         Task.recurrence_type.isnot(None),
-                        Task.due_date.isnot(None)
+                        Task.due_date.isnot(None),
+                        Task.is_completed
                     )
                 )
                 recurring_tasks = list(result.scalars().all())

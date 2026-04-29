@@ -147,9 +147,16 @@
      - Поддержка interval для weekly с days и monthly с day_of_month
      - Кнопка «Остановить повторение» в RecurrenceHistoryPopup (TaskListView.tsx, Tasks.tsx)
      - isRecurring выставляется при создании задачи с recurrence_type (CreateTask расширен)
-     - Удалён дублирующийся файл `backend/app/schemas/task_recurrence.py`
-     - Новые тесты: weekly с днями 1-7, копирование тегов, trash-пропуск, валидация config, update с сохранением due_date, monthly с interval
-     - Файлы: `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `backend/app/api/tasks.py`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/i18n/locales/ru/tasks.json`, `frontend/src/i18n/locales/en/tasks.json`
+      - Удалён дублирующийся файл `backend/app/schemas/task_recurrence.py`
+      - Новые тесты: weekly с днями 1-7, копирование тегов, trash-пропуск, валидация config, update с сохранением due_date, monthly с interval
+      - Файлы: `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `backend/app/api/tasks.py`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/i18n/locales/ru/tasks.json`, `frontend/src/i18n/locales/en/tasks.json`
+   - Исправление бага сдвига дедлайна при перезапуске ✅ (29.04.2026):
+      - При каждом перезапуске бекенда (Docker) дедлайн активных повторяющихся задач сдвигался на следующий интервал
+      - Причина 1: `_job_startup_recovery` обрабатывал ВСЕ повторяющиеся задачи (без фильтра `Task.is_completed`), а не только выполненные
+      - Причина 2: `catch_up_missed_tasks` безусловно обновлял `task.due_date` в ветке `else` даже для невыполненных задач
+      - Фикс 1: добавлен `Task.is_completed` в запрос `_job_startup_recovery` (синхронизировано с `_job_generate_recurring_tasks`)
+      - Фикс 2: в `catch_up_missed_tasks` ветка `else` обновляет `due_date` только для выполненных задач
+      - Файлы: `backend/app/scheduler.py`, `backend/app/services/recurrence_service.py`
 - Автоматическая фиксация времени выполнения задачи (completed_at)
 - Удаление задачи с подтверждением через кастомный диалог (ConfirmDialog)
   - Перемещение в корзину: диалог "Переместить в корзину?"

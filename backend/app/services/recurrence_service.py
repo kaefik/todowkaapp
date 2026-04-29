@@ -289,7 +289,8 @@ class RecurrenceService:
                 task.due_date = next_date
                 current_date = next_date
             else:
-                task.due_date = next_date
+                if task.is_completed:
+                    task.due_date = next_date
                 break
 
         return generated_tasks
