@@ -150,6 +150,7 @@ async def login(
 
     user.failed_login_attempts = 0
     user.locked_until = None
+    user.last_login_at = datetime.now(UTC)
     await db.commit()
 
     access_token = create_access_token(data={"sub": str(user.id)})

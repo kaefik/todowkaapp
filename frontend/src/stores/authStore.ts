@@ -17,6 +17,7 @@ export interface User {
   telegram_notifications_enabled: boolean
   capitalize_first: boolean
   created_at: string
+  last_login_at: string | null
 }
 
 interface AuthState {

@@ -72,6 +72,8 @@
   "user": "User",
   "userTimezone": "Timezone",
   "registrationDate": "Registration date",
+  "lastLogin": "Last login",
+  "neverLoggedIn": "Never logged in",
   "active": "Active",
   "blocked": "Blocked",
   "administrator": "Administrator",

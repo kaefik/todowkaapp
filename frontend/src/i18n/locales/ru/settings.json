@@ -72,6 +72,8 @@
   "user": "Пользователь",
   "userTimezone": "Часовой пояс",
   "registrationDate": "Дата регистрации",
+  "lastLogin": "Последний вход",
+  "neverLoggedIn": "Ещё не входил",
   "active": "Активен",
   "blocked": "Заблокирован",
   "administrator": "Администратор",

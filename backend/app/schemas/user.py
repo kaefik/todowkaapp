@@ -36,6 +36,7 @@ class UserResponse(BaseResponseSchema):
     telegram_notifications_enabled: bool = False
     capitalize_first: bool = True
     created_at: datetime
+    last_login_at: datetime | None = None
 
     model_config = {
         'from_attributes': True

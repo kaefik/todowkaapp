@@ -1127,6 +1127,9 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   {t('registrationDate')}
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  {t('lastLogin')}
+                </th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
                   {t('actions')}
                 </th>
@@ -1178,6 +1181,11 @@ function UsersTab({ currentUser }: { currentUser: User }) {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                     {new Date(u.created_at).toLocaleDateString(i18n.language === 'ru' ? 'ru-RU' : 'en-US')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {u.last_login_at
+                      ? new Date(u.last_login_at).toLocaleString(i18n.language === 'ru' ? 'ru-RU' : 'en-US', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : t('neverLoggedIn')}
                   </td>
                   <td className="px-4 py-3 text-right text-sm">
                     {currentUser.id !== u.id && !u.is_admin && (
