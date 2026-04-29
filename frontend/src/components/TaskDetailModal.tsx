@@ -10,6 +10,34 @@ import { useAreas } from '../hooks/useAreas'
 import { useProjects } from '../hooks/useProjects'
 import { useAuthStore } from '../stores/authStore'
 
+const MAX_DESCRIPTION_LENGTH = 200
+
+function TruncatedModalDescription({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false)
+  if (!text) return null
+
+  if (text.length <= MAX_DESCRIPTION_LENGTH) {
+    return <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{text}</p>
+  }
+
+  if (expanded) {
+    return <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{text}</p>
+  }
+
+  return (
+    <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+      {text.slice(0, MAX_DESCRIPTION_LENGTH)}{' '}
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="text-indigo-600 dark:text-indigo-400 hover:underline inline"
+      >
+        Ещё...
+      </button>
+    </p>
+  )
+}
+
 interface TaskDetailModalProps {
   taskId: string | null
   isOpen: boolean
@@ -201,7 +229,7 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
               {task.description && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('descriptionLabel')}</h4>
-                  <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{task.description}</p>
+                  <TruncatedModalDescription text={task.description} />
                 </div>
               )}
 
