@@ -12,6 +12,7 @@ from app.api.auth import auth_router
 from app.api.checklist import checklist_router
 from app.api.config import config_router
 from app.api.contexts import contexts_router
+from app.api.export_import import export_import_router
 from app.api.notifications import notifications_router
 from app.api.projects import projects_router
 from app.api.router import api_router
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
     api_router.include_router(checklist_router)
     api_router.include_router(config_router)
     api_router.include_router(contexts_router)
+    api_router.include_router(export_import_router)
     api_router.include_router(notifications_router)
     api_router.include_router(projects_router)
     api_router.include_router(sse_router)
