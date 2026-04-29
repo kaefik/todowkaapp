@@ -1,3 +1,4 @@
+import uuid as uuid_mod
 from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
@@ -213,12 +214,34 @@ class ExportImportService:
         return datetime.fromisoformat(value)
 
     @staticmethod
+    def _parse_time(value: str | None):
+        if value is None:
+            return None
+        from datetime import time as time_type
+        parts = value.split(":")
+        return time_type(
+            int(parts[0]),
+            int(parts[1]),
+            int(parts[2].split(".")[0]) if len(parts) > 2 else 0,
+        )
+
+    @staticmethod
     def _set_datetime_fields(
         obj, item: dict, fields: list[str]
     ) -> None:
         for field in fields:
             val = item.get(field)
             setattr(obj, field, ExportImportService._parse_datetime(val))
+
+    def _resolve_id(self, raw_id: str | None, id_map: dict[str, str]) -> str | None:
+        if raw_id is None:
+            return None
+        return id_map.get(raw_id, raw_id)
+
+    def _new_id(self, raw_id: str, id_map: dict[str, str]) -> str:
+        new = str(uuid_mod.uuid4())
+        id_map[raw_id] = new
+        return new
 
     async def _import_simple_entities(
         self,
@@ -229,6 +252,7 @@ class ExportImportService:
         imported: dict,
         key: str,
         errors: list[str],
+        id_map: dict[str, str],
     ) -> set[str]:
         ids: set[str] = set()
         count = 0
@@ -238,23 +262,30 @@ class ExportImportService:
                 continue
             existing = await self.db.get(model_class, entity_id)
             if existing is not None and existing.user_id != user_id:
-                continue
-            if existing is not None:
-                for field in fields:
-                    if field in item:
-                        setattr(existing, field, item[field])
-                self._set_datetime_fields(
-                    existing, item, ["created_at", "updated_at"]
-                )
-            else:
-                kwargs: dict = {"id": entity_id, "user_id": user_id}
+                new_id = self._new_id(entity_id, id_map)
+                kwargs: dict = {"id": new_id, "user_id": user_id}
                 for field in fields:
                     if field in item:
                         kwargs[field] = item[field]
                 obj = model_class(**kwargs)
                 self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
                 self.db.add(obj)
-            ids.add(entity_id)
+                ids.add(new_id)
+            elif existing is not None:
+                for field in fields:
+                    if field in item:
+                        setattr(existing, field, item[field])
+                self._set_datetime_fields(existing, item, ["created_at", "updated_at"])
+                ids.add(entity_id)
+            else:
+                kwargs = {"id": entity_id, "user_id": user_id}
+                for field in fields:
+                    if field in item:
+                        kwargs[field] = item[field]
+                obj = model_class(**kwargs)
+                self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
+                self.db.add(obj)
+                ids.add(entity_id)
             count += 1
         imported[key] = count
         return ids
@@ -265,48 +296,33 @@ class ExportImportService:
         imported: dict[str, int] = {}
         errors: list[str] = []
         skipped = 0
+        id_map: dict[str, str] = {}
 
         area_ids = await self._import_simple_entities(
-            uid,
-            data.get("areas", []),
-            Area,
+            uid, data.get("areas", []), Area,
             ["name", "description", "color", "sort_order"],
-            imported,
-            "areas",
-            errors,
+            imported, "areas", errors, id_map,
         )
         await self.db.flush()
 
         context_ids = await self._import_simple_entities(
-            uid,
-            data.get("contexts", []),
-            Context,
+            uid, data.get("contexts", []), Context,
             ["name", "color", "icon"],
-            imported,
-            "contexts",
-            errors,
+            imported, "contexts", errors, id_map,
         )
         await self.db.flush()
 
         tag_ids = await self._import_simple_entities(
-            uid,
-            data.get("tags", []),
-            Tag,
+            uid, data.get("tags", []), Tag,
             ["name", "color"],
-            imported,
-            "tags",
-            errors,
+            imported, "tags", errors, id_map,
         )
         await self.db.flush()
 
         await self._import_simple_entities(
-            uid,
-            data.get("verb_templates", []),
-            VerbTemplate,
+            uid, data.get("verb_templates", []), VerbTemplate,
             ["text", "icon", "position"],
-            imported,
-            "verb_templates",
-            errors,
+            imported, "verb_templates", errors, id_map,
         )
         await self.db.flush()
 
@@ -316,25 +332,16 @@ class ExportImportService:
             entity_id = item.get("id")
             if not entity_id:
                 continue
-            area_id = item.get("area_id")
-            if area_id and area_id not in area_ids:
-                skipped += 1
-                continue
+            raw_area_id = item.get("area_id")
+            area_id = self._resolve_id(raw_area_id, id_map)
+            if raw_area_id and area_id not in area_ids:
+                area_id = None
             existing = await self.db.get(Project, entity_id)
             if existing is not None and existing.user_id != uid:
-                skipped += 1
-                continue
-            if existing is not None:
-                for field in ["name", "description", "color", "is_active", "sort_order"]:
-                    if field in item:
-                        setattr(existing, field, item[field])
-                existing.area_id = area_id if area_id else None
-                self._set_datetime_fields(existing, item, ["created_at", "updated_at"])
-            else:
+                new_id = self._new_id(entity_id, id_map)
                 obj = Project(
-                    id=entity_id,
-                    user_id=uid,
-                    area_id=area_id if area_id else None,
+                    id=new_id, user_id=uid,
+                    area_id=area_id,
                     name=item.get("name", ""),
                     description=item.get("description"),
                     color=item.get("color"),
@@ -343,81 +350,110 @@ class ExportImportService:
                 )
                 self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
                 self.db.add(obj)
-            imported_project_ids.add(entity_id)
+                imported_project_ids.add(new_id)
+            elif existing is not None:
+                for field in ["name", "description", "color", "is_active", "sort_order"]:
+                    if field in item:
+                        setattr(existing, field, item[field])
+                existing.area_id = area_id
+                self._set_datetime_fields(existing, item, ["created_at", "updated_at"])
+                imported_project_ids.add(entity_id)
+            else:
+                obj = Project(
+                    id=entity_id, user_id=uid,
+                    area_id=area_id,
+                    name=item.get("name", ""),
+                    description=item.get("description"),
+                    color=item.get("color"),
+                    is_active=item.get("is_active", True),
+                    sort_order=item.get("sort_order", 0),
+                )
+                self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
+                self.db.add(obj)
+                imported_project_ids.add(entity_id)
             project_count += 1
         imported["projects"] = project_count
         await self.db.flush()
 
         task_count = 0
         imported_task_ids: set[str] = set()
+        task_fields = [
+            "title", "description", "is_completed", "gtd_status",
+            "position", "notes", "recurrence_type", "recurrence_config",
+            "reminder_offsets", "reminder_fired", "deadline_notified",
+        ]
         for item in data.get("tasks", []):
             entity_id = item.get("id")
             if not entity_id:
                 continue
-            context_id = item.get("context_id")
-            area_id = item.get("area_id")
-            project_id = item.get("project_id")
-            if context_id and context_id not in context_ids:
-                skipped += 1
-                continue
-            if area_id and area_id not in area_ids:
-                skipped += 1
-                continue
-            if project_id and project_id not in imported_project_ids:
-                skipped += 1
-                continue
+            raw_ctx = item.get("context_id")
+            raw_area = item.get("area_id")
+            raw_proj = item.get("project_id")
+            context_id = self._resolve_id(raw_ctx, id_map)
+            area_id = self._resolve_id(raw_area, id_map)
+            project_id = self._resolve_id(raw_proj, id_map)
+            if raw_ctx and context_id not in context_ids:
+                context_id = None
+            if raw_area and area_id not in area_ids:
+                area_id = None
+            if raw_proj and project_id not in imported_project_ids:
+                project_id = None
             existing = await self.db.get(Task, entity_id)
             if existing is not None and existing.user_id != uid:
-                skipped += 1
-                continue
-            task_fields = [
-                "title", "description", "is_completed", "gtd_status",
-                "position", "notes", "recurrence_type", "recurrence_config",
-                "reminder_offsets", "reminder_fired", "deadline_notified",
-            ]
-            if existing is not None:
-                for field in task_fields:
-                    if field in item:
-                        setattr(existing, field, item[field])
-                existing.context_id = context_id if context_id else None
-                existing.area_id = area_id if area_id else None
-                existing.project_id = project_id if project_id else None
-                self._set_datetime_fields(
-                    existing, item,
-                    ["completed_at", "due_date", "recurrence_end_date", "trashed_at", "created_at", "updated_at"],
-                )
-                if "reminder_time" in item and item["reminder_time"] is not None:
-                    from datetime import time as time_type
-                    parts = item["reminder_time"].split(":")
-                    existing.reminder_time = time_type(
-                        int(parts[0]), int(parts[1]), int(parts[2].split(".")[0]) if len(parts) > 2 else 0
-                    )
-                elif "reminder_time" in item:
-                    existing.reminder_time = None
-            else:
+                new_id = self._new_id(entity_id, id_map)
                 obj = Task(
-                    id=entity_id,
-                    user_id=uid,
+                    id=new_id, user_id=uid,
                     title=item.get("title", ""),
-                    context_id=context_id if context_id else None,
-                    area_id=area_id if area_id else None,
-                    project_id=project_id if project_id else None,
+                    context_id=context_id,
+                    area_id=area_id,
+                    project_id=project_id,
                 )
                 for field in task_fields:
                     if field in item:
                         setattr(obj, field, item[field])
-                self._set_datetime_fields(
-                    obj, item,
-                    ["completed_at", "due_date", "recurrence_end_date", "trashed_at", "created_at", "updated_at"],
-                )
+                self._set_datetime_fields(obj, item, [
+                    "completed_at", "due_date", "recurrence_end_date",
+                    "trashed_at", "created_at", "updated_at",
+                ])
                 if item.get("reminder_time") is not None:
-                    from datetime import time as time_type
-                    parts = item["reminder_time"].split(":")
-                    obj.reminder_time = time_type(
-                        int(parts[0]), int(parts[1]), int(parts[2].split(".")[0]) if len(parts) > 2 else 0
-                    )
+                    obj.reminder_time = self._parse_time(item["reminder_time"])
                 self.db.add(obj)
-            imported_task_ids.add(entity_id)
+                imported_task_ids.add(new_id)
+            elif existing is not None:
+                for field in task_fields:
+                    if field in item:
+                        setattr(existing, field, item[field])
+                existing.context_id = context_id
+                existing.area_id = area_id
+                existing.project_id = project_id
+                self._set_datetime_fields(existing, item, [
+                    "completed_at", "due_date", "recurrence_end_date",
+                    "trashed_at", "created_at", "updated_at",
+                ])
+                if "reminder_time" in item and item["reminder_time"] is not None:
+                    existing.reminder_time = self._parse_time(item["reminder_time"])
+                elif "reminder_time" in item:
+                    existing.reminder_time = None
+                imported_task_ids.add(entity_id)
+            else:
+                obj = Task(
+                    id=entity_id, user_id=uid,
+                    title=item.get("title", ""),
+                    context_id=context_id,
+                    area_id=area_id,
+                    project_id=project_id,
+                )
+                for field in task_fields:
+                    if field in item:
+                        setattr(obj, field, item[field])
+                self._set_datetime_fields(obj, item, [
+                    "completed_at", "due_date", "recurrence_end_date",
+                    "trashed_at", "created_at", "updated_at",
+                ])
+                if item.get("reminder_time") is not None:
+                    obj.reminder_time = self._parse_time(item["reminder_time"])
+                self.db.add(obj)
+                imported_task_ids.add(entity_id)
             task_count += 1
         imported["tasks"] = task_count
         await self.db.flush()
@@ -427,23 +463,25 @@ class ExportImportService:
             entity_id = item.get("id")
             if not entity_id:
                 continue
-            task_id = item.get("task_id")
-            if task_id not in imported_task_ids:
+            raw_task_id = item.get("task_id")
+            task_id = self._resolve_id(raw_task_id, id_map)
+            if not task_id or task_id not in imported_task_ids:
                 skipped += 1
                 continue
             existing = await self.db.get(ChecklistItem, entity_id)
             if existing is not None:
-                if existing.task_id not in imported_task_ids:
+                mapped_task = self._resolve_id(existing.task_id, id_map)
+                if mapped_task not in imported_task_ids and existing.task_id not in imported_task_ids:
                     skipped += 1
                     continue
                 for field in ["title", "is_completed", "position"]:
                     if field in item:
                         setattr(existing, field, item[field])
+                existing.task_id = task_id
                 self._set_datetime_fields(existing, item, ["completed_at", "created_at", "updated_at"])
             else:
                 obj = ChecklistItem(
-                    id=entity_id,
-                    task_id=task_id,
+                    id=entity_id, task_id=task_id,
                     title=item.get("title", ""),
                     is_completed=item.get("is_completed", False),
                     position=item.get("position", 0),
@@ -459,31 +497,33 @@ class ExportImportService:
             entity_id = item.get("id")
             if not entity_id:
                 continue
-            task_id = item.get("task_id")
-            generated_task_id = item.get("generated_task_id")
-            if task_id not in imported_task_ids or generated_task_id not in imported_task_ids:
+            task_id = self._resolve_id(item.get("task_id"), id_map)
+            gen_task_id = self._resolve_id(item.get("generated_task_id"), id_map)
+            if not task_id or task_id not in imported_task_ids:
+                skipped += 1
+                continue
+            if not gen_task_id or gen_task_id not in imported_task_ids:
                 skipped += 1
                 continue
             existing = await self.db.get(TaskRecurrence, entity_id)
             if existing is not None:
+                existing.task_id = task_id
+                existing.generated_task_id = gen_task_id
                 for field in ["status"]:
                     if field in item:
                         setattr(existing, field, item[field])
-                self._set_datetime_fields(
-                    existing, item,
-                    ["due_date_of_generated_task", "generated_at"],
-                )
+                self._set_datetime_fields(existing, item, [
+                    "due_date_of_generated_task", "generated_at",
+                ])
             else:
                 obj = TaskRecurrence(
-                    id=entity_id,
-                    task_id=task_id,
-                    generated_task_id=generated_task_id,
+                    id=entity_id, task_id=task_id,
+                    generated_task_id=gen_task_id,
                     status=item.get("status", "completed"),
                 )
-                self._set_datetime_fields(
-                    obj, item,
-                    ["due_date_of_generated_task", "generated_at"],
-                )
+                self._set_datetime_fields(obj, item, [
+                    "due_date_of_generated_task", "generated_at",
+                ])
                 self.db.add(obj)
             recurrence_count += 1
         imported["task_recurrences"] = recurrence_count
@@ -491,10 +531,12 @@ class ExportImportService:
 
         tt_count = 0
         for item in data.get("task_tags", []):
-            task_id = item.get("task_id")
-            tag_id = item.get("tag_id")
-            if not task_id or not tag_id:
+            raw_task_id = item.get("task_id")
+            raw_tag_id = item.get("tag_id")
+            if not raw_task_id or not raw_tag_id:
                 continue
+            task_id = self._resolve_id(raw_task_id, id_map)
+            tag_id = self._resolve_id(raw_tag_id, id_map)
             if task_id not in imported_task_ids or tag_id not in tag_ids:
                 skipped += 1
                 continue

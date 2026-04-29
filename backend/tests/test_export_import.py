@@ -255,3 +255,43 @@ async def test_import_upsert_updates_existing(client, auth_user):
     verify_resp = await client.get(f"/api/tasks/{task_id}")
     assert verify_resp.status_code == 200
     assert verify_resp.json()["title"] == "Updated Via Import"
+
+
+@pytest.mark.asyncio
+async def test_cross_user_import_creates_with_new_ids(client, auth_user, db_session):
+    await client.post("/api/tags", json={"name": "work", "color": "#FF0000"})
+    await client.post("/api/contexts", json={"name": "Office"})
+    await client.post("/api/areas", json={"name": "Work"})
+    await client.post("/api/projects", json={"name": "Proj A"})
+    await client.post("/api/tasks", json={"title": "Task from user A"})
+
+    export_resp = await client.get("/api/export-import/export")
+    assert export_resp.status_code == 200
+    export_content = export_resp.json()["content"]
+
+    user_b_data = {
+        "username": "importer",
+        "email": "importer@example.com",
+        "password": "Password123!",
+    }
+    await client.post("/api/auth/register", json=user_b_data)
+    await client.post(
+        "/api/auth/login",
+        json={"username": "importer", "password": "Password123!"},
+    )
+
+    json_bytes = export_content.encode()
+    import_resp = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
+    )
+    assert import_resp.status_code == 200
+    report = import_resp.json()
+    assert report["imported"]["tasks"] >= 1
+    assert report["imported"]["tags"] >= 1
+    assert report["imported"]["areas"] >= 1
+    assert report["imported"]["projects"] >= 1
+
+    tasks_resp = await client.get("/api/tasks")
+    user_b_tasks = tasks_resp.json()["items"]
+    assert any(t["title"] == "Task from user A" for t in user_b_tasks)

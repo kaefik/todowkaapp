@@ -1278,3 +1278,16 @@
 - Подзадачи скрыты из общего списка задач (фильтр parentTaskId в activeTasks)
 - Каскадное перемещение в корзину: при trash дочерние подзадачи тоже перемещаются (frontend + backend)
 - Предупреждение в ConfirmDialog: если у задачи есть подзадачи, показывается их количество и предупреждение об удалении
+
+**29 апреля 2026:**
+- Экспорт и импорт данных пользователя в JSON формат
+  - Экспорт всех данных: задачи, проекты, области, контексты, теги, шаблоны глаголов, чеклисты, повторения, связи task_tags
+  - Импорт с поддержкой upsert (обновление существующих записей, создание новых)
+  - Валидация формата файла (версия, приложение, структура)
+  - Порядок импорта с учётом FK-зависимостей (areas → contexts → tags → verb_templates → projects → tasks → checklist_items → task_recurrences → task_tags)
+  - Пропуск записей с несуществующими FK-ссылками
+  - API эндпоинты: GET /api/export-import/export, POST /api/export-import/import
+  - Кнопки «Экспорт данных» / «Импорт данных» в настройках (секция «Управление данными»)
+  - Синхронизация с Dexie после импорта через performInitialSync
+  - Локализация ru/en для UI экспорта/импорта
+  - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, backend/app/schemas/export_import.py, backend/tests/test_export_import.py, frontend/src/api/exportImport.ts, frontend/src/routes/Settings.tsx
