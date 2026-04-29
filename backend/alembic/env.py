@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.config import settings
 from app.database import Base
+import app.models  # noqa: F401 — ensure all models are registered
 
 config = context.config
 
