@@ -243,6 +243,18 @@
 - Миграция: `alembic/versions/20260429_1241_add_last_login_at_to_users_257e9261a354.py`
 - Файлы: `backend/app/models/user.py`, `backend/app/schemas/user.py`, `backend/app/api/auth.py`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`, `frontend/src/routes/Settings.tsx`
 
+#### Автоматические резервные копии в Telegram
+- Настраиваемое расписание отправки JSON-бэкапа БД в Telegram-бот
+- Периодичность: ежедневно, еженедельно (выбор дня недели), ежемесячно (выбор числа)
+- Точное время отправки в часовом поясе пользователя
+- Кнопка «Отправить сейчас» для ручной отправки вне расписания
+- Доступно только при подключённом Telegram-боте (токен + chat_id)
+- Файл отправляется как документ через Telegram API (sendDocument)
+- Новый scheduler job: _job_send_backup_schedules (каждую 1 минуту)
+- Модель: BackupSchedule (отдельная таблица, один к одному с User)
+- API: GET/POST/PUT/DELETE /api/backup-schedule, POST /api/backup-schedule/send-now
+- Файлы: `backend/app/models/backup_schedule.py`, `backend/app/schemas/backup_schedule.py`, `backend/app/services/backup_schedule_service.py`, `backend/app/api/backup_schedules.py`, `backend/app/scheduler.py`, `backend/app/services/telegram_notifier.py`, `frontend/src/components/BackupScheduleSettings.tsx`, `frontend/src/api/backupSchedules.ts`, `frontend/src/hooks/useBackupSchedule.ts`, `frontend/src/routes/Settings.tsx`
+
 #### Управление контекстами
 - CRUD для контекстов (создание, редактирование, удаление)
 - Привязка задач к контексту (context_id в tasks)
