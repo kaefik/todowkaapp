@@ -60,6 +60,7 @@ export interface TaskListViewProps {
   autoFocus?: boolean
   showGtdStatus?: boolean
   groupBy?: import('../hooks/useTasks').GroupBy
+  afterAddForm?: React.ReactNode
 }
 
 function formatShortDate(date: Date, locale: string) {
@@ -198,6 +199,7 @@ export function TaskListView({
   autoFocus = false,
   showGtdStatus = false,
   groupBy,
+  afterAddForm,
 }: TaskListViewProps) {
   const { t, i18n } = useTranslation('tasks')
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -447,6 +449,8 @@ export function TaskListView({
       )}
 
       {mobileFab}
+
+      {afterAddForm}
 
       {activeTasks.length === 0 && completedTasks.length === 0 && !isLoading && (
         <div className="text-center py-12">

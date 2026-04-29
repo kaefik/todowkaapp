@@ -211,5 +211,7 @@
   "viewSettings": "List view",
   "popoverGroup": "Grouping",
   "popoverSort": "Sorting",
-  "popoverDirection": "Direction"
+  "popoverDirection": "Direction",
+  "overdueCount": "Overdue ({{count}})",
+  "noOverdueTasks": "No overdue tasks"
 }

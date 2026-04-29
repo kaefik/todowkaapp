@@ -211,5 +211,7 @@
   "viewSettings": "Вид списка",
   "popoverGroup": "Группировка",
   "popoverSort": "Сортировка",
-  "popoverDirection": "Направление"
+  "popoverDirection": "Направление",
+  "overdueCount": "Просрочено ({{count}})",
+  "noOverdueTasks": "Нет просроченных задач"
 }

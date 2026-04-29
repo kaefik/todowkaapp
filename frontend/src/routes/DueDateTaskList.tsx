@@ -5,6 +5,8 @@ import { useTasks, type UpdateTask, type GtdStatus } from '../hooks/useTasks'
 import { useAuthStore } from '../stores/authStore'
 import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
+import { OverdueTasksBlock } from '../components/OverdueTasksBlock'
+import { useOverdueTasks } from '../hooks/useOverdueTasks'
 import { useTaskFilter } from '../hooks/useTaskFilter'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
@@ -18,6 +20,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
   const { t } = useTranslation('tasks')
   const user = useAuthStore(s => s.user)
   const { tasks: dueTasks, isLoading } = useDueDateTasks(dayOffset)
+  const { tasks: overdueTasks, isLoading: overdueLoading } = useOverdueTasks()
 
   const {
     filters,
@@ -123,6 +126,18 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
         onRefetch={refetch}
         emptyMessage={emptyMessage}
         groupBy={filters.group_by}
+        afterAddForm={dayOffset === 0 ? (
+          <OverdueTasksBlock
+            tasks={overdueTasks}
+            isLoading={overdueLoading}
+            onAddTask={handleAddTask}
+            onToggleTask={toggleTask}
+            onDeleteTask={handleDeleteTask}
+            onMoveTask={handleMoveTask}
+            onSaveTask={handleSaveTask}
+            onRefetch={refetch}
+          />
+        ) : undefined}
       />
 
       <ConfirmDialog
