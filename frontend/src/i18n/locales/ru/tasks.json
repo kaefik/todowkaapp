@@ -9,6 +9,7 @@
   "noTasksProject": "В проекте пока нет задач.",
   "completed": "Выполненные",
   "completedCount": "Выполненные ({{count}})",
+  "completedTodayCount": "Выполнено за сегодня: {{count}}",
   "restore": "Восстановить",
   "editTask": "Редактирование задачи",
   "taskDetail": "Детали задачи",

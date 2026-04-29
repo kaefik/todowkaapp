@@ -6,7 +6,9 @@ import { useAuthStore } from '../stores/authStore'
 import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
 import { OverdueTasksBlock } from '../components/OverdueTasksBlock'
+import { CompletedTodaySection } from '../components/CompletedTodaySection'
 import { useOverdueTasks } from '../hooks/useOverdueTasks'
+import { useCompletedTodayTasks } from '../hooks/useCompletedTodayTasks'
 import { useTaskFilter } from '../hooks/useTaskFilter'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
@@ -21,6 +23,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
   const user = useAuthStore(s => s.user)
   const { tasks: dueTasks, isLoading } = useDueDateTasks(dayOffset)
   const { tasks: overdueTasks, isLoading: overdueLoading } = useOverdueTasks()
+  const { tasks: completedTodayTasks, isLoading: completedTodayLoading } = useCompletedTodayTasks()
 
   const {
     filters,
@@ -139,6 +142,14 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
           />
         ) : undefined}
       />
+
+      {dayOffset === 0 && (
+        <CompletedTodaySection
+          tasks={completedTodayTasks}
+          isLoading={completedTodayLoading}
+          onToggleTask={toggleTask}
+        />
+      )}
 
       <ConfirmDialog
         open={!!pendingDeleteId}

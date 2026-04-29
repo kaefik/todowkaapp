@@ -9,6 +9,7 @@
   "noTasksProject": "No tasks in this project yet.",
   "completed": "Completed",
   "completedCount": "Completed ({{count}})",
+  "completedTodayCount": "Completed today: {{count}}",
   "restore": "Restore",
   "editTask": "Edit Task",
   "taskDetail": "Task Details",
