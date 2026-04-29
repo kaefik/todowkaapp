@@ -73,6 +73,33 @@ class TelegramNotifierService:
             return False
 
     @staticmethod
+    async def send_document(
+        bot_token: str, chat_id: str, filename: str, json_bytes: bytes, caption: str = ""
+    ) -> bool:
+        url = TELEGRAM_API_BASE.format(token=bot_token, method="sendDocument")
+        data = {
+            "chat_id": chat_id,
+            "caption": caption,
+        }
+        files = {
+            "document": (filename, json_bytes, "application/json"),
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(url, data=data, files=files)
+                resp_data = resp.json()
+                if resp.status_code == 403:
+                    logger.warning(f"Telegram bot blocked by user chat_id={chat_id}")
+                    return False
+                if not resp_data.get("ok"):
+                    logger.warning(f"Telegram sendDocument failed: {resp_data}")
+                    return False
+                return True
+        except httpx.HTTPError as e:
+            logger.warning(f"Telegram send_document error: {e}")
+            return False
+
+    @staticmethod
     def _build_task_link(task_id, frontend_url: str) -> str:
         return f'<a href="{frontend_url}/tasks?viewTaskId={task_id}">🔗 Открыть задачу</a>'
 
