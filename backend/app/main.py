@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.areas import areas_router
 from app.api.auth import auth_router
+from app.api.backup_schedules import backup_schedules_router
 from app.api.checklist import checklist_router
 from app.api.config import config_router
 from app.api.contexts import contexts_router
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     api_router.include_router(tags_router)
     api_router.include_router(tasks_router)
     api_router.include_router(users_router)
+    api_router.include_router(backup_schedules_router)
     api_router.include_router(verb_templates_router)
     app.include_router(api_router)
 
