@@ -7,12 +7,13 @@ import { useToastStore } from '../stores/toastStore'
 import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 import { VerbSettings } from '../components/VerbSettings'
+import { BackupScheduleSettings } from '../components/BackupScheduleSettings'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
 import { exportImportApi } from '../api/exportImport'
 import { performInitialSync } from '../db/init'
 
 type Theme = 'light' | 'dark'
-type Tab = 'general' | 'appearance' | 'profile' | 'security' | 'verbs' | 'users'
+type Tab = 'general' | 'appearance' | 'profile' | 'security' | 'verbs' | 'users' | 'backup'
 
 function SettingsContent() {
   const { t, i18n } = useTranslation('settings')
@@ -197,6 +198,7 @@ function SettingsContent() {
     { key: 'profile', label: t('tabProfile'), adminOnly: false },
     { key: 'security', label: t('tabSecurity'), adminOnly: false },
     { key: 'verbs', label: t('tabVerbs'), adminOnly: false },
+    { key: 'backup', label: t('tabBackup'), adminOnly: false },
     { key: 'users', label: t('tabUsers'), adminOnly: true },
   ]
 
@@ -881,6 +883,7 @@ function SettingsContent() {
         <VerbSettings />
       )}
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
+      {activeTab === 'backup' && <BackupScheduleSettings user={user!} />}
     </div>
   )
 }
