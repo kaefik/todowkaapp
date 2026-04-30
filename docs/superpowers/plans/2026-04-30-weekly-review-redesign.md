@@ -15,6 +15,9 @@
 **Files:**
 - Create: `frontend/src/stores/reviewStore.ts`
 
+> ⚠️ **Known Limitation:** Прогресс обзора хранится только в памяти (Zustand). 
+> При перезагрузке страницы прогресс сбрасывается. Это ожидаемое поведение для MVP.
+
 - [ ] **Step 1: Создать reviewStore.ts**
 
 ```typescript
@@ -125,6 +128,8 @@ export const useReviewStore = create<ReviewState>()((set, get) => ({
     }),
 }))
 ```
+
+> ⚠️ **Known Limitation:** Прогресс сбрасывается при перезагрузке страницы.
 
 - [ ] **Step 2: Проверить TypeScript**
 
@@ -748,7 +753,7 @@ import { httpClient } from '../../api/httpClient'
 
 export function ReviewSomedayStep() {
   const { t } = useTranslation('review')
-  const { data, setStep, incrementSomedayProcessed: incrementProcessed } = useReviewStore()
+  const { data, setStep, incrementSomedayProcessed } = useReviewStore()
 
   const tasks = data?.someday_tasks ?? []
   const [currentIndex, setCurrentIndex] = useState(0)
