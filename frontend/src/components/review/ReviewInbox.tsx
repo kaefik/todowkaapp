@@ -1,303 +1,248 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProjects } from '../../hooks/useProjects'
+import { useReviewStore } from '../../stores/reviewStore'
 import { db } from '../../db/database'
 import { useAuthStore } from '../../stores/authStore'
-import type { TaskReviewItem } from '../../api/review'
-import type { GtdStatus } from '../../hooks/useTasks'
 import { v4 as uuidv4 } from 'uuid'
 
-interface ReviewInboxProps {
-  inboxTasks: TaskReviewItem[]
-  onComplete: () => void
-  onProgress: (processed: number, total: number) => void
-}
-
-interface ProcessedTask {
-  id: string
-  status: GtdStatus
-  projectId?: string | null
-}
-
-export function ReviewInbox({ inboxTasks, onComplete, onProgress }: ReviewInboxProps) {
+export function ReviewInboxStep() {
   const { t } = useTranslation('review')
   const { projects } = useProjects()
   const user = useAuthStore(s => s.user)
+  const data = useReviewStore(s => s.data)
+  const incrementInboxProcessed = useReviewStore(s => s.incrementInboxProcessed)
+  const setStep = useReviewStore(s => s.setStep)
 
-  const [processedMap, setProcessedMap] = useState<Map<string, ProcessedTask>>(new Map())
-  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
-  const [openProjectId, setOpenProjectId] = useState<string | null>(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [processing, setProcessing] = useState(false)
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
 
-  const totalCount = inboxTasks.length
-  const processedCount = processedMap.size
-  const allProcessed = processedCount >= totalCount && totalCount > 0
-
-  useEffect(() => {
-    onProgress(processedCount, totalCount)
-  }, [processedCount, totalCount, onProgress])
+  const inboxTasks = data?.inbox_tasks ?? []
+  const total = inboxTasks.length
 
   useEffect(() => {
-    if (allProcessed) {
-      const timer = setTimeout(onComplete, 600)
-      return () => clearTimeout(timer)
+    if (total === 0) {
+      setStep('projects')
     }
-  }, [allProcessed, onComplete])
+  }, [total, setStep])
+
+  useEffect(() => {
+    if (currentIndex >= total && total > 0) {
+      setStep('projects')
+    }
+  }, [currentIndex, total, setStep])
 
   const processTask = useCallback(
-    async (taskId: string, gtdStatus: GtdStatus, projectId?: string | null) => {
+    async (taskId: string, targetStatus: string, projectId?: string) => {
       if (!user) return
       setProcessing(true)
-      setRemovingIds(prev => new Set(prev).add(taskId))
-
-      await new Promise(r => setTimeout(r, 300))
 
       const now = new Date().toISOString()
       const updates: Record<string, unknown> = {
-        gtdStatus,
+        gtdStatus: targetStatus,
         updatedAt: now,
         _syncStatus: 'modified',
       }
-      if (projectId !== undefined) {
-        updates.projectId = projectId
-      }
+      if (projectId) updates.projectId = projectId
 
-      await db.tasks.update(taskId, updates)
+      await db.tasks.update(taskId, updates as never)
       await db.mutations.add({
         id: uuidv4(),
         entityType: 'task',
         entityId: taskId,
         action: 'move',
         payload: JSON.stringify({
-          gtd_status: gtdStatus,
-          ...(projectId !== undefined ? { project_id: projectId } : {}),
+          gtd_status: targetStatus,
+          ...(projectId ? { project_id: projectId } : {}),
         }),
         timestamp: Date.now(),
         retryCount: 0,
         lastError: null,
       })
 
-      setProcessedMap(prev => {
-        const next = new Map(prev)
-        next.set(taskId, { id: taskId, status: gtdStatus, projectId })
-        return next
-      })
-      setRemovingIds(prev => {
-        const next = new Set(prev)
-        next.delete(taskId)
-        return next
-      })
+      incrementInboxProcessed()
+      setCurrentIndex(prev => prev + 1)
+      setShowProjectPicker(false)
       setProcessing(false)
     },
-    [user],
+    [user, incrementInboxProcessed],
   )
 
-  const handleDoIt = useCallback(
-    (taskId: string) => {
-      processTask(taskId, 'active')
+  const currentTaskId = inboxTasks[currentIndex]?.id
+
+  const handleDoIt = useCallback(() => {
+    if (processing || !currentTaskId) return
+    processTask(currentTaskId, 'active')
+  }, [processing, currentTaskId, processTask])
+
+  const handleSomeday = useCallback(() => {
+    if (processing || !currentTaskId) return
+    processTask(currentTaskId, 'someday')
+  }, [processing, currentTaskId, processTask])
+
+  const handleDelete = useCallback(() => {
+    if (processing || !currentTaskId) return
+    processTask(currentTaskId, 'trash')
+  }, [processing, currentTaskId, processTask])
+
+  const handleSelectProject = useCallback(
+    (projectId: string) => {
+      if (processing || !currentTaskId) return
+      processTask(currentTaskId, 'active', projectId)
     },
-    [processTask],
+    [processing, currentTaskId, processTask],
   )
 
-  const handleSomeday = useCallback(
-    (taskId: string) => {
-      processTask(taskId, 'someday')
-    },
-    [processTask],
-  )
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (processing || showProjectPicker) return
+      if (currentIndex >= total) return
+      if (e.key === '1') handleDoIt()
+      else if (e.key === '2') setShowProjectPicker(true)
+      else if (e.key === '3') handleSomeday()
+      else if (e.key === '4') handleDelete()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [processing, showProjectPicker, currentIndex, total, handleDoIt, handleSomeday, handleDelete])
 
-  const handleTrash = useCallback(
-    (taskId: string) => {
-      processTask(taskId, 'trash')
-    },
-    [processTask],
-  )
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showProjectPicker) {
+        setShowProjectPicker(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showProjectPicker])
 
-  const handleMoveToProject = useCallback(
-    (taskId: string, projectId: string) => {
-      processTask(taskId, 'active', projectId)
-      setOpenProjectId(null)
-      setOpenDropdownId(null)
-    },
-    [processTask],
-  )
+  if (total === 0) return null
 
-  const toggleDropdown = useCallback((taskId: string) => {
-    setOpenDropdownId(prev => (prev === taskId ? null : taskId))
-    setOpenProjectId(null)
-  }, [])
+  const currentTask = inboxTasks[currentIndex]
+  if (!currentTask) return null
 
-  const toggleProjectSelect = useCallback((taskId: string) => {
-    setOpenProjectId(prev => (prev === taskId ? null : taskId))
-  }, [])
-
-  if (totalCount === 0) {
-    return (
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          {t('inboxTitle')}
-        </h2>
-        <div className="flex flex-col items-center py-8 text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-            <svg className="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p className="text-sm font-medium text-green-700 dark:text-green-400">
-            {t('inboxEmpty')}
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const nextTasks = inboxTasks.slice(currentIndex + 1, currentIndex + 3)
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          {t('inboxTitle')}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">
+          📥 {t('inboxTitle')}
         </h2>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {t('processedCount', { processed: processedCount, total: totalCount })}
-        </span>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {t('inboxDescription')}
+        </p>
       </div>
 
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        {t('inboxDescription', { count: totalCount })}
+      <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-3 uppercase tracking-wide">
+        {t('taskNumberOf', { current: currentIndex + 1, total })}
       </p>
 
-      <div className="space-y-2">
-        {inboxTasks.map(task => {
-          const isRemoving = removingIds.has(task.id)
-          const isProcessed = processedMap.has(task.id)
-
-          if (isProcessed && !isRemoving) return null
-
-          return (
-            <div
-              key={task.id}
-              className={`transition-all duration-300 ${
-                isRemoving
-                  ? 'translate-y-[-10px] opacity-0'
-                  : 'translate-y-0 opacity-100'
-              }`}
-            >
-              <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 p-3">
-                <div className="mb-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {task.title}
-                  </p>
-                  {task.description && (
-                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                      {task.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => handleDoIt(task.id)}
-                    disabled={processing}
-                    className="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50"
-                  >
-                    {t('actionDoIt')}
-                  </button>
-
-                  <button
-                    onClick={() => handleSomeday(task.id)}
-                    disabled={processing}
-                    className="inline-flex items-center rounded-lg bg-purple-100 px-3 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50"
-                  >
-                    {t('actionSomeday')}
-                  </button>
-
-                  <button
-                    onClick={() => handleTrash(task.id)}
-                    disabled={processing}
-                    className="inline-flex items-center rounded-lg bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
-                  >
-                    {t('actionDelete')}
-                  </button>
-
-                  <div className="relative">
-                    <button
-                      onClick={() => toggleDropdown(task.id)}
-                      disabled={processing}
-                      className="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 transition-colors disabled:opacity-50"
-                    >
-                      {t('actionMore')}
-                      <svg className="ml-1 h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-
-                    {openDropdownId === task.id && (
-                      <div className="absolute left-0 z-20 mt-1 w-48 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-lg">
-                        <button
-                          onClick={() => toggleProjectSelect(task.id)}
-                          className="flex w-full items-center px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                        >
-                          <svg className="mr-2 h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                          </svg>
-                          {t('actionMoveToProject')}
-                        </button>
-                      </div>
-                    )}
-
-                    {openProjectId === task.id && (
-                      <div className="absolute left-0 z-30 mt-1 max-h-48 w-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-lg">
-                        {projects.length === 0 ? (
-                          <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
-                            {t('noProjects')}
-                          </div>
-                        ) : (
-                          projects.map(project => (
-                            <button
-                              key={project.id}
-                              onClick={() => handleMoveToProject(task.id, project.id)}
-                              className="flex w-full items-center px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                            >
-                              {project.color && (
-                                <span
-                                  className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
-                                  style={{ backgroundColor: project.color }}
-                                />
-                              )}
-                              {project.name}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })}
+      <div className="rounded-xl border-2 border-indigo-500 dark:border-indigo-400 bg-white dark:bg-gray-800 p-6 mb-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          {currentTask.title}
+        </h3>
+        {currentTask.description && (
+          <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
+            {currentTask.description}
+          </p>
+        )}
       </div>
 
-      {allProcessed && (
-        <div className="mt-6 flex flex-col items-center py-4 text-center animate-[fadeIn_0.3s_ease-in]">
-          <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-            <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <p className="text-sm font-medium text-green-700 dark:text-green-400">
-            {t('inboxAllProcessed')}
+      {showProjectPicker && (
+        <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 p-3">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('selectProject')}
           </p>
+          {projects.length === 0 ? (
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t('noProjects')}</p>
+          ) : (
+            <div className="max-h-40 overflow-y-auto space-y-1">
+              {projects.map(project => (
+                <button
+                  key={project.id}
+                  onClick={() => handleSelectProject(project.id)}
+                  disabled={processing}
+                  className="flex w-full items-center rounded-md px-3 py-2 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                >
+                  {project.color && (
+                    <span
+                      className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: project.color }}
+                    />
+                  )}
+                  {project.name}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowProjectPicker(false)}
+            className="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            {t('cancel')}
+          </button>
         </div>
       )}
 
-      <button
-        onClick={onComplete}
-        className="mt-4 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-      >
-        {t('skipStep')}
-      </button>
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <button
+          onClick={handleDoIt}
+          disabled={processing || showProjectPicker}
+          className="flex flex-col items-center rounded-lg bg-indigo-600 px-4 py-3 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50"
+        >
+          <span className="text-sm font-medium">{t('actionDoIt')}</span>
+          <span className="text-[10px] opacity-70 mt-0.5">1</span>
+        </button>
+
+        <button
+          onClick={() => setShowProjectPicker(true)}
+          disabled={processing}
+          className="flex flex-col items-center rounded-lg bg-gray-100 px-4 py-3 text-gray-700 hover:bg-gray-200 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500 transition-colors disabled:opacity-50"
+        >
+          <span className="text-sm font-medium">{t('actionMoveToProject')}</span>
+          <span className="text-[10px] opacity-70 mt-0.5">2</span>
+        </button>
+
+        <button
+          onClick={handleSomeday}
+          disabled={processing || showProjectPicker}
+          className="flex flex-col items-center rounded-lg bg-purple-100 px-4 py-3 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50"
+        >
+          <span className="text-sm font-medium">{t('actionSomeday')}</span>
+          <span className="text-[10px] opacity-70 mt-0.5">3</span>
+        </button>
+
+        <button
+          onClick={handleDelete}
+          disabled={processing || showProjectPicker}
+          className="flex flex-col items-center rounded-lg bg-red-100 px-4 py-3 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+        >
+          <span className="text-sm font-medium">{t('actionDelete')}</span>
+          <span className="text-[10px] opacity-70 mt-0.5">4</span>
+        </button>
+      </div>
+
+      {nextTasks.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2">
+            {t('nextInQueue')}
+          </p>
+          <div className="space-y-2">
+            {nextTasks.map(task => (
+              <div
+                key={task.id}
+                className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 px-4 py-2.5"
+              >
+                <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                  {task.title}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

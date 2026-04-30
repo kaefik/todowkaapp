@@ -43,5 +43,19 @@
   "completionInboxProcessed": "Обработано задач из входящих: {{count}}",
   "completionProjectsWithoutNext": "Проектов без next action: {{count}}",
   "completionSomedayActivated": "Задач когда-нибудь активировано: {{count}}",
-  "goHome": "На главную"
+  "goHome": "На главную",
+  "minimapTitle": "Обзор",
+  "minimapOverall": "Общий прогресс",
+  "minimapOf": "из",
+  "minimapWithoutNext": "{{count}} без next action",
+  "taskNumberOf": "ЗАДАЧА {{current}} ИЗ {{total}}",
+  "nextInQueue": "ДАЛЕЕ В ОЧЕРЕДИ",
+  "selectProject": "Выбрать проект",
+  "addedOn": "Добавлено",
+  "completionSubtitle": "Вы молодец. Система в порядке.",
+  "completionNextAdded": "Next action добавлено",
+  "completionReviewNumber": "Это ваш",
+  "completionReviewWord": "обзор",
+  "completionNextReview": "Следующий:",
+  "actionDeleteDesc": "Удалить задачу"
 }

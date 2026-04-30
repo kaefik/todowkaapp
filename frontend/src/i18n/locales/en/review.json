@@ -43,5 +43,19 @@
   "completionInboxProcessed": "Inbox tasks processed: {{count}}",
   "completionProjectsWithoutNext": "Projects without next action: {{count}}",
   "completionSomedayActivated": "Someday tasks activated: {{count}}",
-  "goHome": "Go Home"
+  "goHome": "Go Home",
+  "minimapTitle": "Review",
+  "minimapOverall": "Overall progress",
+  "minimapOf": "of",
+  "minimapWithoutNext": "{{count}} without next action",
+  "taskNumberOf": "TASK {{current}} OF {{total}}",
+  "nextInQueue": "NEXT IN QUEUE",
+  "selectProject": "Select project",
+  "addedOn": "Added on",
+  "completionSubtitle": "Well done. Your system is in order.",
+  "completionNextAdded": "Next actions added",
+  "completionReviewNumber": "This is your",
+  "completionReviewWord": "review",
+  "completionNextReview": "Next:",
+  "actionDeleteDesc": "Delete task"
 }

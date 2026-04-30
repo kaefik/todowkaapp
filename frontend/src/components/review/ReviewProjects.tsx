@@ -1,27 +1,31 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTasks, type CreateTask } from '../../hooks/useTasks'
-import type { ProjectReviewItem } from '../../api/review'
+import { useReviewStore } from '../../stores/reviewStore'
 
-interface ReviewProjectsProps {
-  projects: ProjectReviewItem[]
-  onComplete: () => void
-}
-
-export function ReviewProjects({ projects, onComplete }: ReviewProjectsProps) {
+export function ReviewProjectsStep() {
   const { t } = useTranslation('review')
   const { addTask } = useTasks()
+  const { data, markProjectReviewed, incrementNextActionsAdded, setStep } = useReviewStore()
+  const projects = data?.active_projects ?? []
+
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [taskTitle, setTaskTitle] = useState('')
   const [creatingForId, setCreatingForId] = useState<string | null>(null)
-  const [localProjects, setLocalProjects] = useState(() =>
-    projects.map((p) => ({ ...p }))
-  )
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set())
+  const [localHasNextAction, setLocalHasNextAction] = useState<Set<string>>(new Set())
 
-  const handleToggleExpand = useCallback((projectId: string) => {
-    setExpandedId((prev) => (prev === projectId ? null : projectId))
-    setTaskTitle('')
-  }, [])
+  const handleToggleExpand = useCallback(
+    (projectId: string) => {
+      setExpandedId((prev) => (prev === projectId ? null : projectId))
+      setTaskTitle('')
+      if (!reviewedIds.has(projectId)) {
+        setReviewedIds((prev) => new Set(prev).add(projectId))
+        markProjectReviewed()
+      }
+    },
+    [reviewedIds, markProjectReviewed],
+  )
 
   const handleCreate = useCallback(
     async (projectId: string) => {
@@ -30,24 +34,21 @@ export function ReviewProjects({ projects, onComplete }: ReviewProjectsProps) {
 
       setCreatingForId(projectId)
       try {
-        const data: CreateTask = {
+        const taskData: CreateTask = {
           title,
           project_id: projectId,
           gtd_status: 'active',
         }
-        await addTask(data)
-        setLocalProjects((prev) =>
-          prev.map((p) =>
-            p.id === projectId ? { ...p, has_next_action: true } : p
-          )
-        )
+        await addTask(taskData)
+        setLocalHasNextAction((prev) => new Set(prev).add(projectId))
+        incrementNextActionsAdded()
         setExpandedId(null)
         setTaskTitle('')
       } finally {
         setCreatingForId(null)
       }
     },
-    [addTask, taskTitle]
+    [addTask, taskTitle, incrementNextActionsAdded],
   )
 
   const handleKeyDown = useCallback(
@@ -61,51 +62,92 @@ export function ReviewProjects({ projects, onComplete }: ReviewProjectsProps) {
         setTaskTitle('')
       }
     },
-    [handleCreate]
+    [handleCreate],
   )
 
-  if (localProjects.length === 0) {
+  const handleSomeday = useCallback(() => {
+    projects.forEach((p) => {
+      if (!reviewedIds.has(p.id)) {
+        markProjectReviewed()
+      }
+    })
+    setStep('someday')
+  }, [projects, reviewedIds, markProjectReviewed, setStep])
+
+  const hasNextAction = (project: (typeof projects)[number]) =>
+    project.has_next_action || localHasNextAction.has(project.id)
+
+  if (projects.length === 0) {
     return (
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          {t('projectsTitle')}
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          {t('projectsDescription', { count: 0 })}
-        </p>
-        <p className="text-sm text-gray-400 dark:text-gray-500">
-          {t('projectsEmpty')}
-        </p>
+      <div className="flex-1 flex flex-col">
+        <div className="px-5 py-4 border-b bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                📁 {t('projectsTitle')}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {t('projectsDescription', { count: 0 })}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSomeday}
+              className="px-4 py-2 text-sm font-medium rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            >
+              {t('someday')} →
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-5">
+          <p className="text-sm text-gray-400 dark:text-gray-500">{t('projectsEmpty')}</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-        {t('projectsTitle')}
-      </h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        {t('projectsDescription', { count: localProjects.length })}
-      </p>
+    <div className="flex-1 flex flex-col">
+      <div className="px-5 py-4 border-b bg-gray-50 dark:bg-gray-800/50">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              📁 {t('projectsTitle')}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {t('projectsDescription', { count: projects.length })}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSomeday}
+            className="px-4 py-2 text-sm font-medium rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+          >
+            {t('someday')} →
+          </button>
+        </div>
+      </div>
 
-      <ul className="space-y-3">
-        {localProjects.map((project) => {
+      <div className="flex-1 overflow-y-auto p-5 space-y-3">
+        {projects.map((project) => {
           const isExpanded = expandedId === project.id
           const isCreating = creatingForId === project.id
+          const hasAction = hasNextAction(project)
 
           return (
-            <li
+            <div
               key={project.id}
-              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden"
+              className={`rounded-lg border overflow-hidden ${
+                hasAction
+                  ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                  : 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-900/10'
+              }`}
             >
               <div className="flex items-center justify-between gap-3 p-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <span
                     className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${
-                      project.has_next_action
-                        ? 'bg-green-500'
-                        : 'bg-red-500'
+                      hasAction ? 'bg-green-500' : 'bg-red-500'
                     }`}
                   />
                   <div className="min-w-0">
@@ -121,12 +163,12 @@ export function ReviewProjects({ projects, onComplete }: ReviewProjectsProps) {
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
-                  {!project.has_next_action && (
+                  {!hasAction && (
                     <span className="text-xs font-medium text-red-600 dark:text-red-400 whitespace-nowrap">
                       {t('noNextAction')}
                     </span>
                   )}
-                  {project.has_next_action && (
+                  {hasAction && (
                     <span className="text-xs font-medium text-green-600 dark:text-green-400 whitespace-nowrap">
                       ✓
                     </span>
@@ -181,22 +223,9 @@ export function ReviewProjects({ projects, onComplete }: ReviewProjectsProps) {
                   </div>
                 </div>
               )}
-            </li>
+            </div>
           )
         })}
-      </ul>
-
-      <div className="mt-6 flex justify-end">
-        <button
-          type="button"
-          onClick={onComplete}
-          className="px-5 py-2 text-sm font-medium rounded-xl text-white
-            bg-indigo-600 hover:bg-indigo-700
-            dark:bg-indigo-500 dark:hover:bg-indigo-600
-            transition-colors"
-        >
-          {t('next')}
-        </button>
       </div>
     </div>
   )

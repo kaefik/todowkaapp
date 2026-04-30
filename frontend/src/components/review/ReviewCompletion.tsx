@@ -1,26 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { reviewApi } from '../../api/review'
-
-export interface ReviewStats {
-  inboxProcessed: number
-  projectsWithoutNext: number
-  somedayActivated: number
-}
+import { useReviewStore } from '../../stores/reviewStore'
 
 interface ReviewCompletionProps {
-  stats: ReviewStats
   onGoHome: () => void
 }
 
-export function ReviewCompletion({ stats, onGoHome }: ReviewCompletionProps) {
+export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
   const { t } = useTranslation('review')
+  const { stats, data } = useReviewStore()
   const [isCompleting, setIsCompleting] = useState(true)
+  const [completedAt, setCompletedAt] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     reviewApi
       .complete()
+      .then((response) => {
+        if (!cancelled) setCompletedAt(response.completed_at)
+      })
       .catch(() => {})
       .finally(() => {
         if (!cancelled) setIsCompleting(false)
@@ -30,11 +29,19 @@ export function ReviewCompletion({ stats, onGoHome }: ReviewCompletionProps) {
     }
   }, [])
 
+  const reviewCount = data?.review_count ?? 0
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    date.setDate(date.getDate() + 7)
+    return date.toLocaleDateString('ru-RU')
+  }
+
   return (
-    <div className="animate-scale-in flex flex-col items-center py-8 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+    <div className="flex-1 flex flex-col items-center justify-center p-8">
+      <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
         <svg
-          className="h-8 w-8 text-green-600 dark:text-green-400"
+          className="w-10 h-10 text-green-600 dark:text-green-400"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -44,36 +51,38 @@ export function ReviewCompletion({ stats, onGoHome }: ReviewCompletionProps) {
         </svg>
       </div>
 
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
         {t('completionTitle')}
       </h2>
+      <p className="text-gray-600 dark:text-gray-400 mb-8">
+        {t('completionSubtitle')}
+      </p>
 
-      <ul className="space-y-3 text-left w-full max-w-xs mb-8">
-        <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0">
-            {stats.inboxProcessed}
-          </span>
-          {t('completionInboxProcessed', { count: stats.inboxProcessed })}
-        </li>
-        <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-          <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold shrink-0 ${
-              stats.projectsWithoutNext > 0
-                ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                : 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-            }`}
-          >
-            {stats.projectsWithoutNext}
-          </span>
-          {t('completionProjectsWithoutNext', { count: stats.projectsWithoutNext })}
-        </li>
-        <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-bold shrink-0">
-            {stats.somedayActivated}
-          </span>
-          {t('completionSomedayActivated', { count: stats.somedayActivated })}
-        </li>
-      </ul>
+      <div className="grid grid-cols-3 gap-3 w-full max-w-md mb-6">
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.inboxProcessed}</div>
+          <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">{t('completionInboxProcessed')}</div>
+        </div>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.nextActionsAdded}</div>
+          <div className="text-xs text-green-700 dark:text-green-300 mt-1">{t('completionNextAdded')}</div>
+        </div>
+        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.somedayActivated}</div>
+          <div className="text-xs text-purple-700 dark:text-purple-300 mt-1">{t('completionSomedayActivated')}</div>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3 w-full max-w-md mb-6">
+        <div className="text-sm text-gray-700 dark:text-gray-300">
+          {t('completionReviewNumber', { count: reviewCount })}
+        </div>
+        {completedAt && (
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {t('completionNextReview', { date: formatDate(completedAt) })}
+          </div>
+        )}
+      </div>
 
       <button
         onClick={onGoHome}
