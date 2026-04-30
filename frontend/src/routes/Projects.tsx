@@ -9,6 +9,7 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from '@dnd-kit/utilities'
 import { useProjects, reorderProjects, autoSortProjects, useNoProjectCount, type Project, type SortMode } from '../hooks/useProjects'
 import { ColorPickerField } from '../components/ColorPickerField'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
@@ -304,6 +305,7 @@ function ProjectsContent() {
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sortMode, setSortMode] = useState<SortMode | null>(getStoredSortMode)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -360,12 +362,20 @@ function ProjectsContent() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('confirmDeleteProject'))) return
+    setPendingDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
     try {
-      await deleteProject(id)
+      await deleteProject(pendingDeleteId)
     } catch {
+    } finally {
+      setPendingDeleteId(null)
     }
   }
+
+  const pendingDeleteProject = projects.find(p => p.id === pendingDeleteId)
 
   const handleClickProject = (id: string) => {
     navigate(`/projects/${id}`)
@@ -461,6 +471,16 @@ function ProjectsContent() {
           </div>
         </SortableContext>
       </DndContext>
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmDeleteProject').split('?')[0] + '?'}
+        message={pendingDeleteProject ? ` "${pendingDeleteProject.name}" — ${t('confirmDeleteProject').split('?')[1] || 'Задачи проекта будут отвязаны.'}` : t('confirmDeleteProject')}
+        confirmText={t('delete', { ns: 'common' })}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }

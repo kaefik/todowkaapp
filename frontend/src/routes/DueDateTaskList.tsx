@@ -154,7 +154,7 @@ export function DueDateTaskList({ dayOffset, title, emptyMessage }: DueDateTaskL
       <ConfirmDialog
         open={!!pendingDeleteId}
         title={t('confirmTrash')}
-        message={`${t('confirmTrashBody')}.${checklistWarning}`}
+        message={(pendingDeleteTask ? ` "${pendingDeleteTask.title}" — ` : '') + t('confirmTrashBody') + checklistWarning}
         confirmText={t('delete', { ns: 'common' })}
         variant="danger"
         onConfirm={confirmDelete}

@@ -66,7 +66,7 @@ export function GtdTaskList({ gtdStatus, title }: GtdTaskListProps) {
     : ''
 
   const deleteTitle = gtdStatus === 'trash' ? t('confirmDelete') : t('confirmTrash')
-  const deleteMessage = (gtdStatus === 'trash' ? t('thisActionCannotBeUndone') : t('confirmTrashBody')) + checklistWarning
+  const deleteMessage = (gtdStatus === 'trash' ? t('thisActionCannotBeUndone') : t('confirmTrashBody')) + (pendingDeleteTask ? ` "${pendingDeleteTask.title}"` : '') + checklistWarning
 
   const handleRestoreTask = async (id: string) => {
     setPendingRestoreId(id)

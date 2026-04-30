@@ -88,11 +88,11 @@ export function ProjectDetail() {
     notifyTasksChanged()
   }
 
-  const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
+const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
   const checklistWarning = pendingDeleteTask && pendingDeleteTask.checklist_total > 0
-    ? ` ${t('checklistWillBeTrashed')}`
+    ? ' ' + t('checklistWillBeTrashed')
     : ''
-  const deleteMessage = t('confirmTrashBody') + checklistWarning
+  const deleteMessage = (pendingDeleteTask ? ` "${pendingDeleteTask.title}" — ` : '') + t('confirmTrashBody') + checklistWarning
 
   const handleSaveTask = async (taskId: string, data: UpdateTask) => {
     await updateTask(taskId, data)

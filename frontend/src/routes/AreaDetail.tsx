@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAreas } from '../hooks/useAreas'
@@ -7,6 +7,7 @@ import { useTaskFilter } from '../hooks/useTaskFilter'
 import { TaskFilterPanel } from '../components/TaskFilterPanel'
 import { TaskListView } from '../components/TaskListView'
 import { notifyTasksChanged } from '../hooks/useGtdCounts'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 export function AreaDetail() {
   const { t } = useTranslation('projects')
@@ -54,10 +55,21 @@ export function AreaDetail() {
     await addTask({ ...data, area_id: id, gtd_status: 'active' })
   }
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
   const handleDeleteTask = async (taskId: string) => {
-    await moveTask(taskId, 'trash')
+    setPendingDeleteId(taskId)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
+    await moveTask(pendingDeleteId, 'trash')
+    setPendingDeleteId(null)
+    refetch()
     notifyTasksChanged()
   }
+
+  const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
 
   const handleSaveTask = async (taskId: string, data: UpdateTask) => {
     await updateTask(taskId, data)
@@ -156,6 +168,16 @@ export function AreaDetail() {
         emptyMessage={t('noAreaTasks')}
         showGtdStatus
         groupBy={filters.group_by}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmTrash')}
+        message={(pendingDeleteTask ? ` "${pendingDeleteTask.title}" — ` : '') + t('confirmTrashBody')}
+        confirmText={t('deleteBtn')}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
       />
     </div>
   )

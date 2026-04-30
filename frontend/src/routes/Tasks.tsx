@@ -14,6 +14,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const taskCreateSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255, 'Title must be at most 255 characters'),
@@ -233,12 +234,20 @@ function TasksContent() {
     toggleTask(id)
   }
 
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+
   const handleDeleteTask = async (id: string) => {
-    try {
-      await moveTask(id, 'trash')
-    } catch {
-    }
+    setPendingDeleteId(id)
   }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
+    await moveTask(pendingDeleteId, 'trash')
+    setPendingDeleteId(null)
+    refetch()
+  }
+
+  const pendingDeleteTask = tasks.find(t => t.id === pendingDeleteId)
 
   const handleEditTask = (task: Task) => {
     setEditingTask(task)
@@ -625,6 +634,16 @@ function TasksContent() {
           setViewingTaskId(null)
           setEditingTask(task)
         }}
+      />
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmTrash')}
+        message={(pendingDeleteTask ? ` "${pendingDeleteTask.title}" — ` : '') + t('confirmTrashBody')}
+        confirmText={t('deleteBtn')}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
       />
     </div>
   )

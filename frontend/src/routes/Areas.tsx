@@ -9,6 +9,7 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from '@dnd-kit/utilities'
 import { useAreas, reorderAreas, autoSortAreas, type Area, type AreaSortMode } from '../hooks/useAreas'
 import { ColorPickerField } from '../components/ColorPickerField'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
@@ -255,6 +256,7 @@ function AreasContent() {
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sortMode, setSortMode] = useState<AreaSortMode | null>(getStoredSortMode)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -311,12 +313,20 @@ function AreasContent() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('confirmDeleteArea'))) return
+    setPendingDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
     try {
-      await deleteArea(id)
+      await deleteArea(pendingDeleteId)
     } catch {
+    } finally {
+      setPendingDeleteId(null)
     }
   }
+
+  const pendingDeleteArea = areas.find(a => a.id === pendingDeleteId)
 
   if (isLoading && areas.length === 0) {
     return (
@@ -402,6 +412,16 @@ function AreasContent() {
           </div>
         </SortableContext>
       </DndContext>
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmDeleteArea').split('?')[0] + '?'}
+        message={pendingDeleteArea ? ` "${pendingDeleteArea.name}"?` : t('confirmDeleteArea')}
+        confirmText={t('delete', { ns: 'common' })}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }

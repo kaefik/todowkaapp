@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { useTags, type Tag } from '../hooks/useTags'
 import { ColorPickerField } from '../components/ColorPickerField'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
@@ -149,6 +150,7 @@ function TagsContent() {
   const { t } = useTranslation('projects')
   const { tags, isLoading, error, addTag, updateTag, deleteTag, refetch } = useTags()
   const [editingTag, setEditingTag] = useState<Tag | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -176,12 +178,20 @@ function TagsContent() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('confirmDeleteTag'))) return
+    setPendingDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
     try {
-      await deleteTag(id)
+      await deleteTag(pendingDeleteId)
     } catch {
+    } finally {
+      setPendingDeleteId(null)
     }
   }
+
+  const pendingDeleteTag = tags.find(t => t.id === pendingDeleteId)
 
   if (isLoading && tags.length === 0) {
     return (
@@ -259,6 +269,16 @@ function TagsContent() {
           />
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmDeleteTag').split('?')[0] + '?'}
+        message={pendingDeleteTag ? ` "${pendingDeleteTag.name}"?` : t('confirmDeleteTag')}
+        confirmText={t('delete', { ns: 'common' })}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }

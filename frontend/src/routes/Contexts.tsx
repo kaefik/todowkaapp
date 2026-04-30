@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { useContexts, type Context } from '../hooks/useContexts'
 import { ColorPickerField } from '../components/ColorPickerField'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
 
@@ -155,6 +156,7 @@ function ContextsContent() {
   const { t } = useTranslation('projects')
   const { contexts, isLoading, error, addContext, updateContext, deleteContext, refetch } = useContexts()
   const [editingContext, setEditingContext] = useState<Context | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -182,12 +184,20 @@ function ContextsContent() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('confirmDeleteContext'))) return
+    setPendingDeleteId(id)
+  }
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return
     try {
-      await deleteContext(id)
+      await deleteContext(pendingDeleteId)
     } catch {
+    } finally {
+      setPendingDeleteId(null)
     }
   }
+
+  const pendingDeleteContext = contexts.find(c => c.id === pendingDeleteId)
 
   if (isLoading && contexts.length === 0) {
     return (
@@ -265,6 +275,16 @@ function ContextsContent() {
           />
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title={t('confirmDeleteContext').split('?')[0] + '?'}
+        message={pendingDeleteContext ? ` "${pendingDeleteContext.name}"?` : t('confirmDeleteContext')}
+        confirmText={t('delete', { ns: 'common' })}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   )
 }
