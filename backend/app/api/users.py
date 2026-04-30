@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,13 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_admin_user, get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.user import UserResponse, UserUpdate
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 
 @users_router.get("", response_model=list[UserResponse])
+@limiter.limit(read_limit)
 async def get_users(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_admin_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[User]:
@@ -24,7 +27,9 @@ async def get_users(
 
 
 @users_router.patch("/{user_id}/block", response_model=UserResponse)
+@limiter.limit(write_limit)
 async def block_user(
+    request: Request,
     user_id: str,
     current_user: Annotated[User, Depends(get_current_admin_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -62,7 +67,9 @@ async def block_user(
 
 
 @users_router.patch("/{user_id}/unblock", response_model=UserResponse)
+@limiter.limit(write_limit)
 async def unblock_user(
+    request: Request,
     user_id: str,
     current_user: Annotated[User, Depends(get_current_admin_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -88,7 +95,9 @@ async def unblock_user(
 
 
 @users_router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_user(
+    request: Request,
     user_id: str,
     current_user: Annotated[User, Depends(get_current_admin_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -119,7 +128,9 @@ async def delete_user(
 
 
 @users_router.patch("/me", response_model=UserResponse)
+@limiter.limit(write_limit)
 async def update_current_user(
+    request: Request,
     data: UserUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -162,7 +173,9 @@ class TelegramTokenResponse(BaseModel):
 
 
 @users_router.post("/telegram/validate-token", response_model=TelegramTokenResponse)
+@limiter.limit(write_limit)
 async def validate_telegram_token(
+    request: Request,
     data: TelegramTokenRequest,
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> TelegramTokenResponse:

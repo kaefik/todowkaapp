@@ -1,0 +1,20 @@
+{
+  "title": "Active Sessions",
+  "current": "Current",
+  "revoke": "Revoke",
+  "revokeAll": "Sign out of all devices",
+  "created": "Created:",
+  "lastActivity": "Last activity:",
+  "justNow": "just now",
+  "minutesAgo": "{{count}} min. ago",
+  "hoursAgo": "{{count}} hr. ago",
+  "daysAgo": "{{count}} days ago",
+  "noSessions": "No active sessions",
+  "loadError": "Failed to load sessions",
+  "revokeSuccess": "Session revoked",
+  "revokeError": "Failed to revoke session",
+  "revokeAllSuccess": "Signed out of all devices",
+  "revokeAllError": "Failed to sign out of all devices",
+  "revokeAllConfirmTitle": "Sign out of all devices?",
+  "revokeAllConfirmMessage": "You will be signed out on all devices except the current one."
+}

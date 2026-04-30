@@ -1,13 +1,44 @@
 import { Outlet, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, type MouseEventHandler } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { navigateWithTransition } from '../utils/navigation'
 import { InstallPrompt } from './InstallPrompt'
 import { NotificationBell } from './NotificationBell'
 import { StatusLight } from './StatusLight'
 import { SearchOverlay } from './SearchOverlay'
+import { ReviewReminderBanner } from './ReviewReminderBanner'
+
+function NavItem({
+  to,
+  className,
+  children,
+  onNavigate,
+}: {
+  to: string;
+  className: string;
+  children: React.ReactNode;
+  onNavigate?: () => void;
+}) {
+  const navigate = useNavigate();
+
+  const handleClick: MouseEventHandler<HTMLAnchorElement> = useCallback(
+    (e) => {
+      e.preventDefault();
+      onNavigate?.();
+      navigateWithTransition(navigate, to);
+    },
+    [navigate, to, onNavigate],
+  );
+
+  return (
+    <a href={to} onClick={handleClick} className={className}>
+      {children}
+    </a>
+  );
+}
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const location = useLocation()
@@ -31,16 +62,17 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col h-full">
       <div className="flex-1 space-y-1">
+        <ReviewReminderBanner />
         <div className="px-3 py-2">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
             {t('groupGtd')}
           </p>
         </div>
         {gtdItems.map((item) => (
-          <Link
+          <NavItem
             key={item.path}
             to={item.path}
-            onClick={onNavigate}
+            onNavigate={onNavigate}
             className={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               isActive(item.path)
                 ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
@@ -57,7 +89,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 {item.count}
               </span>
             )}
-          </Link>
+          </NavItem>
         ))}
 
         <div className="px-3 pt-4 pb-2">
@@ -65,9 +97,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             {t('groupView')}
           </p>
         </div>
-        <Link
+        <NavItem
           to="/completed"
-          onClick={onNavigate}
+          onNavigate={onNavigate}
           className={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
             isActive('/completed')
               ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
@@ -80,10 +112,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {counts.completed}
             </span>
           )}
-        </Link>
-        <Link
+        </NavItem>
+        <NavItem
           to="/trash"
-          onClick={onNavigate}
+          onNavigate={onNavigate}
           className={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors ${
             isActive('/trash')
               ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
@@ -96,7 +128,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               {counts.trash}
             </span>
           )}
-        </Link>
+        </NavItem>
 
         <div className="px-3 pt-4 pb-2">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
@@ -109,10 +141,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           { path: '/areas', label: t('areas') },
           { path: '/tags', label: t('tags') },
         ].map((item) => (
-          <Link
+          <NavItem
             key={item.path}
             to={item.path}
-            onClick={onNavigate}
+            onNavigate={onNavigate}
             className={`block px-3 py-2 text-sm font-medium rounded-md transition-colors ${
               isActive(item.path)
                 ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
@@ -120,25 +152,25 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             }`}
           >
             {item.label}
-          </Link>
+          </NavItem>
         ))}
       </div>
 
       <div className="border-t border-gray-200 dark:border-gray-700 pt-2 space-y-1">
-        <Link
+        <NavItem
           to="/profile"
-          onClick={onNavigate}
+          onNavigate={onNavigate}
           className="block px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
         >
           {user?.username}
-        </Link>
-        <Link
+        </NavItem>
+        <NavItem
           to="/settings"
-          onClick={onNavigate}
+          onNavigate={onNavigate}
           className="block px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
         >
           {t('settings')}
-        </Link>
+        </NavItem>
         <button
           onClick={() => {
             logout()
@@ -232,8 +264,8 @@ export function AppLayout() {
 
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col">
+          <div className="fixed inset-0 bg-black/50 animate-fade-in" onClick={() => setSidebarOpen(false)} />
+          <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col transition-all duration-200 ease-out">
             <div className="flex items-center justify-between p-4 pb-0">
               <Link to="/" className="text-xl font-bold text-indigo-600 dark:text-indigo-400 flex items-center" onClick={() => setSidebarOpen(false)}>
                 Todowka <StatusLight />

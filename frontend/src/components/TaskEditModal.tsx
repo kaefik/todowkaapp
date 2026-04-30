@@ -397,11 +397,11 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9999] ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
+      className={`fixed inset-0 z-[9999] animate-fade-in ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className={`bg-white dark:bg-gray-800 shadow-2xl mx-4 border-4 border-indigo-500 dark:border-indigo-400 ${
+        className={`animate-scale-in bg-white dark:bg-gray-800 shadow-2xl mx-4 border-4 border-indigo-500 dark:border-indigo-400 ${
           isMobile
             ? 'w-full max-w-none rounded-t-lg border-b-0 max-h-[95vh] flex flex-col'
             : 'max-w-lg w-full rounded-lg p-4 max-h-[90vh] flex flex-col'

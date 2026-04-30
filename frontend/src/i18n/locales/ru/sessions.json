@@ -1,0 +1,20 @@
+{
+  "title": "Активные сессии",
+  "current": "Текущая",
+  "revoke": "Отозвать",
+  "revokeAll": "Выйти со всех устройств",
+  "created": "Создана:",
+  "lastActivity": "Активность:",
+  "justNow": "только что",
+  "minutesAgo": "{{count}} мин. назад",
+  "hoursAgo": "{{count}} ч. назад",
+  "daysAgo": "{{count}} дн. назад",
+  "noSessions": "Нет активных сессий",
+  "loadError": "Не удалось загрузить сессии",
+  "revokeSuccess": "Сессия отозвана",
+  "revokeError": "Не удалось отозвать сессию",
+  "revokeAllSuccess": "Вы вышли со всех устройств",
+  "revokeAllError": "Не удалось выйти со всех устройств",
+  "revokeAllConfirmTitle": "Выйти со всех устройств?",
+  "revokeAllConfirmMessage": "Вы будете разлогинены на всех устройствах, кроме текущего."
+}

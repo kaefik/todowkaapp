@@ -9,6 +9,7 @@ import type { User } from '../api/users'
 import { VerbSettings } from '../components/VerbSettings'
 import { BackupScheduleSettings } from '../components/BackupScheduleSettings'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
+import { SessionList } from '../components/sessions/SessionList'
 import { exportImportApi } from '../api/exportImport'
 import { performInitialSync } from '../db/init'
 
@@ -1058,6 +1059,12 @@ function SecurityTab() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-1">{t('activeSessions')}</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('activeSessionsDescription')}</p>
+        <SessionList />
       </div>
 
       <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 border border-red-200 dark:border-red-800">

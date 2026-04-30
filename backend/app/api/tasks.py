@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.task import Task
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.recurrence import TaskRecurrenceListResponse
 from app.schemas.task import (
     GtdCountsResponse,
@@ -36,7 +37,9 @@ async def _publish_task_event(user_id, task_id: str, action: str):
 
 
 @tasks_router.get("/counts", response_model=GtdCountsResponse)
+@limiter.limit(read_limit)
 async def get_gtd_counts(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> GtdCountsResponse:
@@ -46,7 +49,9 @@ async def get_gtd_counts(
 
 
 @tasks_router.get("", response_model=TaskListResponse)
+@limiter.limit(read_limit)
 async def list_tasks(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     gtd_status: str | None = Query(default=None),
@@ -112,7 +117,9 @@ async def list_tasks(
 
 
 @tasks_router.post("", status_code=status.HTTP_201_CREATED, response_model=TaskResponse)
+@limiter.limit(write_limit)
 async def create_task(
+    request: Request,
     data: TaskCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -133,7 +140,9 @@ async def create_task(
 
 
 @tasks_router.get("/{task_id}", response_model=TaskResponse)
+@limiter.limit(read_limit)
 async def get_task(
+    request: Request,
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -156,7 +165,9 @@ async def get_task(
 
 
 @tasks_router.put("/{task_id}", response_model=TaskResponse)
+@limiter.limit(write_limit)
 async def update_task(
+    request: Request,
     task_id: str,
     data: TaskUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -184,7 +195,9 @@ async def update_task(
 
 
 @tasks_router.patch("/{task_id}/move", response_model=TaskResponse)
+@limiter.limit(write_limit)
 async def move_task(
+    request: Request,
     task_id: str,
     data: TaskMoveRequest,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -208,7 +221,9 @@ async def move_task(
 
 
 @tasks_router.patch("/{task_id}/reorder", response_model=TaskResponse)
+@limiter.limit(write_limit)
 async def reorder_task(
+    request: Request,
     task_id: str,
     data: TaskReorderRequest,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -230,7 +245,9 @@ async def reorder_task(
 
 
 @tasks_router.patch("/{task_id}/toggle", response_model=TaskResponse)
+@limiter.limit(write_limit)
 async def toggle_task(
+    request: Request,
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -251,7 +268,9 @@ async def toggle_task(
 
 
 @tasks_router.delete("/completed/clear", status_code=status.HTTP_200_OK)
+@limiter.limit(write_limit)
 async def clear_completed(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, int]:
@@ -266,7 +285,9 @@ async def clear_completed(
 
 
 @tasks_router.delete("/trash/clear", status_code=status.HTTP_200_OK)
+@limiter.limit(write_limit)
 async def clear_trash(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, int]:
@@ -281,7 +302,9 @@ async def clear_trash(
 
 
 @tasks_router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_task(
+    request: Request,
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -306,7 +329,9 @@ async def delete_task(
 
 
 @tasks_router.get("/{task_id}/recurrences", response_model=TaskRecurrenceListResponse)
+@limiter.limit(read_limit)
 async def get_task_recurrences(
+    request: Request,
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -332,7 +357,9 @@ async def get_task_recurrences(
 
 
 @tasks_router.post("/{task_id}/stop-recurrence", response_model=TaskResponse)
+@limiter.limit(write_limit)
 async def stop_task_recurrence(
+    request: Request,
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

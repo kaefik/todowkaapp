@@ -1,6 +1,10 @@
 from fastapi import APIRouter
 
+from app.api import review as review_api
+
 api_router = APIRouter(prefix="/api")
+
+api_router.include_router(review_api.review_router)
 
 
 @api_router.get("/")

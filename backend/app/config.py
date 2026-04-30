@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     bcrypt_rounds: int = 12
     hibp_enabled: bool = False
+    rate_limit_write: str = "20/minute"
+    rate_limit_read: str = "60/minute"
+    rate_limit_sse: str = "5/minute"
+    rate_limit_export: str = "5/minute"
 
     @property
     def frontend_url(self) -> str:

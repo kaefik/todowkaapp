@@ -40,11 +40,11 @@ export function ConfirmDialog({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9999] ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
+      className={`fixed inset-0 z-[9999] animate-fade-in ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel() }}
     >
       <div
-        className={`bg-white dark:bg-gray-800 shadow-2xl mx-4 rounded-lg ${
+        className={`animate-scale-in bg-white dark:bg-gray-800 shadow-2xl mx-4 rounded-lg ${
           isMobile ? 'w-full max-w-none rounded-t-lg rounded-b-none' : 'max-w-md w-full'
         }`}
         onClick={(e) => e.stopPropagation()}

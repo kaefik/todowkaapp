@@ -197,5 +197,7 @@
   "backupSaveError": "Failed to save backup settings",
   "backupLastSent": "Last sent:",
   "backupNeverSent": "Not sent yet",
-  "backupNextSend": "Next backup will be sent at the specified time"
+  "backupNextSend": "Next backup will be sent at the specified time",
+  "activeSessions": "Active Sessions",
+  "activeSessionsDescription": "Devices where you are signed in"
 }

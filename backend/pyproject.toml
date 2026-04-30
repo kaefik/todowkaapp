@@ -23,6 +23,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "apscheduler>=3.10.4",
     "sse-starlette>=2.1.2",
+    "user-agents>=2.2",
 ]
 
 [project.optional-dependencies]

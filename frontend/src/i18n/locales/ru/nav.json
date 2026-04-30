@@ -18,5 +18,7 @@
   "contexts": "Контексты",
   "areas": "Области",
   "tags": "Теги",
-  "profile": "Профиль"
+  "profile": "Профиль",
+  "reviewReminder": "Время для еженедельного обзора",
+  "reviewStart": "Начать"
 }

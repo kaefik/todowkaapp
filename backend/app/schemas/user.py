@@ -35,6 +35,8 @@ class UserResponse(BaseResponseSchema):
     telegram_chat_id: str | None = None
     telegram_notifications_enabled: bool = False
     capitalize_first: bool = True
+    last_review_at: datetime | None = None
+    review_count: int = 0
     created_at: datetime
     last_login_at: datetime | None = None
 

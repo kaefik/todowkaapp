@@ -197,5 +197,7 @@
   "backupSaveError": "Ошибка сохранения настроек бэкапа",
   "backupLastSent": "Последняя отправка:",
   "backupNeverSent": "Ещё не отправлялось",
-  "backupNextSend": "Следующая отправка будет в указанное время"
+  "backupNextSend": "Следующая отправка будет в указанное время",
+  "activeSessions": "Активные сессии",
+  "activeSessionsDescription": "Устройства, на которых вы вошли в систему"
 }

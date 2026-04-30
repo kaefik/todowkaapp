@@ -1,13 +1,14 @@
 import asyncio
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.database import AsyncSessionLocal
+from app.models.revoked_token import RevokedToken
 from app.models.task import Task
 from app.models.user import User
 
@@ -110,6 +111,15 @@ class TaskScheduler:
                 max_instances=1,
             )
 
+            self.scheduler.add_job(
+                self._job_cleanup_revoked_tokens,
+                'interval',
+                days=1,
+                id='cleanup_revoked_tokens',
+                replace_existing=True,
+                max_instances=1,
+            )
+
             self.scheduler.start()
             logger.info("Scheduler started")
 
@@ -186,6 +196,22 @@ class TaskScheduler:
         if self.scheduler:
             self.scheduler.shutdown(wait=True)
             logger.info("Scheduler shut down")
+
+    @staticmethod
+    async def _job_cleanup_revoked_tokens():
+        logger.info("Running job: cleanup_revoked_tokens")
+
+        try:
+            async with AsyncSessionLocal() as session:
+                cutoff = datetime.now() - timedelta(days=7)
+                result = await session.execute(
+                    delete(RevokedToken).where(RevokedToken.revoked_at < cutoff)
+                )
+                await session.commit()
+                logger.info(f"Deleted {result.rowcount} expired revoked tokens")
+
+        except Exception as e:
+            logger.error(f"Error in cleanup_revoked_tokens: {e}")
 
     @staticmethod
     async def _job_generate_recurring_tasks():

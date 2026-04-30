@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.area import (
     AreaCreate,
     AreaListResponse,
@@ -27,7 +28,9 @@ async def _publish_area_event(user_id: str, area_id: str, action: str):
 
 
 @areas_router.get("", response_model=AreaListResponse)
+@limiter.limit(read_limit)
 async def list_areas(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     search: str | None = Query(default=None),
@@ -53,7 +56,9 @@ async def list_areas(
 
 
 @areas_router.put("/reorder", response_model=dict)
+@limiter.limit(write_limit)
 async def reorder_areas(
+    request: Request,
     data: AreaReorderRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -66,7 +71,9 @@ async def reorder_areas(
 
 
 @areas_router.post("", status_code=status.HTTP_201_CREATED, response_model=AreaResponse)
+@limiter.limit(write_limit)
 async def create_area(
+    request: Request,
     data: AreaCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -78,7 +85,9 @@ async def create_area(
 
 
 @areas_router.get("/{area_id}", response_model=AreaResponse)
+@limiter.limit(read_limit)
 async def get_area(
+    request: Request,
     area_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -96,7 +105,9 @@ async def get_area(
 
 
 @areas_router.put("/{area_id}", response_model=AreaResponse)
+@limiter.limit(write_limit)
 async def update_area(
+    request: Request,
     area_id: str,
     data: AreaUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -116,7 +127,9 @@ async def update_area(
 
 
 @areas_router.delete("/{area_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_area(
+    request: Request,
     area_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

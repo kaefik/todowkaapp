@@ -25,6 +25,7 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
+  sessionId: string | null
   login: (credentials: { username: string; password: string }) => Promise<void>
   register: (data: { username: string; email: string; password: string; invite_code?: string }) => Promise<void>
   registerAndLogin: (data: { username: string; email: string; password: string; invite_code?: string }) => Promise<void>
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  sessionId: null,
 
   login: async (credentials) => {
     set({ isLoading: true, error: null })
@@ -71,6 +73,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        sessionId: data.session_id ?? null,
       })
       if (data.user?.id) {
         performInitialSync(data.user.id).catch((err) => {
@@ -168,6 +171,7 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: true,
         isLoading: false,
         error: null,
+        sessionId: loginData.session_id ?? null,
       })
       if (loginData.user?.id) {
         performInitialSync(loginData.user.id).catch((err) => {
@@ -202,6 +206,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       error: null,
+      sessionId: null,
     })
   },
 
@@ -221,11 +226,13 @@ export const useAuthStore = create<AuthState>()(
       set({
         user: data.user,
         isAuthenticated: true,
+        sessionId: data.session_id ?? useAuthStore.getState().sessionId,
       })
     } catch (error) {
       set({
         user: null,
         isAuthenticated: false,
+        sessionId: null,
       })
       throw error
     }
@@ -318,6 +325,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       error: null,
+      sessionId: null,
     })
   },
 }),

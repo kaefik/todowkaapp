@@ -74,6 +74,7 @@ class Task(Base):
         Index('ix_tasks_user_due_date', 'user_id', 'due_date'),
         Index('ix_tasks_user_position', 'user_id', 'position'),
         Index('ix_tasks_trashed_at', 'gtd_status', 'trashed_at'),
+        Index('ix_tasks_user_updated', 'user_id', 'updated_at'),
     )
 
     @property

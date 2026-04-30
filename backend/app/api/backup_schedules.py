@@ -1,12 +1,13 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.backup_schedule import (
     BackupScheduleCreate,
     BackupScheduleResponse,
@@ -18,7 +19,9 @@ backup_schedules_router = APIRouter(prefix="/backup-schedule", tags=["backup-sch
 
 
 @backup_schedules_router.get("", response_model=BackupScheduleResponse)
+@limiter.limit(read_limit)
 async def get_backup_schedule(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -30,7 +33,9 @@ async def get_backup_schedule(
 
 
 @backup_schedules_router.post("", response_model=BackupScheduleResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(write_limit)
 async def create_backup_schedule(
+    request: Request,
     data: BackupScheduleCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -53,7 +58,9 @@ async def create_backup_schedule(
 
 
 @backup_schedules_router.put("", response_model=BackupScheduleResponse)
+@limiter.limit(write_limit)
 async def update_backup_schedule(
+    request: Request,
     data: BackupScheduleUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -69,7 +76,9 @@ async def update_backup_schedule(
 
 
 @backup_schedules_router.delete("", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_backup_schedule(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -82,7 +91,9 @@ async def delete_backup_schedule(
 
 
 @backup_schedules_router.post("/send-now")
+@limiter.limit(write_limit)
 async def send_backup_now(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):

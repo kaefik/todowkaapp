@@ -4,8 +4,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.api.areas import areas_router
 from app.api.auth import auth_router
@@ -17,6 +18,7 @@ from app.api.export_import import export_import_router
 from app.api.notifications import notifications_router
 from app.api.projects import projects_router
 from app.api.router import api_router
+from app.api.sessions import sessions_router
 from app.api.sse import sse_router
 from app.api.stats import stats_router
 from app.api.tags import tags_router
@@ -24,21 +26,12 @@ from app.api.tasks import tasks_router
 from app.api.users import users_router
 from app.api.verb_templates import verb_templates_router
 from app.config import settings
+from app.rate_limit import get_client_ip, limiter
 
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
-
-
-def get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
-limiter = Limiter(key_func=get_client_ip, enabled=settings.app_env != "test")
 
 
 @asynccontextmanager
@@ -70,6 +63,23 @@ def create_app() -> FastAPI:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler_with_logging)
 
+    class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request: Request, call_next):
+            response: Response = await call_next(request)
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+            content_type = response.headers.get("content-type", "")
+            if "text/event-stream" not in content_type:
+                response.headers["Content-Security-Policy"] = (
+                    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                    "img-src 'self' data: blob:; connect-src 'self'; font-src 'self'"
+                )
+            return response
+
+    app.add_middleware(SecurityHeadersMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins.split(","),
@@ -80,6 +90,7 @@ def create_app() -> FastAPI:
 
     api_router.include_router(areas_router)
     api_router.include_router(auth_router)
+    api_router.include_router(sessions_router)
     api_router.include_router(checklist_router)
     api_router.include_router(config_router)
     api_router.include_router(contexts_router)

@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.tag import TagCreate, TagListResponse, TagResponse, TagUpdate
 from app.services.tag_service import TagService
 
@@ -21,7 +22,9 @@ async def _publish_tag_event(user_id: str, tag_id: str, action: str):
 
 
 @tags_router.get("", response_model=TagListResponse)
+@limiter.limit(read_limit)
 async def list_tags(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     search: str | None = Query(default=None),
@@ -47,7 +50,9 @@ async def list_tags(
 
 
 @tags_router.post("", status_code=status.HTTP_201_CREATED, response_model=TagResponse)
+@limiter.limit(write_limit)
 async def create_tag(
+    request: Request,
     data: TagCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -59,7 +64,9 @@ async def create_tag(
 
 
 @tags_router.get("/{tag_id}", response_model=TagResponse)
+@limiter.limit(read_limit)
 async def get_tag(
+    request: Request,
     tag_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -77,7 +84,9 @@ async def get_tag(
 
 
 @tags_router.put("/{tag_id}", response_model=TagResponse)
+@limiter.limit(write_limit)
 async def update_tag(
+    request: Request,
     tag_id: str,
     data: TagUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -97,7 +106,9 @@ async def update_tag(
 
 
 @tags_router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_tag(
+    request: Request,
     tag_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

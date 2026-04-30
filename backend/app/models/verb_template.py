@@ -11,7 +11,7 @@ class VerbTemplate(Base):
     __tablename__ = 'verb_templates'
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     text: Mapped[str] = mapped_column(String(30), nullable=False)
     icon: Mapped[str] = mapped_column(String(10), nullable=False)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

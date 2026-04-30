@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.context import ContextCreate, ContextListResponse, ContextResponse, ContextUpdate
 from app.services.context_service import ContextService
 
@@ -21,7 +22,9 @@ async def _publish_context_event(user_id: str, context_id: str, action: str):
 
 
 @contexts_router.get("", response_model=ContextListResponse)
+@limiter.limit(read_limit)
 async def list_contexts(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     search: str | None = Query(default=None),
@@ -47,7 +50,9 @@ async def list_contexts(
 
 
 @contexts_router.post("", status_code=status.HTTP_201_CREATED, response_model=ContextResponse)
+@limiter.limit(write_limit)
 async def create_context(
+    request: Request,
     data: ContextCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -59,7 +64,9 @@ async def create_context(
 
 
 @contexts_router.get("/{context_id}", response_model=ContextResponse)
+@limiter.limit(read_limit)
 async def get_context(
+    request: Request,
     context_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -77,7 +84,9 @@ async def get_context(
 
 
 @contexts_router.put("/{context_id}", response_model=ContextResponse)
+@limiter.limit(write_limit)
 async def update_context(
+    request: Request,
     context_id: str,
     data: ContextUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -97,7 +106,9 @@ async def update_context(
 
 
 @contexts_router.delete("/{context_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_context(
+    request: Request,
     context_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

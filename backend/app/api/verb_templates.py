@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.verb_template import (
     VerbTemplateCreate,
     VerbTemplateListResponse,
@@ -27,7 +28,9 @@ async def _publish_verb_event(user_id: str, verb_id: str, action: str):
 
 
 @verb_templates_router.get('', response_model=VerbTemplateListResponse)
+@limiter.limit(read_limit)
 async def list_verb_templates(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
@@ -52,7 +55,9 @@ async def list_verb_templates(
 
 
 @verb_templates_router.post('', response_model=VerbTemplateResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(write_limit)
 async def create_verb_template(
+    request: Request,
     data: VerbTemplateCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -64,7 +69,9 @@ async def create_verb_template(
 
 
 @verb_templates_router.put('/{verb_id}', response_model=VerbTemplateResponse)
+@limiter.limit(write_limit)
 async def update_verb_template(
+    request: Request,
     verb_id: str,
     data: VerbTemplateUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -79,7 +86,9 @@ async def update_verb_template(
 
 
 @verb_templates_router.delete('/{verb_id}', status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_verb_template(
+    request: Request,
     verb_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -92,7 +101,9 @@ async def delete_verb_template(
 
 
 @verb_templates_router.put('/reorder', response_model=list[VerbTemplateResponse])
+@limiter.limit(write_limit)
 async def reorder_verb_templates(
+    request: Request,
     data: VerbTemplateReorderRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -105,7 +116,9 @@ async def reorder_verb_templates(
 
 
 @verb_templates_router.post('/reset', response_model=list[VerbTemplateResponse])
+@limiter.limit(write_limit)
 async def reset_verb_templates(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[VerbTemplateResponse]:

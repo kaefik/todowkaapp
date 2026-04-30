@@ -154,11 +154,11 @@ export function TaskDetailModal({ taskId, isOpen, onClose, onEdit }: TaskDetailM
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[9999] ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
+      className={`fixed inset-0 z-[9999] animate-fade-in ${isMobile ? 'flex items-end' : 'flex items-center justify-center'} bg-black/75 dark:bg-black/90`}
       onClick={onClose}
     >
       <div
-        className={`bg-white dark:bg-gray-800 shadow-2xl ${
+        className={`animate-scale-in bg-white dark:bg-gray-800 shadow-2xl ${
           isMobile
             ? 'w-full max-w-none rounded-t-lg mx-0 max-h-[95vh] flex flex-col'
             : 'mx-4 max-w-2xl w-full rounded-lg max-h-[90vh] flex flex-col'

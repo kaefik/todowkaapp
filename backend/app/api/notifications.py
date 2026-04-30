@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,13 +10,16 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.notification import Notification
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.notification import NotificationListResponse
 
 notifications_router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
 @notifications_router.get("", response_model=NotificationListResponse)
+@limiter.limit(read_limit)
 async def get_notifications(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     unread_only: bool = Query(default=False),
@@ -56,7 +59,9 @@ async def get_notifications(
 
 
 @notifications_router.patch("/{notification_id}/read", status_code=status.HTTP_200_OK)
+@limiter.limit(write_limit)
 async def mark_notification_as_read(
+    request: Request,
     notification_id: UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -87,7 +92,9 @@ async def mark_notification_as_read(
 
 
 @notifications_router.patch("/read-all", status_code=status.HTTP_200_OK)
+@limiter.limit(write_limit)
 async def mark_all_notifications_as_read(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
@@ -105,7 +112,9 @@ async def mark_all_notifications_as_read(
 
 
 @notifications_router.delete("/read", status_code=status.HTTP_200_OK)
+@limiter.limit(write_limit)
 async def delete_read_notifications(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, str]:
@@ -118,7 +127,9 @@ async def delete_read_notifications(
 
 
 @notifications_router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_notification(
+    request: Request,
     notification_id: UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

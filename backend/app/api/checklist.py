@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.checklist import (
     ChecklistItemCreate,
     ChecklistItemListResponse,
@@ -19,7 +20,9 @@ checklist_router = APIRouter(prefix="/tasks", tags=["checklist"])
 
 
 @checklist_router.get("/checklist/all", response_model=ChecklistItemListResponse)
+@limiter.limit(read_limit)
 async def list_all_checklist_items(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     updated_since: str | None = Query(default=None),
@@ -47,7 +50,9 @@ async def _publish_checklist_event(user_id, task_id: str, action: str):
 
 
 @checklist_router.get("/{task_id}/checklist", response_model=list[ChecklistItemResponse])
+@limiter.limit(read_limit)
 async def list_checklist(
+    request: Request,
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -69,7 +74,9 @@ async def list_checklist(
     status_code=status.HTTP_201_CREATED,
     response_model=ChecklistItemResponse,
 )
+@limiter.limit(write_limit)
 async def create_checklist_item(
+    request: Request,
     task_id: str,
     data: ChecklistItemCreate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -92,7 +99,9 @@ async def create_checklist_item(
     "/{task_id}/checklist/{item_id}",
     response_model=ChecklistItemResponse,
 )
+@limiter.limit(write_limit)
 async def update_checklist_item(
+    request: Request,
     task_id: str,
     item_id: str,
     data: ChecklistItemUpdate,
@@ -114,7 +123,9 @@ async def update_checklist_item(
     "/{task_id}/checklist/{item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
+@limiter.limit(write_limit)
 async def delete_checklist_item(
+    request: Request,
     task_id: str,
     item_id: str,
     current_user: Annotated[User, Depends(get_current_user)],

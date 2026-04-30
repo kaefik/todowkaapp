@@ -3,12 +3,13 @@ import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
 
 from app.dependencies import get_current_user
 from app.event_bus import event_bus
 from app.models.user import User
+from app.rate_limit import limiter, sse_limit
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,9 @@ sse_router = APIRouter(prefix="/sse", tags=["sse"])
 
 
 @sse_router.get("/notifications")
+@limiter.limit(sse_limit)
 async def notification_stream(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> EventSourceResponse:
     user_id = str(current_user.id)
@@ -42,7 +45,9 @@ async def notification_stream(
 
 
 @sse_router.get("/sync")
+@limiter.limit(sse_limit)
 async def sync_stream(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> EventSourceResponse:
     user_id = str(current_user.id)

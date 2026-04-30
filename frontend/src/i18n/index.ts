@@ -11,6 +11,8 @@ import notificationsRu from './locales/ru/notifications.json'
 import syncRu from './locales/ru/sync.json'
 import verbsRu from './locales/ru/verbs.json'
 import onboardingRu from './locales/ru/onboarding.json'
+import reviewRu from './locales/ru/review.json'
+import sessionsRu from './locales/ru/sessions.json'
 
 import commonEn from './locales/en/common.json'
 import navEn from './locales/en/nav.json'
@@ -22,6 +24,8 @@ import notificationsEn from './locales/en/notifications.json'
 import syncEn from './locales/en/sync.json'
 import verbsEn from './locales/en/verbs.json'
 import onboardingEn from './locales/en/onboarding.json'
+import reviewEn from './locales/en/review.json'
+import sessionsEn from './locales/en/sessions.json'
 
 const resources = {
   ru: {
@@ -35,6 +39,8 @@ const resources = {
     sync: syncRu,
     verbs: verbsRu,
     onboarding: onboardingRu,
+    review: reviewRu,
+    sessions: sessionsRu,
   },
   en: {
     common: commonEn,
@@ -47,6 +53,8 @@ const resources = {
     sync: syncEn,
     verbs: verbsEn,
     onboarding: onboardingEn,
+    review: reviewEn,
+    sessions: sessionsEn,
   },
 }
 
@@ -64,7 +72,7 @@ i18n.use(initReactI18next).init({
   resources,
   lng: detectLanguage(),
   fallbackLng: 'ru',
-  ns: ['common', 'nav', 'auth', 'tasks', 'settings', 'projects', 'notifications', 'sync', 'verbs', 'onboarding'],
+  ns: ['common', 'nav', 'auth', 'tasks', 'settings', 'projects', 'notifications', 'sync', 'verbs', 'onboarding', 'review', 'sessions'],
   defaultNS: 'common',
   interpolation: {
     escapeValue: false,

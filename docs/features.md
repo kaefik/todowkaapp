@@ -40,6 +40,14 @@
   - Refresh-токены, выпущенные до смены пароля, автоматически отзываются
   - API: POST /api/auth/change-password
   - Файлы: `backend/app/api/auth.py`, `backend/app/schemas/auth.py`, `backend/app/models/user.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`
+- Управление сессиями ✅ (Реализовано 30.04.2026)
+  - Просмотр активных сессий: устройство, браузер, ОС, IP, дата входа
+  - Отзыв отдельной сессии или всех устройств (кроме текущей)
+  - Текущая сессия помечена визуально
+  - UI: Settings → Security → «Активные сессии»
+  - API: GET /api/auth/sessions, DELETE /api/auth/sessions/{session_id}, DELETE /api/auth/sessions
+  - Модель Session с полями: user_agent, ip_address, device_type, browser, os, last_active_at
+  - Файлы: `backend/app/models/session.py`, `backend/app/api/auth.py`, `frontend/src/routes/Settings.tsx`
 - Удаление аккаунта ✅ (Реализовано 26.04.2026)
   - Полное и безвозвратное удаление аккаунта со всеми данными (задачи, проекты, области, контексты, теги, уведомления, глаголы)
   - Требует ввода пароля для подтверждения
@@ -302,6 +310,16 @@
   - Работает во всех местах: списки задач (TaskListView), страница Tasks, модалка детали (TaskDetailModal), поиск (SearchOverlay)
   - Файлы: `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/components/TaskDetailModal.tsx`, `frontend/src/components/SearchOverlay.tsx`
 
+#### Weekly Review Wizard ✅ (Реализовано 30.04.2026)
+- Пошаговый wizard на /review для проведения еженедельного обзора по GTD
+- Шаг 1: Обработка Inbox (сделать/когда-нибудь/удалить/в проект)
+- Шаг 2: Проверка проектов (индикатор next action)
+- Шаг 3: Ревизия Someday/Maybe (активировать/в корзину/оставить)
+- Экран завершения со статистикой (обработано задач, перемещено, удалено)
+- Напоминание в sidebar если review > 7 дней (оранжевый бейдж)
+- Роут: `/review`
+- Файлы: `frontend/src/routes/Review.tsx`, `frontend/src/components/AppLayout.tsx`
+
 #### GTD-статус Active ✅ (Реализовано 22.04.2026)
 - Новый GTD-статус `active` — задачи с дедлайном, которые «в работе»
 - Автоматический переход: при установке `due_date` задаче в `inbox` → статус меняется на `active`
@@ -349,6 +367,15 @@
 - Хранение: в localStorage (ключ `show-task-counts`), только на клиенте
 - Применяется ко всем счётчикам: GTD-секции (Inbox, Active, Today, Tomorrow, Next, Waiting, Someday), Completed, Trash
 - Файлы: `frontend/src/routes/Settings.tsx`, `frontend/src/components/AppLayout.tsx`
+
+#### Анимации (Polish) ✅ (Реализовано 30.04.2026)
+- CSS keyframes анимации (fadeIn, slideUp, slideDown, scaleIn)
+- Анимации модальных окон (scale-in) и overlay (fade-in)
+- Stagger-анимация для списков задач (каскадная задержка появления элементов)
+- Плавный sidebar toggle (slide + opacity)
+- View Transitions API для page transitions (кросс-браузерный fallback)
+- Поддержка prefers-reduced-motion (отключение анимаций для пользователей)
+- Файлы: `frontend/src/index.css`, `frontend/src/components/AppLayout.tsx`, `frontend/src/components/TaskListView.tsx`
 
 #### Пользовательский интерфейс
 - Адаптивный дизайн для всех устройств (десктоп, планшет, телефон)
@@ -756,6 +783,18 @@
 
 #### Безопасность
 - Хеширование паролей с bcrypt и salt
+- Security headers middleware ✅ (Реализовано 30.04.2026)
+  - CSP (Content-Security-Policy), X-Frame-Options (DENY), X-Content-Type-Options (nosniff)
+  - X-XSS-Protection, Referrer-Policy (strict-origin-when-cross-origin)
+  - Permissions-Policy (camera=(), microphone=(), geolocation=())
+  - Настраиваемые через переменные окружения
+  - Файлы: `backend/app/main.py`, `backend/app/config.py`
+- Фоновая очистка RevokedToken ✅ (Реализовано 30.04.2026)
+  - Автоматическое удаление отозванных токенов старше 7 дней
+  - Scheduler job запускается раз в сутки
+  - Файлы: `backend/app/scheduler.py`, `backend/app/services/auth_service.py`
+- Полный security audit пройден ✅ (30.04.2026)
+- Хеширование паролей с bcrypt и salt (без дублирования)
   - Cost factor (rounds) зафиксирован в конфигурации: BCRYPT_ROUNDS (по умолчанию 12)
   - Автоматический апгрейд хеша: при логине проверяется cost factor, если устарел — пароль перехешируется с текущим BCRYPT_ROUNDS
   - Функция `needs_rehash()` в `backend/app/security.py` определяет необходимость перехеширования
@@ -807,6 +846,11 @@
   - Реализовано с помощью slowapi библиотеки
   - Поддержка X-Forwarded-For для корректного определения IP за прокси
   - Понятные сообщения об ошибках rate limiting на фронтенде (HTTP 429)
+- Rate limiting на все API эндпоинты ✅ (Реализовано 30.04.2026)
+  - Категории лимитов: auth (3/мин), write (20/мин), read (60/мин), SSE (5/мин), export (5/мин)
+  - Настраиваемые через .env (RATE_LIMIT_AUTH, RATE_LIMIT_WRITE, RATE_LIMIT_READ, RATE_LIMIT_SSE, RATE_LIMIT_EXPORT)
+  - Покрытие всех эндпоинтов без исключений
+  - Файлы: `backend/app/main.py`, `backend/app/config.py`
 - Защита от брутфорса с блокировкой аккаунта:
   - После 5 неверных попыток входа аккаунт блокируется на 15 минут
   - Все ошибочные ответы идентичны: 401 "Incorrect username or password" (без раскрытия информации)
@@ -844,6 +888,11 @@
 - Композитный индекс ix_tasks_user_id_is_completed для оптимизации запросов
 - Cascade delete при удалении пользователя
 - Таблица revoked_tokens для хранения отозванных refresh токенов (JTI + revoked_at)
+- SQL-индексы для оптимизации запросов ✅ (Реализовано 30.04.2026)
+  - Индексы для user_id в таблицах: projects, areas, contexts, verb_templates
+  - Композитный индекс (user_id, updated_at) для tasks — оптимизация инкрементального pull
+  - Миграция: `alembic/versions/20260430_*_add_iteration4_indexes_*.py`
+  - Файлы: `backend/app/models/project.py`, `backend/app/models/area.py`, `backend/app/models/context.py`, `backend/app/models/verb_template.py`, `backend/app/models/task.py`
 
 #### Деплой и DevOps
 - Контейнеризация с Docker
@@ -1102,7 +1151,34 @@
 
 ## История возможностей
 
-*Последнее обновление: 27 апреля 2026 года*
+*Последнее обновление: 30 апреля 2026 года*
+
+**30 апреля 2026:**
+- Weekly Review Wizard (пошаговый GTD-обзор на /review)
+  - 3 шага: обработка Inbox, проверка проектов, ревизия Someday/Maybe
+  - Экран завершения со статистикой
+  - Напоминание в sidebar при review > 7 дней
+  - Файлы: `frontend/src/routes/Review.tsx`, `frontend/src/components/AppLayout.tsx`
+- Управление сессиями
+  - Просмотр активных сессий (устройство, браузер, ОС, IP, дата входа)
+  - Отзыв отдельной сессии или всех устройств
+  - API: GET/DELETE /api/auth/sessions
+  - Файлы: `backend/app/models/session.py`, `backend/app/api/auth.py`, `frontend/src/routes/Settings.tsx`
+- Анимации (Polish)
+  - CSS keyframes, stagger-анимация списков, плавный sidebar toggle
+  - View Transitions API для page transitions
+  - Поддержка prefers-reduced-motion
+  - Файлы: `frontend/src/index.css`, `frontend/src/components/AppLayout.tsx`, `frontend/src/components/TaskListView.tsx`
+- SQL-индексы
+  - Индексы user_id для projects, areas, contexts, verb_templates
+  - Композитный (user_id, updated_at) для tasks
+- Rate Limiting на все API эндпоинты
+  - Категории: auth (3/мин), write (20/мин), read (60/мин), SSE (5/мин), export (5/мин)
+  - Настраиваемые через .env
+- Security Hardening
+  - Security headers middleware (CSP, X-Frame-Options, X-Content-Type-Options и др.)
+  - Фоновая очистка RevokedToken (старше 7 дней)
+  - Полный security audit пройден
 
 **27 апреля 2026:**
 - Исправление timezone-бага дедлайнов задач

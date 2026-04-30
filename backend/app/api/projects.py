@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.project import (
     ProjectCreate,
     ProjectDetailResponse,
@@ -29,7 +30,9 @@ async def _publish_project_event(user_id: str, project_id: str, action: str):
 
 
 @projects_router.get("", response_model=ProjectListResponse)
+@limiter.limit(read_limit)
 async def list_projects(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     search: str | None = Query(default=None),
@@ -73,7 +76,9 @@ async def list_projects(
 
 
 @projects_router.put("/reorder", response_model=dict)
+@limiter.limit(write_limit)
 async def reorder_projects(
+    request: Request,
     data: ProjectReorderRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -86,7 +91,9 @@ async def reorder_projects(
 
 
 @projects_router.post("", status_code=status.HTTP_201_CREATED, response_model=ProjectResponse)
+@limiter.limit(write_limit)
 async def create_project(
+    request: Request,
     data: ProjectCreate,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -98,7 +105,9 @@ async def create_project(
 
 
 @projects_router.get("/{project_id}", response_model=ProjectDetailResponse)
+@limiter.limit(read_limit)
 async def get_project(
+    request: Request,
     project_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -129,7 +138,9 @@ async def get_project(
 
 
 @projects_router.put("/{project_id}", response_model=ProjectResponse)
+@limiter.limit(write_limit)
 async def update_project(
+    request: Request,
     project_id: str,
     data: ProjectUpdate,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -149,7 +160,9 @@ async def update_project(
 
 
 @projects_router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(write_limit)
 async def delete_project(
+    request: Request,
     project_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -168,7 +181,9 @@ async def delete_project(
 
 
 @projects_router.get("/{project_id}/tasks", response_model=TaskListResponse)
+@limiter.limit(read_limit)
 async def get_project_tasks(
+    request: Request,
     project_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

@@ -29,6 +29,7 @@ from app.security import (
     verify_password,
 )
 from app.services.hibp import check_password_breach
+from app.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,23 @@ async def login(
     set_refresh_cookie(response, refresh_token)
     set_access_cookie(response, access_token)
 
-    return TokenResponse(user=user)
+    user_agent = request.headers.get("user-agent")
+    ip_address = request.client.host if request.client else None
+    refresh_jti = get_token_jti(refresh_token)
+
+    session_id = None
+    if refresh_jti:
+        try:
+            session_service = SessionService(db)
+            session = await session_service.create_session(
+                str(user.id), refresh_jti, user_agent, ip_address
+            )
+            session_id = session.id
+            await db.commit()
+        except Exception:
+            logger.warning("Failed to create session", exc_info=True)
+
+    return TokenResponse(user=user, session_id=session_id)
 
 
 @auth_router.post("/refresh", response_model=TokenResponse)
@@ -250,6 +267,22 @@ async def refresh(
         db.add(revoked_token)
         await db.commit()
 
+    try:
+        session_service = SessionService(db)
+        if settings.refresh_token_rotation_enabled:
+            new_jti = get_token_jti(new_refresh_token)
+            if new_jti:
+                await session_service.delete_by_jti(token_jti)
+                await session_service.create_session(
+                    str(user.id), new_jti, None, None
+                )
+                await db.commit()
+        else:
+            await session_service.update_activity(token_jti)
+            await db.commit()
+    except Exception:
+        logger.warning("Failed to update session activity", exc_info=True)
+
     return TokenResponse(user=user)
 
 
@@ -259,12 +292,20 @@ async def logout(
     db: Annotated[AsyncSession, Depends(get_db)],
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> dict[str, str]:
-    if refresh_token and settings.refresh_token_rotation_enabled:
+    if refresh_token:
         token_jti = get_token_jti(refresh_token)
-        if token_jti:
+        if token_jti and settings.refresh_token_rotation_enabled:
             revoked_token = RevokedToken(token_jti=token_jti)
             db.add(revoked_token)
             await db.commit()
+
+        if token_jti:
+            try:
+                session_service = SessionService(db)
+                await session_service.delete_by_jti(token_jti)
+                await db.commit()
+            except Exception:
+                pass
 
     clear_refresh_cookie(response)
     clear_access_cookie(response)
@@ -303,6 +344,14 @@ async def change_password(
     current_user.password_changed_at = datetime.now(UTC)
     await db.commit()
 
+    current_jti = get_token_jti(refresh_token) if refresh_token else None
+    try:
+        session_service = SessionService(db)
+        await session_service.revoke_all_sessions(str(current_user.id), current_jti or "")
+        await db.commit()
+    except Exception:
+        logger.warning("Failed to revoke sessions on password change", exc_info=True)
+
     if refresh_token:
         token_jti = get_token_jti(refresh_token)
         if token_jti:
@@ -315,6 +364,17 @@ async def change_password(
 
     set_access_cookie(response, new_access)
     set_refresh_cookie(response, new_refresh)
+
+    new_jti = get_token_jti(new_refresh)
+    if new_jti:
+        try:
+            session_service = SessionService(db)
+            await session_service.create_session(
+                str(current_user.id), new_jti, None, None
+            )
+            await db.commit()
+        except Exception:
+            logger.warning("Failed to create session after password change", exc_info=True)
 
     return {"message": "Пароль успешно изменён"}
 

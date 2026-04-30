@@ -2,12 +2,13 @@ import json
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import export_limit, limiter
 from app.schemas.export_import import ImportReport
 from app.services.export_import_service import ExportImportService
 
@@ -17,7 +18,9 @@ MAX_FILE_SIZE = 50 * 1024 * 1024
 
 
 @export_import_router.get("/export")
+@limiter.limit(export_limit)
 async def export_data(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -29,7 +32,9 @@ async def export_data(
 
 
 @export_import_router.post("/import", response_model=ImportReport)
+@limiter.limit(export_limit)
 async def import_data(
+    request: Request,
     file: UploadFile,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

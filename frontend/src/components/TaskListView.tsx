@@ -460,10 +460,11 @@ export function TaskListView({
 
       {activeTasks.length > 0 && !activeGroups && (
         <div className="space-y-2">
-          {activeTasks.map((task) => (
+          {activeTasks.map((task, index) => (
             <div
               key={task.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer animate-slide-up"
+              style={{ animationDelay: `${Math.min(index * 30, 300)}ms`, animationFillMode: 'both' }}
               onClick={() => setViewingTaskId(task.id)}
             >
               <div className="flex items-start gap-3">
@@ -604,10 +605,11 @@ export function TaskListView({
               group={group}
               storageKey={`group-collapsed:${group.key}:${groupBy}`}
             >
-              {group.tasks.map((task) => (
+              {group.tasks.map((task, index) => (
                 <div
                   key={task.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 hover:shadow-md dark:hover:shadow-lg transition-shadow cursor-pointer animate-slide-up"
+                  style={{ animationDelay: `${Math.min(index * 30, 300)}ms`, animationFillMode: 'both' }}
                   onClick={() => setViewingTaskId(task.id)}
                 >
                   <div className="flex items-start gap-3">

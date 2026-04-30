@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,13 +9,16 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.task import Task
 from app.models.user import User
+from app.rate_limit import limiter, read_limit
 from app.schemas.stats import StatsResponse
 
 stats_router = APIRouter(prefix="/stats", tags=["stats"])
 
 
 @stats_router.get("", response_model=StatsResponse)
+@limiter.limit(read_limit)
 async def get_stats(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> StatsResponse:
