@@ -20,5 +20,8 @@
   "tags": "Теги",
   "profile": "Профиль",
   "reviewReminder": "Время для еженедельного обзора",
-  "reviewStart": "Начать"
+  "reviewStart": "Начать",
+  "reviewLink": "Еженедельный обзор",
+  "snooze1Day": "Завтра",
+  "snooze3Days": "Через 3 дня"
 }

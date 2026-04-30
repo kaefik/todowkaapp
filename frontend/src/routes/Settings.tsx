@@ -14,7 +14,7 @@ import { exportImportApi } from '../api/exportImport'
 import { performInitialSync } from '../db/init'
 
 type Theme = 'light' | 'dark'
-type Tab = 'general' | 'appearance' | 'profile' | 'security' | 'verbs' | 'users' | 'backup'
+type Tab = 'general' | 'appearance' | 'profile' | 'security' | 'verbs' | 'users' | 'backup' | 'review'
 
 function SettingsContent() {
   const { t, i18n } = useTranslation('settings')
@@ -201,6 +201,7 @@ function SettingsContent() {
     { key: 'verbs', label: t('tabVerbs'), adminOnly: false },
     { key: 'backup', label: t('tabBackup'), adminOnly: false },
     { key: 'users', label: t('tabUsers'), adminOnly: true },
+    { key: 'review', label: t('reviewSettingsTitle', { defaultValue: 'Обзор' }), adminOnly: false },
   ]
 
   const visibleTabs = tabs.filter((tab) => !tab.adminOnly || user?.is_admin)
@@ -885,6 +886,87 @@ function SettingsContent() {
       )}
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
       {activeTab === 'backup' && <BackupScheduleSettings user={user!} />}
+      {activeTab === 'review' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 space-y-6">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+              {t('reviewFrequencyLabel', { defaultValue: 'Частота напоминаний' })}
+            </h3>
+            <div className="space-y-3">
+              {[
+                { value: 7, label: t('reviewFrequencyWeekly', { defaultValue: 'Еженедельно (каждые 7 дней)' }) },
+                { value: 14, label: t('reviewFrequencyBiweekly', { defaultValue: 'Раз в 2 недели (14 дней)' }) },
+                { value: 30, label: t('reviewFrequencyMonthly', { defaultValue: 'Ежемесячно (30 дней)' }) },
+              ].map((option) => (
+                <label key={option.value} className="flex items-center">
+                  <input
+                    type="radio"
+                    name="reviewFrequency"
+                    value={option.value}
+                    checked={user?.review_frequency_days === option.value}
+                    onChange={async () => {
+                      const updated = await usersApi.updateCurrentUser({ review_frequency_days: option.value })
+                      if (updated) setCurrentUser(updated)
+                    }}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 dark:border-gray-600 focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    {option.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+              {t('reviewPushEnabled', { defaultValue: 'Push-уведомления' })}
+            </h3>
+            <div className="space-y-3">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={user?.review_notifications_enabled ?? false}
+                  onChange={async (e) => {
+                    const enabled = e.target.checked
+                    if (enabled && browserNotifications.permission !== 'granted') {
+                      await browserNotifications.enable()
+                    }
+                    const updated = await usersApi.updateCurrentUser({ review_notifications_enabled: enabled })
+                    if (updated) setCurrentUser(updated)
+                  }}
+                  className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  {t('reviewPushEnabledDesc', { defaultValue: 'Показывать уведомление о необходимости обзора' })}
+                </span>
+              </label>
+              {browserNotifications.permission !== 'granted' && (
+                <button
+                  onClick={async () => {
+                    const result = await browserNotifications.enable()
+                    if (result) {
+                      addToast({ type: 'success', title: t('notificationsEnabled', { defaultValue: 'Уведомления разрешены' }), body: '' })
+                    }
+                  }}
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {t('allowNotifications', { defaultValue: 'Разрешить уведомления' })}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              {t('reviewLastReview', { defaultValue: 'Последний обзор' })}: {user?.last_review_at ? new Date(user.last_review_at).toLocaleDateString() : '—'}
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {t('reviewTotalCount', { defaultValue: 'Всего обзоров' })}: {user?.review_count ?? 0}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

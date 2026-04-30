@@ -20,5 +20,8 @@
   "tags": "Tags",
   "profile": "Profile",
   "reviewReminder": "Time for weekly review",
-  "reviewStart": "Start"
+  "reviewStart": "Start",
+  "reviewLink": "Weekly Review",
+  "snooze1Day": "Tomorrow",
+  "snooze3Days": "In 3 days"
 }

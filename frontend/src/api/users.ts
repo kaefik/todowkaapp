@@ -15,6 +15,10 @@ export interface User {
   capitalize_first: boolean
   created_at: string
   last_login_at: string | null
+  last_review_at: string | null
+  review_count: number
+  review_frequency_days: number
+  review_notifications_enabled: boolean
 }
 
 export const usersApi = {
@@ -23,7 +27,7 @@ export const usersApi = {
     return response.data
   },
 
-  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'language' | 'telegram_bot_token' | 'telegram_notifications_enabled' | 'capitalize_first'>>): Promise<User> => {
+  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'language' | 'telegram_bot_token' | 'telegram_notifications_enabled' | 'capitalize_first' | 'review_frequency_days' | 'review_notifications_enabled'>>): Promise<User> => {
     const response = await httpClient.patch<User>('/users/me', data)
     return response.data
   },

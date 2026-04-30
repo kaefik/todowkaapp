@@ -10,6 +10,7 @@ import { NotificationBell } from './NotificationBell'
 import { StatusLight } from './StatusLight'
 import { SearchOverlay } from './SearchOverlay'
 import { ReviewReminderBanner } from './ReviewReminderBanner'
+import { useReviewNotifications } from '../hooks/useReviewNotifications'
 
 function NavItem({
   to,
@@ -140,6 +141,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           { path: '/contexts', label: t('contexts') },
           { path: '/areas', label: t('areas') },
           { path: '/tags', label: t('tags') },
+          { path: '/review', label: '📅 ' + t('reviewLink') },
         ].map((item) => (
           <NavItem
             key={item.path}
@@ -193,6 +195,8 @@ export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation('nav')
+
+  useReviewNotifications()
 
   useEffect(() => {
     const editTaskId = searchParams.get('editTaskId')

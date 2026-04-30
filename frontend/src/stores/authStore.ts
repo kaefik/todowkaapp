@@ -18,6 +18,10 @@ export interface User {
   capitalize_first: boolean
   created_at: string
   last_login_at: string | null
+  last_review_at: string | null
+  review_count: number
+  review_frequency_days: number
+  review_notifications_enabled: boolean
 }
 
 interface AuthState {

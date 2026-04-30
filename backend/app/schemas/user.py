@@ -37,6 +37,8 @@ class UserResponse(BaseResponseSchema):
     capitalize_first: bool = True
     last_review_at: datetime | None = None
     review_count: int = 0
+    review_frequency_days: int = 7
+    review_notifications_enabled: bool = False
     created_at: datetime
     last_login_at: datetime | None = None
 
@@ -61,6 +63,8 @@ class UserUpdate(BaseModel):
     telegram_bot_token: str | None = None
     telegram_notifications_enabled: bool | None = None
     capitalize_first: bool | None = None
+    review_frequency_days: int | None = None
+    review_notifications_enabled: bool | None = None
 
     @field_validator('default_section')
     @classmethod

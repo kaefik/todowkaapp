@@ -29,6 +29,8 @@ class User(Base):
     capitalize_first: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text('1'), nullable=False)
     last_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text('0'), nullable=False)
+    review_frequency_days: Mapped[int] = mapped_column(Integer, default=7, server_default=text('7'), nullable=False)
+    review_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
