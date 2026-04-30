@@ -173,11 +173,14 @@ class TaskService:
         return await self.get_task(user_id, task.id)
 
     async def update_task(
-        self, user_id: UUID, task_id: UUID, data: TaskUpdate
+        self, user_id: UUID, task_id: UUID, data: TaskUpdate, user: User | None = None
     ) -> Task | None:
         task = await self.get_task(user_id, task_id)
         if task is None:
             return None
+
+        was_completed = task.is_completed
+        was_recurring_and_completed = task.is_recurring and was_completed
 
         update_data = data.model_dump(exclude_unset=True)
 
@@ -237,6 +240,38 @@ class TaskService:
         task.updated_at = datetime.now(UTC)
 
         await self.db.flush()
+
+        if task.is_completed and not was_recurring_and_completed and self.recurrence_service:
+            if self.recurrence_service.should_generate_task(task):
+                new_task = await self.recurrence_service.generate_next_task(task)
+                await self.db.flush()
+
+                if self.reminder_service and new_task and user:
+                    notification = await self.reminder_service.create_notification(
+                        user=user,
+                        task=new_task,
+                        type='recurrence_created',
+                        message=f'Создана повторяющаяся задача: "{new_task.title}"'
+                    )
+
+                    from app.event_bus import event_bus
+                    await event_bus.publish(f"{user.id}:sync", "task_updated", {
+                        "task_id": str(new_task.id),
+                        "action": "created",
+                    })
+                    await event_bus.publish(f"{user.id}:notifications", "notification_created", {
+                        "notification_id": str(notification.id),
+                        "type": notification.type,
+                        "message": notification.message,
+                        "task_id": str(new_task.id),
+                        "notification_data": {
+                            "id": str(notification.id),
+                            "message": notification.message,
+                            "created_at": notification.created_at.isoformat() if notification.created_at else None,
+                            "due_date": new_task.due_date.isoformat() if new_task.due_date else None,
+                        },
+                    })
+
         return await self.get_task(user_id, task_id)
 
     async def move_task(self, user_id: UUID, task_id: UUID, gtd_status: GtdStatus, user: User | None = None) -> Task | None:

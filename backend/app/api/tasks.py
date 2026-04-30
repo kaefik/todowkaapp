@@ -173,9 +173,11 @@ async def update_task(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TaskResponse:
-    service = TaskService(db)
+    recurrence_service = RecurrenceService(db)
+    reminder_service = ReminderService(db)
+    service = TaskService(db, recurrence_service=recurrence_service, reminder_service=reminder_service)
     try:
-        task = await service.update_task(user_id=current_user.id, task_id=task_id, data=data)
+        task = await service.update_task(user_id=current_user.id, task_id=task_id, data=data, user=current_user)
     except IntegrityError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
