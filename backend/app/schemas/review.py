@@ -16,6 +16,8 @@ class ProjectReviewItem(BaseModel):
     name: str
     description: str | None = None
     has_next_action: bool
+    next_actions: list[TaskReviewItem] = []
+    available_tasks: list[TaskReviewItem] = []
 
 
 class ReviewStatusResponse(BaseModel):

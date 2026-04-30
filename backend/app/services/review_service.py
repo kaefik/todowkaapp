@@ -60,12 +60,49 @@ class ReviewService:
                 )
             )
             has_next_action = (has_next_result.scalar() or 0) > 0
+
+            next_actions_result = await self.db.execute(
+                select(Task.id, Task.title, Task.description, Task.due_date).where(
+                    Task.project_id == project.id,
+                    Task.gtd_status.in_([GtdStatus.ACTIVE.value, GtdStatus.NEXT.value]),
+                    Task.user_id == str(user_id),
+                )
+            )
+            next_actions = [
+                {
+                    "id": row.id,
+                    "title": row.title,
+                    "description": row.description,
+                    "due_date": row.due_date.isoformat() if row.due_date else None,
+                }
+                for row in next_actions_result.all()
+            ]
+
+            available_result = await self.db.execute(
+                select(Task.id, Task.title, Task.description, Task.due_date).where(
+                    Task.project_id == project.id,
+                    Task.gtd_status.in_([GtdStatus.SOMEDAY.value, GtdStatus.WAITING.value]),
+                    Task.user_id == str(user_id),
+                )
+            )
+            available_tasks = [
+                {
+                    "id": row.id,
+                    "title": row.title,
+                    "description": row.description,
+                    "due_date": row.due_date.isoformat() if row.due_date else None,
+                }
+                for row in available_result.all()
+            ]
+
             active_projects.append(
                 {
                     "id": project.id,
                     "name": project.name,
                     "description": project.description,
                     "has_next_action": has_next_action,
+                    "next_actions": next_actions,
+                    "available_tasks": available_tasks,
                 }
             )
 

@@ -12,6 +12,8 @@ export interface ProjectReviewItem {
   name: string
   description: string | null
   has_next_action: boolean
+  next_actions: TaskReviewItem[]
+  available_tasks: TaskReviewItem[]
 }
 
 export interface ReviewStatus {
