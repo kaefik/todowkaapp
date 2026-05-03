@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Task, UpdateTask, GtdStatus } from '../hooks/useTasks'
 import { useRecurrences } from '../hooks/useRecurrences'
 import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useVerbTemplates, type VerbTemplate } from '../hooks/useVerbTemplates'
+import { useHotkey } from '../hooks/useHotkey'
 import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
 import { TaskEditModal } from './TaskEditModal'
@@ -250,6 +251,16 @@ export function TaskListView({
     }
     return undefined
   }, [isLoading, autoFocus])
+
+  const focusInput = useCallback(() => {
+    if (!showAddForm || editingTask || viewingTaskId) return
+    inputRef.current?.focus()
+  }, [showAddForm, editingTask, viewingTaskId])
+
+  useHotkey(
+    { code: 'KeyN', shift: true, enabled: showAddForm && !editingTask && !viewingTaskId },
+    focusInput,
+  )
 
   const handleVerbSelect = (verb: VerbTemplate | null) => {
     if (blurTimeoutRef.current) {

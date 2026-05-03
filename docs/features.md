@@ -70,6 +70,13 @@
   - Backend: модель VerbTemplate, API CRUD + reorder + reset, миграция
   - Frontend: Dexie table + sync engine, useVerbTemplates hook, VerbChips, VerbFab, VerbSettings
   - Файлы: `backend/app/models/verb_template.py`, `backend/app/schemas/verb_template.py`, `backend/app/services/verb_template_service.py`, `backend/app/api/verb_templates.py`, `frontend/src/db/database.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/api/verbTemplates.ts`, `frontend/src/hooks/useVerbTemplates.ts`, `frontend/src/components/VerbChips.tsx`, `frontend/src/components/VerbFab.tsx`, `frontend/src/components/VerbSettings.tsx`, `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Settings.tsx`
+- Клавиатурные сочетания для работы с задачами ✅ (Реализовано 03.05.2026)
+  - Shift+N — фокусирует поле ввода для создания новой задачи
+  - Работает на любой раскладке клавиатуры (используется `e.code` вместо `e.key`)
+  - Срабатывает только на страницах со списком задач (где есть форма добавления)
+  - Не срабатывает при открытых модальных окнах (редактирование/просмотр задачи)
+  - Хук: `frontend/src/hooks/useHotkey.ts`
+  - Файлы: `frontend/src/hooks/useHotkey.ts`, `frontend/src/components/TaskListView.tsx`
 - Быстрое создание задачи с заголовком (обязательно) и описанием (опционально)
   - В GTD-секциях (Inbox, Active, Next, Waiting, Someday) задача создаётся с текущим статусом секции
   - В «Сегодня»/«Завтра» задача создаётся со статусом `active` и дедлайном на соответствующий день
