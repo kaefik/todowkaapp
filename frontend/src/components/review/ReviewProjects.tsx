@@ -16,14 +16,21 @@ export function ReviewProjectsStep() {
   const { t } = useTranslation('review')
   const { addTask, updateTask } = useTasks()
   const { data, markProjectReviewed, incrementNextActionsAdded, setStep } = useReviewStore()
-  const projects = data?.active_projects ?? []
+  const allProjects = data?.active_projects ?? []
 
+  const problemProjects = allProjects.filter((p) => !p.has_next_action)
+  const okProjects = allProjects.filter((p) => p.has_next_action)
+
+  const [showAll, setShowAll] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [expandedState, setExpandedState] = useState<Record<string, ExpandedState>>({})
   const [taskTitle, setTaskTitle] = useState('')
   const [creatingForId, setCreatingForId] = useState<string | null>(null)
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set())
   const [localHasNextAction, setLocalHasNextAction] = useState<Set<string>>(new Set())
+  const [skippedIds, setSkippedIds] = useState<Set<string>>(new Set())
+
+  const displayProjects = showAll ? allProjects : problemProjects
 
   const getExpandedState = useCallback(
     (projectId: string): ExpandedState => {
@@ -32,17 +39,24 @@ export function ReviewProjectsStep() {
     [expandedState],
   )
 
-  const handleToggleExpand = useCallback(
+  const handleToggleExpand = (projectId: string) => {
+    setExpandedId((prev) => (prev === projectId ? null : projectId))
+    setTaskTitle('')
+    setExpandedState((prev) => {
+      const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
+      return { ...prev, [projectId]: { ...current, addMode: 'none', selectedTaskId: null } }
+    })
+    setReviewedIds((prev) => {
+      if (prev.has(projectId)) return prev
+      const next = new Set(prev).add(projectId)
+      markProjectReviewed()
+      return next
+    })
+  }
+
+  const handleSkipProject = useCallback(
     (projectId: string) => {
-      setExpandedId((prev) => (prev === projectId ? null : projectId))
-      setTaskTitle('')
-      setExpandedState((prev) => {
-        const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
-        return {
-          ...prev,
-          [projectId]: { ...current, addMode: 'none', selectedTaskId: null },
-        }
-      })
+      setSkippedIds((prev) => new Set(prev).add(projectId))
       if (!reviewedIds.has(projectId)) {
         setReviewedIds((prev) => new Set(prev).add(projectId))
         markProjectReviewed()
@@ -51,57 +65,33 @@ export function ReviewProjectsStep() {
     [reviewedIds, markProjectReviewed],
   )
 
-  const handleToggleNextActions = useCallback(
-    (projectId: string) => {
-      setExpandedState((prev) => {
-        const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
-        return {
-          ...prev,
-          [projectId]: { ...current, nextActions: !current.nextActions },
-        }
-      })
-    },
-    [],
-  )
+  const handleToggleNextActions = useCallback((projectId: string) => {
+    setExpandedState((prev) => {
+      const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
+      return { ...prev, [projectId]: { ...current, nextActions: !current.nextActions } }
+    })
+  }, [])
 
-  const handleSetAddMode = useCallback(
-    (projectId: string, mode: AddMode) => {
-      setExpandedState((prev) => {
-        const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
-        return {
-          ...prev,
-          [projectId]: { ...current, addMode: mode, selectedTaskId: null },
-        }
-      })
-    },
-    [],
-  )
+  const handleSetAddMode = useCallback((projectId: string, mode: AddMode) => {
+    setExpandedState((prev) => {
+      const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
+      return { ...prev, [projectId]: { ...current, addMode: mode, selectedTaskId: null } }
+    })
+  }, [])
 
-  const handleSelectTask = useCallback(
-    (projectId: string, taskId: string) => {
-      setExpandedState((prev) => {
-        const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
-        return {
-          ...prev,
-          [projectId]: { ...current, selectedTaskId: taskId },
-        }
-      })
-    },
-    [],
-  )
+  const handleSelectTask = useCallback((projectId: string, taskId: string) => {
+    setExpandedState((prev) => {
+      const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
+      return { ...prev, [projectId]: { ...current, selectedTaskId: taskId } }
+    })
+  }, [])
 
-  const handleSetStatus = useCallback(
-    (projectId: string, status: 'active' | 'next') => {
-      setExpandedState((prev) => {
-        const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
-        return {
-          ...prev,
-          [projectId]: { ...current, selectedStatus: status },
-        }
-      })
-    },
-    [],
-  )
+  const handleSetStatus = useCallback((projectId: string, status: 'active' | 'next') => {
+    setExpandedState((prev) => {
+      const current = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
+      return { ...prev, [projectId]: { ...current, selectedStatus: status } }
+    })
+  }, [])
 
   const handleCreate = useCallback(
     async (projectId: string) => {
@@ -110,11 +100,7 @@ export function ReviewProjectsStep() {
 
       setCreatingForId(projectId)
       try {
-        const taskData: CreateTask = {
-          title,
-          project_id: projectId,
-          gtd_status: 'active',
-        }
+        const taskData: CreateTask = { title, project_id: projectId, gtd_status: 'active' }
         await addTask(taskData)
         setLocalHasNextAction((prev) => new Set(prev).add(projectId))
         incrementNextActionsAdded()
@@ -124,68 +110,40 @@ export function ReviewProjectsStep() {
         setCreatingForId(null)
       }
     },
-    [addTask, incrementNextActionsAdded],
+    [addTask, incrementNextActionsAdded, taskTitle],
   )
 
   const handleSelectExisting = useCallback(
-    async (projectId: string) => {
-      setExpandedState((prev) => {
-        const state = prev[projectId] || { nextActions: false, addMode: 'none', selectedTaskId: null, selectedStatus: 'active' }
-        if (!state.selectedTaskId) return prev
+    async (projectId: string, state: ExpandedState) => {
+      if (!state.selectedTaskId) return
 
-        setCreatingForId(projectId)
-        const selectedTaskId = state.selectedTaskId
-        const selectedStatus = state.selectedStatus
-
-        ;(async () => {
-          try {
-            const updateData: UpdateTask = {
-              project_id: projectId,
-              gtd_status: selectedStatus,
-            }
-            await updateTask(selectedTaskId, updateData)
-            setLocalHasNextAction((prev) => new Set(prev).add(projectId))
-            incrementNextActionsAdded()
-            setExpandedId(null)
-            setTaskTitle('')
-          } finally {
-            setCreatingForId(null)
-          }
-        })()
-
-        return {
-          ...prev,
-          [projectId]: { ...state, addMode: 'none', selectedTaskId: null },
-        }
-      })
+      setCreatingForId(projectId)
+      try {
+        const updateData: UpdateTask = { project_id: projectId, gtd_status: state.selectedStatus }
+        await updateTask(state.selectedTaskId, updateData)
+        setLocalHasNextAction((prev) => new Set(prev).add(projectId))
+        incrementNextActionsAdded()
+        setExpandedId(null)
+        setTaskTitle('')
+      } finally {
+        setCreatingForId(null)
+      }
     },
     [updateTask, incrementNextActionsAdded],
   )
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent, projectId: string) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleCreate(projectId)
-      }
-      if (e.key === 'Escape') {
-        setExpandedId(null)
-        setTaskTitle('')
-      }
-    },
-    [handleCreate],
-  )
+  const handleKeyDown = (e: React.KeyboardEvent, projectId: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleCreate(projectId)
+    }
+    if (e.key === 'Escape') {
+      setExpandedId(null)
+      setTaskTitle('')
+    }
+  }
 
-  const handleSomeday = useCallback(() => {
-    projects.forEach((p) => {
-      if (!reviewedIds.has(p.id)) {
-        markProjectReviewed()
-      }
-    })
-    setStep('someday')
-  }, [projects, reviewedIds, markProjectReviewed, setStep])
-
-  const hasNextAction = (project: (typeof projects)[number]) =>
+  const hasNextAction = (project: (typeof allProjects)[number]) =>
     project.has_next_action || localHasNextAction.has(project.id)
 
   const formatDueDate = (dueDate: string | null) => {
@@ -198,30 +156,22 @@ export function ReviewProjectsStep() {
     }
   }
 
-  if (projects.length === 0) {
+  if (allProjects.length === 0) {
     return (
       <div className="flex-1 flex flex-col">
         <div className="px-5 py-4 border-b bg-gray-50 dark:bg-gray-800/50">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                📁 {t('projectsTitle')}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {t('projectsDescription', { count: 0 })}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSomeday}
-              className="px-4 py-2 text-sm font-medium rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-            >
-              {t('someday')} →
-            </button>
-          </div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            📁 {t('projectsTitle')}
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('projectsEmpty')}</p>
         </div>
         <div className="flex-1 flex items-center justify-center p-5">
-          <p className="text-sm text-gray-400 dark:text-gray-500">{t('projectsEmpty')}</p>
+          <button
+            onClick={() => setStep('dashboard')}
+            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+          >
+            {t('backToDashboard')}
+          </button>
         </div>
       </div>
     )
@@ -229,33 +179,46 @@ export function ReviewProjectsStep() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <div className="px-5 py-4 border-b bg-gray-50 dark:bg-gray-800/50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              📁 {t('projectsTitle')}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {t('projectsDescription', { count: projects.length })}
-            </p>
-          </div>
+      <div className="px-5 py-4 border-b bg-gray-50 dark:bg-gray-800/50 flex items-center justify-between">
+        <div>
           <button
-            type="button"
-            onClick={handleSomeday}
-            className="px-4 py-2 text-sm font-medium rounded-lg text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+            onClick={() => setStep('dashboard')}
+            className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors mb-1"
           >
-            {t('someday')} →
+            {t('backToDashboard')}
           </button>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            📁 {t('projectsTitle')}
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {t('projectsDescription', { count: problemProjects.length })}
+          </p>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-3">
-        {projects.map((project) => {
+        {displayProjects.map((project) => {
           const isExpanded = expandedId === project.id
           const state = getExpandedState(project.id)
           const isCreating = creatingForId === project.id
           const hasAction = hasNextAction(project)
           const hasAvailableTasks = project.available_tasks && project.available_tasks.length > 0
+          const isSkipped = skippedIds.has(project.id)
+
+          if (isSkipped) {
+            return (
+              <div
+                key={project.id}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-3 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-gray-400" />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{project.name}</span>
+                </div>
+                <span className="text-xs text-gray-400">{t('skipWillRemind')}</span>
+              </div>
+            )
+          }
 
           return (
             <div
@@ -277,6 +240,11 @@ export function ReviewProjectsStep() {
                     <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate block">
                       {project.name}
                     </span>
+                    {!hasAction && project.days_without_next > 0 && (
+                      <span className="text-xs text-red-500 dark:text-red-400">
+                        {t('daysWithoutNext', { count: project.days_without_next })}
+                      </span>
+                    )}
                     {project.description && (
                       <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">
                         {project.description}
@@ -292,27 +260,23 @@ export function ReviewProjectsStep() {
                     </span>
                   )}
                   {hasAction && (
-                    <span className="text-xs font-medium text-green-600 dark:text-green-400 whitespace-nowrap">
-                      ✓
-                    </span>
+                    <span className="text-xs font-medium text-green-600 dark:text-green-400">✓</span>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleExpand(project.id)}
-                    className="px-2.5 py-1 text-xs font-medium rounded-md
-                      text-indigo-600 dark:text-indigo-400
-                      bg-indigo-50 dark:bg-indigo-900/30
-                      hover:bg-indigo-100 dark:hover:bg-indigo-900/50
-                      transition-colors"
-                  >
-                    {t('addNextAction')}
-                  </button>
+                  {!hasAction && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleExpand(project.id)}
+                      className="px-2.5 py-1 text-xs font-medium rounded-md text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                    >
+                      {t('addNextAction')}
+                    </button>
+                  )}
                 </div>
               </div>
 
               {isExpanded && (
                 <div className="px-3 pb-3 pt-1 border-t border-gray-100 dark:border-gray-700">
-                  {(project.next_actions && project.next_actions.length > 0) && (
+                  {project.next_actions && project.next_actions.length > 0 && (
                     <div className="mb-3">
                       <button
                         type="button"
@@ -320,22 +284,16 @@ export function ReviewProjectsStep() {
                         className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1 mb-2"
                       >
                         <span>{state.nextActions ? '▼' : '▶'}</span>
-                        <span>{t('currentNextActions') || 'Текущие задачи'} ({project.next_actions.length})</span>
+                        <span>{t('currentNextActions')} ({project.next_actions.length})</span>
                       </button>
                       {state.nextActions && (
                         <div className="ml-4 space-y-1">
                           {project.next_actions.map((task) => (
                             <div key={task.id} className="flex items-center gap-2 text-xs">
-                              <input
-                                type="checkbox"
-                                disabled
-                                className="rounded border-gray-300 dark:border-gray-600"
-                              />
+                              <input type="checkbox" disabled className="rounded border-gray-300 dark:border-gray-600" />
                               <span className="text-gray-700 dark:text-gray-300">{task.title}</span>
                               {task.due_date && (
-                                <span className="text-gray-400 dark:text-gray-500">
-                                  {formatDueDate(task.due_date)}
-                                </span>
+                                <span className="text-gray-400 dark:text-gray-500">{formatDueDate(task.due_date)}</span>
                               )}
                             </div>
                           ))}
@@ -351,7 +309,7 @@ export function ReviewProjectsStep() {
                         onClick={() => handleSetAddMode(project.id, 'create')}
                         className="px-3 py-1.5 text-xs font-medium rounded-md text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                       >
-                        + {t('createNew') || 'Создать новую'}
+                        + {t('createNew')}
                       </button>
                       {hasAvailableTasks && (
                         <button
@@ -359,7 +317,7 @@ export function ReviewProjectsStep() {
                           onClick={() => handleSetAddMode(project.id, 'select')}
                           className="px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
-                          {t('selectExisting') || 'Выбрать из существующих'}
+                          {t('selectExisting')}
                         </button>
                       )}
                     </div>
@@ -373,11 +331,7 @@ export function ReviewProjectsStep() {
                         onChange={(e) => setTaskTitle(e.target.value)}
                         onKeyDown={(e) => handleKeyDown(e, project.id)}
                         placeholder={t('nextActionPlaceholder')}
-                        className="flex-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600
-                          bg-white dark:bg-gray-700
-                          text-gray-900 dark:text-gray-100
-                          placeholder-gray-400 dark:placeholder-gray-500
-                          focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                        className="flex-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                         autoFocus
                         disabled={isCreating}
                       />
@@ -385,16 +339,9 @@ export function ReviewProjectsStep() {
                         type="button"
                         onClick={() => handleCreate(project.id)}
                         disabled={!taskTitle.trim() || isCreating}
-                        className="px-3 py-1.5 text-xs font-medium rounded-md text-white
-                          bg-indigo-600 hover:bg-indigo-700
-                          dark:bg-indigo-500 dark:hover:bg-indigo-600
-                          transition-colors
-                          disabled:opacity-50 disabled:cursor-not-allowed
-                          flex items-center gap-1"
+                        className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                       >
-                        {isCreating && (
-                          <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        )}
+                        {isCreating && <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />}
                         {t('create')}
                       </button>
                       <button
@@ -409,9 +356,7 @@ export function ReviewProjectsStep() {
 
                   {state.addMode === 'select' && hasAvailableTasks && (
                     <div className="space-y-2">
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                        {t('selectTask') || 'Выберите задачу:'}
-                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t('selectTask')}</div>
                       <div className="max-h-40 overflow-y-auto space-y-1">
                         {project.available_tasks.map((task) => (
                           <label
@@ -430,20 +375,12 @@ export function ReviewProjectsStep() {
                               className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 dark:text-indigo-400"
                             />
                             <span className="text-gray-700 dark:text-gray-300 flex-1 truncate">{task.title}</span>
-                            {task.due_date && (
-                              <span className="text-gray-400 dark:text-gray-500 text-xs">
-                                {formatDueDate(task.due_date)}
-                              </span>
-                            )}
                           </label>
                         ))}
                       </div>
-
                       {state.selectedTaskId && (
                         <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {t('setStatus') || 'Статус:'}
-                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{t('setStatus')}</span>
                           <label className="flex items-center gap-1 text-xs cursor-pointer">
                             <input
                               type="radio"
@@ -466,23 +403,15 @@ export function ReviewProjectsStep() {
                           </label>
                         </div>
                       )}
-
                       <div className="flex gap-2 pt-2">
                         <button
                           type="button"
-                          onClick={() => handleSelectExisting(project.id)}
+                          onClick={() => handleSelectExisting(project.id, state)}
                           disabled={!state.selectedTaskId || isCreating}
-                          className="px-3 py-1.5 text-xs font-medium rounded-md text-white
-                            bg-indigo-600 hover:bg-indigo-700
-                            dark:bg-indigo-500 dark:hover:bg-indigo-600
-                            transition-colors
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                            flex items-center gap-1"
+                          className="px-3 py-1.5 text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                         >
-                          {isCreating && (
-                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          )}
-                          {t('add') || 'Добавить'}
+                          {isCreating && <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+                          {t('add')}
                         </button>
                         <button
                           type="button"
@@ -494,11 +423,33 @@ export function ReviewProjectsStep() {
                       </div>
                     </div>
                   )}
+
+                </div>
+              )}
+
+              {!hasAction && !isExpanded && (
+                <div className="px-3 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSkipProject(project.id)}
+                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    {t('skipWillRemind')}
+                  </button>
                 </div>
               )}
             </div>
           )
         })}
+
+        {!showAll && okProjects.length > 0 && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="w-full text-center py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          >
+            {t('showAllProjects', { count: allProjects.length })}
+          </button>
+        )}
       </div>
     </div>
   )

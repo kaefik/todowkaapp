@@ -3,8 +3,9 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useReviewStore } from '../stores/reviewStore'
-import { ReviewMinimap } from '../components/review/ReviewMinimap'
+import { ReviewDashboard } from '../components/review/ReviewDashboard'
 import { ReviewInboxStep } from '../components/review/ReviewInbox'
+import { ReviewOverdueStep } from '../components/review/ReviewOverdue'
 import { ReviewProjectsStep } from '../components/review/ReviewProjects'
 import { ReviewSomedayStep } from '../components/review/ReviewSomeday'
 import { ReviewCompletion } from '../components/review/ReviewCompletion'
@@ -13,13 +14,13 @@ export function Review() {
   const { isAuthenticated } = useAuthStore()
   const { t } = useTranslation('review')
   const navigate = useNavigate()
-  const { currentStep, isLoading, error, data, fetchData, resetStats } = useReviewStore()
+  const { currentStep, isLoading, error, fetchSummary, resetStats } = useReviewStore()
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchData()
+      fetchSummary()
     }
-  }, [isAuthenticated, fetchData])
+  }, [isAuthenticated, fetchSummary])
 
   useEffect(() => {
     return () => {
@@ -57,7 +58,7 @@ export function Review() {
     )
   }
 
-  if (error && !data) {
+  if (error) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
@@ -75,8 +76,12 @@ export function Review() {
 
   const renderStep = () => {
     switch (currentStep) {
+      case 'dashboard':
+        return <ReviewDashboard />
       case 'inbox':
         return <ReviewInboxStep />
+      case 'overdue':
+        return <ReviewOverdueStep />
       case 'projects':
         return <ReviewProjectsStep />
       case 'someday':
@@ -90,14 +95,27 @@ export function Review() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      <ReviewMinimap />
       <div className="flex-1 flex flex-col relative">
-        <button
-          onClick={handleCancel}
-          className="absolute top-4 right-4 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors z-10"
-        >
-          {t('cancel')}
-        </button>
+        {currentStep !== 'dashboard' && (
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={handleCancel}
+              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+          </div>
+        )}
+        {currentStep === 'dashboard' && (
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={handleCancel}
+              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {renderStep()}
       </div>
     </div>

@@ -19,11 +19,11 @@ function isSnoozed(): boolean {
   return new Date(snoozedUntil) > new Date()
 }
 
-function isMoreThanSevenDaysAgo(dateStr: string): boolean {
+function isMoreThanDaysAgo(dateStr: string, days: number): boolean {
   const lastReview = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - lastReview.getTime()
-  return diffMs > 7 * 24 * 60 * 60 * 1000
+  return diffMs > days * 24 * 60 * 60 * 1000
 }
 
 export function ReviewReminderBanner() {
@@ -41,9 +41,9 @@ export function ReviewReminderBanner() {
     if (!checkShouldShow()) return
 
     reviewApi
-      .getStatus()
-      .then((status) => {
-        if (!status.last_review_date || isMoreThanSevenDaysAgo(status.last_review_date)) {
+      .getSummary()
+      .then((summary) => {
+        if (!summary.last_review_date || isMoreThanDaysAgo(summary.last_review_date, summary.review_frequency_days)) {
           setShow(true)
         }
       })

@@ -9,16 +9,24 @@ interface ReviewCompletionProps {
 
 export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
   const { t } = useTranslation('review')
-  const { stats, data } = useReviewStore()
+  const { stats, data, summary } = useReviewStore()
   const [isCompleting, setIsCompleting] = useState(true)
   const [completedAt, setCompletedAt] = useState<string | null>(null)
+  const [healthAfter, setHealthAfter] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     reviewApi
-      .complete()
+      .complete({
+        inbox_processed: stats.inboxProcessed,
+        next_actions_added: stats.nextActionsAdded,
+        someday_activated: stats.somedayActivated,
+      })
       .then((response) => {
-        if (!cancelled) setCompletedAt(response.completed_at)
+        if (!cancelled) {
+          setCompletedAt(response.completed_at)
+          setHealthAfter(response.snapshot_health)
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -27,15 +35,18 @@ export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [stats])
 
   const reviewCount = data?.review_count ?? 0
+  const frequencyDays = summary?.review_frequency_days ?? 7
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
-    date.setDate(date.getDate() + 7)
-    return date.toLocaleDateString('ru-RU')
+    date.setDate(date.getDate() + frequencyDays)
+    return date.toLocaleDateString()
   }
+
+  const healthBefore = summary?.health_status ?? null
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
@@ -72,6 +83,14 @@ export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
           <div className="text-xs text-purple-700 dark:text-purple-300 mt-1">{t('completionSomedayActivated')}</div>
         </div>
       </div>
+
+      {healthBefore && healthAfter && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3 w-full max-w-md mb-4">
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            Health: {healthBefore} → {healthAfter}
+          </div>
+        </div>
+      )}
 
       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3 w-full max-w-md mb-6">
         <div className="text-sm text-gray-700 dark:text-gray-300">
