@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useReviewStore } from '../../stores/reviewStore'
-import { httpClient } from '../../api/httpClient'
+import { db } from '../../db/database'
+import { useAuthStore } from '../../stores/authStore'
+import { v4 as uuidv4 } from 'uuid'
 
 export function ReviewSomedayStep() {
   const { t } = useTranslation('review')
@@ -34,8 +36,10 @@ export function ReviewSomedayStep() {
     setError(null)
   }, [])
 
+  const user = useAuthStore(s => s.user)
+
   const handleActivate = useCallback(async () => {
-    if (processing || currentIndex >= total) return
+    if (processing || currentIndex >= total || !user) return
     const task = somedayTasks[currentIndex]
     if (!task) return
 
@@ -43,7 +47,22 @@ export function ReviewSomedayStep() {
     setError(null)
 
     try {
-      await httpClient.patch(`/tasks/${task.id}`, { gtd_status: 'active' })
+      const now = new Date().toISOString()
+      await db.tasks.update(task.id, {
+        gtdStatus: 'active',
+        updatedAt: now,
+        _syncStatus: 'modified',
+      } as never)
+      await db.mutations.add({
+        id: uuidv4(),
+        entityType: 'task',
+        entityId: task.id,
+        action: 'move',
+        payload: JSON.stringify({ gtd_status: 'active' }),
+        timestamp: Date.now(),
+        retryCount: 0,
+        lastError: null,
+      })
       incrementSomedayActivated()
       advance()
     } catch (err) {
@@ -51,7 +70,7 @@ export function ReviewSomedayStep() {
     } finally {
       setProcessing(false)
     }
-  }, [processing, currentIndex, total, somedayTasks, incrementSomedayActivated, advance, t])
+  }, [processing, currentIndex, total, somedayTasks, incrementSomedayActivated, advance, t, user])
 
   const handleKeep = useCallback(() => {
     if (processing || currentIndex >= total) return
@@ -60,7 +79,7 @@ export function ReviewSomedayStep() {
   }, [processing, currentIndex, total, incrementSomedayProcessed, advance])
 
   const handleTrash = useCallback(async () => {
-    if (processing || currentIndex >= total) return
+    if (processing || currentIndex >= total || !user) return
     const task = somedayTasks[currentIndex]
     if (!task) return
 
@@ -68,7 +87,22 @@ export function ReviewSomedayStep() {
     setError(null)
 
     try {
-      await httpClient.patch(`/tasks/${task.id}`, { gtd_status: 'trash' })
+      const now = new Date().toISOString()
+      await db.tasks.update(task.id, {
+        gtdStatus: 'trash',
+        updatedAt: now,
+        _syncStatus: 'modified',
+      } as never)
+      await db.mutations.add({
+        id: uuidv4(),
+        entityType: 'task',
+        entityId: task.id,
+        action: 'move',
+        payload: JSON.stringify({ gtd_status: 'trash' }),
+        timestamp: Date.now(),
+        retryCount: 0,
+        lastError: null,
+      })
       incrementSomedayProcessed()
       advance()
     } catch (err) {
@@ -76,7 +110,7 @@ export function ReviewSomedayStep() {
     } finally {
       setProcessing(false)
     }
-  }, [processing, currentIndex, total, somedayTasks, incrementSomedayProcessed, advance, t])
+  }, [processing, currentIndex, total, somedayTasks, incrementSomedayProcessed, advance, t, user])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

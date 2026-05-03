@@ -159,10 +159,12 @@ describe('Projects page', () => {
     })
 
     it('calls deleteProject on delete click', async () => {
-      vi.spyOn(window, 'confirm').mockReturnValue(true)
       const user = userEvent.setup()
       renderProjects()
-      await user.click(screen.getByText('Удалить'))
+      const deleteButtons = screen.getAllByText('Удалить')
+      await user.click(deleteButtons[0])
+      const confirmButton = screen.getAllByRole('button', { name: 'Удалить' }).at(-1)!
+      await user.click(confirmButton)
       expect(mockDeleteProject).toHaveBeenCalledWith('p1')
     })
   })

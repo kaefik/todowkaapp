@@ -241,6 +241,8 @@ describe('Tasks', () => {
 
       const deleteButton = screen.getByRole('button', { name: 'Удалить' })
       await user.click(deleteButton)
+      const confirmButton = screen.getAllByRole('button', { name: 'Удалить' }).at(-1)!
+      await user.click(confirmButton)
 
       expect(mockMoveTask).toHaveBeenCalledWith('1', 'trash')
     })
