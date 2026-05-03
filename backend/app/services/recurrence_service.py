@@ -16,7 +16,7 @@ class RecurrenceService:
     def __init__(self, db: 'AsyncSession'):
         self.db = db
 
-    async def generate_next_task(self, task: Task) -> Task | None:
+    async def generate_next_task(self, task: Task, previous_gtd_status: str | None = None) -> Task | None:
         if not task.is_recurring:
             return None
 
@@ -39,11 +39,13 @@ class RecurrenceService:
             if next_due_date > end:
                 return None
 
+        new_status = previous_gtd_status if previous_gtd_status and previous_gtd_status not in ('completed', 'trash') else 'next'
+
         new_task = Task(
             user_id=task.user_id,
             title=task.title,
             description=task.description,
-            gtd_status='next',
+            gtd_status=new_status,
             context_id=task.context_id,
             area_id=task.area_id,
             project_id=task.project_id,
@@ -158,6 +160,28 @@ class RecurrenceService:
                         pass
                 return base_date + timedelta(days=32 * interval)
 
+        if recurrence_type == 'yearly':
+            month = config.get('month')
+            day_of_year = config.get('day_of_month')
+            target_year = base_date.year + interval
+
+            if month is not None and isinstance(month, int) and 1 <= month <= 12:
+                target_month = month
+            else:
+                target_month = base_date.month
+
+            if day_of_year is not None and isinstance(day_of_year, int) and 1 <= day_of_year <= 31:
+                target_day = day_of_year
+            else:
+                target_day = base_date.day
+
+            try:
+                target = base_date.replace(year=target_year, month=target_month, day=1)
+                max_day = (target + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+                return target.replace(day=min(target_day, max_day.day))
+            except ValueError:
+                return None
+
         return None
 
     def should_generate_task(self, task: Task) -> bool:
@@ -259,12 +283,14 @@ class RecurrenceService:
                     current_date = next_date
                     continue
 
+                fallback_status = task.gtd_status if task.gtd_status not in ('completed', 'trash') else 'next'
+
                 new_task = Task(
                     id=str(uuid4()),
                     user_id=task.user_id,
                     title=task.title,
                     description=task.description,
-                    gtd_status='next',
+                    gtd_status=fallback_status,
                     context_id=task.context_id,
                     area_id=task.area_id,
                     project_id=task.project_id,
@@ -300,7 +326,7 @@ class RecurrenceService:
         if not isinstance(config, dict):
             return False
 
-        if recurrence_type not in ['daily', 'weekly', 'monthly', 'custom']:
+        if recurrence_type not in ['daily', 'weekly', 'monthly', 'yearly', 'custom']:
             return False
 
         interval = config.get('interval', 1)
@@ -332,5 +358,15 @@ class RecurrenceService:
                     return False
             else:
                 return False
+
+        if recurrence_type == 'yearly':
+            month = config.get('month')
+            day_of_month = config.get('day_of_month')
+            if month is not None:
+                if not isinstance(month, int) or month < 1 or month > 12:
+                    return False
+            if day_of_month is not None:
+                if not isinstance(day_of_month, int) or day_of_month < 1 or day_of_month > 31:
+                    return False
 
         return True

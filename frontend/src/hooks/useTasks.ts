@@ -13,12 +13,13 @@ export type GtdStatus = 'inbox' | 'active' | 'next' | 'waiting' | 'someday' | 'c
 export type GroupBy = 'project' | 'area' | 'context' | 'due_date' | 'gtd_status'
 
 export interface RecurrenceConfig {
-  type: 'daily' | 'weekly' | 'monthly'
+  type: 'daily' | 'weekly' | 'monthly' | 'yearly'
   interval: number
   days?: number[]
   day_of_month?: number
   week_of_month?: number
   day_of_week?: number
+  month?: number
 }
 
 export interface ProjectBrief {

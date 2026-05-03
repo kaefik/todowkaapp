@@ -181,6 +181,7 @@ class TaskService:
 
         was_completed = task.is_completed
         was_recurring_and_completed = task.is_recurring and was_completed
+        previous_gtd_status = task.gtd_status
 
         update_data = data.model_dump(exclude_unset=True)
 
@@ -243,7 +244,7 @@ class TaskService:
 
         if task.is_completed and not was_recurring_and_completed and self.recurrence_service:
             if self.recurrence_service.should_generate_task(task):
-                new_task = await self.recurrence_service.generate_next_task(task)
+                new_task = await self.recurrence_service.generate_next_task(task, previous_gtd_status)
                 await self.db.flush()
 
                 if self.reminder_service and new_task and user:
@@ -281,6 +282,7 @@ class TaskService:
 
         was_recurring_and_completed = task.is_recurring and task.is_completed
         was_trash = task.gtd_status == GtdStatus.TRASH.value
+        previous_gtd_status = task.gtd_status
 
         task.gtd_status = gtd_status.value
         task.updated_at = datetime.now(UTC)
@@ -310,9 +312,9 @@ class TaskService:
 
         await self.db.flush()
 
-        if gtd_status == GtdStatus.COMPLETED and self.recurrence_service and not was_recurring_and_completed:
+        if task.is_completed and not was_recurring_and_completed and self.recurrence_service:
             if self.recurrence_service.should_generate_task(task):
-                new_task = await self.recurrence_service.generate_next_task(task)
+                new_task = await self.recurrence_service.generate_next_task(task, previous_gtd_status)
                 await self.db.flush()
 
                 if self.reminder_service and new_task and user:
@@ -372,6 +374,7 @@ class TaskService:
 
         was_completed = task.is_completed
         was_recurring_and_completed = task.is_recurring and was_completed
+        previous_gtd_status = task.gtd_status
 
         task.is_completed = not task.is_completed
         task.updated_at = datetime.now(UTC)
@@ -385,7 +388,7 @@ class TaskService:
 
         if task.is_completed and not was_recurring_and_completed and self.recurrence_service:
             if self.recurrence_service.should_generate_task(task):
-                new_task = await self.recurrence_service.generate_next_task(task)
+                new_task = await self.recurrence_service.generate_next_task(task, previous_gtd_status)
                 await self.db.flush()
 
                 if self.reminder_service and new_task and user:

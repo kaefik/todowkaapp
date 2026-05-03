@@ -669,3 +669,123 @@ async def test_monthly_recurrence_with_interval(client, auth_user):
     tasks_resp = await client.get("/api/tasks", headers=h)
     new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
     assert "2026-06-15" in new_task["due_date"]
+
+
+@pytest.mark.asyncio
+async def test_yearly_recurrence_simple(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Yearly task",
+            "due_date": "2026-06-15T23:59:59Z",
+            "recurrence_type": "yearly",
+            "recurrence_config": {"type": "yearly", "interval": 1},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert create_resp.status_code in (200, 201)
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    assert "2027-06-15" in new_task["due_date"]
+
+
+@pytest.mark.asyncio
+async def test_yearly_recurrence_with_interval(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Every 3 years",
+            "due_date": "2026-01-10T23:59:59Z",
+            "recurrence_type": "yearly",
+            "recurrence_config": {"type": "yearly", "interval": 3},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    assert "2029-01-10" in new_task["due_date"]
+
+
+@pytest.mark.asyncio
+async def test_yearly_recurrence_with_month_and_day(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Birthday",
+            "due_date": "2026-03-01T23:59:59Z",
+            "recurrence_type": "yearly",
+            "recurrence_config": {"type": "yearly", "interval": 1, "month": 12, "day_of_month": 25},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    assert "2027-12-25" in new_task["due_date"]
+
+
+@pytest.mark.asyncio
+async def test_yearly_recurrence_leap_year(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Leap year task",
+            "due_date": "2024-02-29T23:59:59Z",
+            "recurrence_type": "yearly",
+            "recurrence_config": {"type": "yearly", "interval": 1},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    task_id = create_resp.json()["id"]
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+    assert "2025-02-28" in new_task["due_date"]
+
+
+@pytest.mark.asyncio
+async def test_yearly_validate_rejects_invalid_month(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Invalid month",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "yearly",
+            "recurrence_config": {"type": "yearly", "interval": 1, "month": 13},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert resp.status_code == 422

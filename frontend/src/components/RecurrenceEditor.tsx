@@ -18,6 +18,7 @@ const RECURRENCE_TYPE_KEYS = [
   { value: 'daily', labelKey: 'recurrenceDaily' },
   { value: 'weekly', labelKey: 'recurrenceWeekly' },
   { value: 'monthly', labelKey: 'recurrenceMonthly' },
+  { value: 'yearly', labelKey: 'recurrenceYearly' },
 ] as const
 
 const WEEKDAY_KEYS = [
@@ -32,6 +33,7 @@ const WEEKDAY_KEYS = [
 
 const WEEK_OF_MONTH_KEYS = ['recurrenceFirst', 'recurrenceSecond', 'recurrenceThird', 'recurrenceFourth'] as const
 const DAY_OF_WEEK_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const
+const MONTH_KEYS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'] as const
 
 const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400'
 const selectClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400'
@@ -55,6 +57,8 @@ export function RecurrenceEditor({
   const [dayOfMonth, setDayOfMonth] = useState(recurrenceConfig?.day_of_month || 1)
   const [weekOfMonth, setWeekOfMonth] = useState(recurrenceConfig?.week_of_month || 1)
   const [dayOfWeek, setDayOfWeek] = useState(recurrenceConfig?.day_of_week || 1)
+  const [yearlyMonth, setYearlyMonth] = useState(recurrenceConfig?.month || 1)
+  const [yearlyDayOfMonth, setYearlyDayOfMonth] = useState(recurrenceConfig?.day_of_month || 1)
   const [endType, setEndType] = useState<'never' | 'on_date'>(recurrenceEndDate ? 'on_date' : 'never')
   const [endDate, setEndDate] = useState(recurrenceEndDate ? recurrenceEndDate.slice(0, 10) : '')
 
@@ -67,6 +71,8 @@ export function RecurrenceEditor({
     setDayOfMonth(recurrenceConfig?.day_of_month || 1)
     setWeekOfMonth(recurrenceConfig?.week_of_month || 1)
     setDayOfWeek(recurrenceConfig?.day_of_week || 1)
+    setYearlyMonth(recurrenceConfig?.month || 1)
+    setYearlyDayOfMonth(recurrenceConfig?.day_of_month || 1)
     setEndType(recurrenceEndDate ? 'on_date' : 'never')
     setEndDate(recurrenceEndDate ? recurrenceEndDate.slice(0, 10) : '')
   }, [recurrenceType, recurrenceConfig, recurrenceEndDate])
@@ -80,8 +86,12 @@ export function RecurrenceEditor({
       if (iv === 1) return t('recurrenceEveryWeek')
       return t('recurrenceEveryWeeks', { count: iv })
     }
-    if (iv === 1) return t('recurrenceEveryMonth')
-    return t('recurrenceEveryMonths', { count: iv })
+    if (recType === 'monthly') {
+      if (iv === 1) return t('recurrenceEveryMonth')
+      return t('recurrenceEveryMonths', { count: iv })
+    }
+    if (iv === 1) return t('recurrenceEveryYear')
+    return t('recurrenceEveryYears', { count: iv })
   }
 
   const handleToggleEnabled = () => {
@@ -107,6 +117,8 @@ export function RecurrenceEditor({
     dayOfMonth: number
     weekOfMonth: number
     dayOfWeek: number
+    yearlyMonth: number
+    yearlyDayOfMonth: number
     endType: 'never' | 'on_date'
     endDate: string
   }>) => {
@@ -123,6 +135,8 @@ export function RecurrenceEditor({
     const dom = overrides.dayOfMonth ?? dayOfMonth
     const wom = overrides.weekOfMonth ?? weekOfMonth
     const dow = overrides.dayOfWeek ?? dayOfWeek
+    const ym = overrides.yearlyMonth ?? yearlyMonth
+    const ydom = overrides.yearlyDayOfMonth ?? yearlyDayOfMonth
     const et = overrides.endType ?? endType
     const ed = overrides.endDate ?? endDate
 
@@ -140,6 +154,9 @@ export function RecurrenceEditor({
         config.week_of_month = wom
         config.day_of_week = dow
       }
+    } else if (tp === 'yearly') {
+      config.month = ym
+      config.day_of_month = ydom
     }
 
     onChange({
@@ -185,6 +202,16 @@ export function RecurrenceEditor({
   const handleDayOfWeekChange = (day: number) => {
     setDayOfWeek(day)
     emitChangeWith({ dayOfWeek: day })
+  }
+
+  const handleYearlyMonthChange = (month: number) => {
+    setYearlyMonth(month)
+    emitChangeWith({ yearlyMonth: month })
+  }
+
+  const handleYearlyDayOfMonthChange = (day: number) => {
+    setYearlyDayOfMonth(day)
+    emitChangeWith({ yearlyDayOfMonth: day })
   }
 
   const handleEndTypeChange = (newEndType: 'never' | 'on_date') => {
@@ -327,6 +354,34 @@ export function RecurrenceEditor({
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {type === 'yearly' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>{t('recurrenceMonth')}</label>
+                <select
+                  value={yearlyMonth}
+                  onChange={e => handleYearlyMonthChange(parseInt(e.target.value))}
+                  className={selectClass}
+                >
+                  {MONTH_KEYS.map((key, i) => (
+                    <option key={i} value={i + 1}>{t(key)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>{t('recurrenceDayOfMonth')}</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={yearlyDayOfMonth}
+                  onChange={e => handleYearlyDayOfMonthChange(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                  className={inputClass}
+                />
+              </div>
             </div>
           )}
 
