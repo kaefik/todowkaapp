@@ -197,7 +197,11 @@ function TasksContent() {
     const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
     const diffMs = dueDay.getTime() - today.getTime()
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24))
-    const shortDate = due.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+    const shortDateOpts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+    if (due.getFullYear() !== new Date().getFullYear()) {
+      shortDateOpts.year = 'numeric'
+    }
+    const shortDate = due.toLocaleDateString(locale, shortDateOpts)
 
     const hours = due.getHours()
     const minutes = due.getMinutes()

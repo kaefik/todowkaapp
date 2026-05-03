@@ -64,7 +64,11 @@ export interface TaskListViewProps {
 }
 
 function formatShortDate(date: Date, locale: string) {
-  return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  if (date.getFullYear() !== new Date().getFullYear()) {
+    opts.year = 'numeric'
+  }
+  return date.toLocaleDateString(locale, opts)
 }
 
 interface DueDateResult {
