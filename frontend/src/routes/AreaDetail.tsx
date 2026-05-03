@@ -52,7 +52,7 @@ export function AreaDetail() {
   )
 
   const handleAddTask = async (data: { title: string; description?: string }) => {
-    await addTask({ ...data, area_id: id, gtd_status: 'active' })
+    await addTask({ ...data, area_id: id, gtd_status: 'someday' })
   }
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
