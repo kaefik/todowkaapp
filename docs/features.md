@@ -318,17 +318,28 @@
   - Работает во всех местах: списки задач (TaskListView), страница Tasks, модалка детали (TaskDetailModal), поиск (SearchOverlay)
   - Файлы: `frontend/src/components/TaskListView.tsx`, `frontend/src/routes/Tasks.tsx`, `frontend/src/components/TaskDetailModal.tsx`, `frontend/src/components/SearchOverlay.tsx`
 
-### Weekly Review с миникартой ✅
-- **Layout:** Миникарта (220px) слева + рабочая область справа
-- **Миникарта:** Навигация по секциям, прогресс-бары, бейджи задач, предупреждения
-- **Inbox:** Карточный режим — обработка по одной задаче с 4 кнопками (Сделать/В проект/Когда-нибудь/Удалить)
-- **Клавиатурные шорткаты:** 1-4 для Inbox, 1-3 для Someday, Escape для отмены
-- **Projects:** Список с акцентом на проекты без next action (красная рамка), inline-форма добавления
-- **Someday:** Карточный режим — обработка по одной с 3 кнопками (Активировать/Оставить/Корзина)
-- **Завершение:** Статистика (Inbox/Next action/Someday), номер обзора, дата следующего
-- **Zustand:** reviewStore для состояния обзора
-- **Свободная навигация:** Переход к любой секции через миникарту
-- **Реализовано:** 30.04.2026 (переработка)
+### Weekly Review — Insight-Driven Fast Review ✅ (Реализовано 03.05.2026)
+- **Layout:** Полноэкранный режим (вне AppLayout), без сайдбара — фокус «ритуала»
+- **Dashboard:** Стартовая страница обзора с 4 метриками (Inbox/Overdue/Active/Someday), алертами, health-бейджем, 4 кнопками навигации
+- **Health Score:** 3 уровня (🟢 ok / 🟡 attention / 🔴 problems) на основе алертов
+- **Alerts:** Автоматические предупреждения (просроченные задачи, переполненный Inbox, проекты без next action, stale-задачи >14 дней)
+- **Overdue Triage:** Обработка просроченных задач — Reschedule/Do It/Someday/Trash/Skip
+- **Inbox Triage:** Карточный режим — обработка по одной задаче с 4 кнопками (Сделать/В проект/Когда-нибудь/Удалить) + Skip
+- **Projects Review:** Проблемно-ориентированная сортировка (проекты без next action первыми), «Show all», days_without_next
+- **Someday Review:** Карточный режим с возрастом задачи (DaysAgo), 3 кнопки (Активировать/Оставить/Корзина) + Skip
+- **Completion:** Health до/после, статистика обработанных задач, номер обзора, дата следующего (использует review_frequency_days)
+- **Skip:** Задача остаётся в текущем статусе, не помечается как обработанная
+- **Progress Dots:** Визуализация прогресса внутри каждой секции
+- **Zustand:** reviewStore (dashboard/overdue/inbox/projects/someday/completion шаги, summary, fetchSummary, overdueProgress)
+- **Backend:** ReviewSnapshot модель + `/review/summary` (метрики) + `/review/complete` (сохраняет snapshot + принимает stats)
+- **Backend Schemas:** ReviewSummaryResponse, OverdueTaskItem, ReviewAlert, ReviewCompleteRequest
+- **Напоминание:** ReviewReminderBanner использует `/review/summary` + `review_frequency_days` вместо захардкоженных 7 дней
+- **Клавиатурные шорткаты:** 1-4 для Inbox, 1-3 для Someday, Escape для отмены, S для Skip
+- **Navigation:** Dashboard-центричная — старт с любой секции, возврат на Dashboard
+- **Миграция:** `alembic/versions/20260503_1929_add_review_snapshots_table_1bc62a38dd88.py`
+- **Реализовано:** 03.05.2026 (редизайн: миникарта заменена на Dashboard)
+- **Файлы:** `frontend/src/components/review/ReviewDashboard.tsx`, `ReviewOverdue.tsx`, `ReviewInbox.tsx`, `ReviewSomeday.tsx`, `ReviewProjects.tsx`, `ReviewCompletion.tsx`, `frontend/src/routes/Review.tsx`, `frontend/src/stores/reviewStore.ts`, `frontend/src/api/review.ts`, `backend/app/services/review_service.py`, `backend/app/schemas/review.py`, `backend/app/api/review.py`, `backend/app/models/review_snapshot.py`
+- **Phase 2 (отложено):** Activity strip (done-per-day), `/review/history` для сравнения недель, resume progress
 
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта

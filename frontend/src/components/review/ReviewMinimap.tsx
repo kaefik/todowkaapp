@@ -86,6 +86,7 @@ function getProgressForStep(
     case 'completion':
       return { processed: 1, total: 1 }
   }
+  return { processed: 0, total: 0 }
 }
 
 function ProgressBar({ progress, colorClass, trackClass }: { progress: SectionProgress; colorClass: string; trackClass: string }) {
