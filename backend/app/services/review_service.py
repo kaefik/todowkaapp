@@ -135,6 +135,14 @@ class ReviewService:
             Task.gtd_status == GtdStatus.SOMEDAY.value,
         )
 
+        previous_snapshot_result = await self.db.execute(
+            select(ReviewSnapshot)
+            .where(ReviewSnapshot.user_id == user_id)
+            .order_by(ReviewSnapshot.created_at.desc())
+            .limit(1)
+        )
+        previous = previous_snapshot_result.scalar_one_or_none()
+
         return {
             'inbox_count': inbox_count,
             'overdue_count': overdue_count,
@@ -148,6 +156,15 @@ class ReviewService:
             'review_frequency_days': user.review_frequency_days if user else 7,
             'week_activity': week_activity,
             'alerts': alerts,
+            'previous_snapshot': {
+                'created_at': previous.created_at.isoformat(),
+                'inbox_count': previous.inbox_count,
+                'overdue_count': previous.overdue_count,
+                'done_count': previous.done_count,
+                'stale_count': previous.stale_count,
+                'projects_without_next': previous.projects_without_next,
+                'health_status': previous.health_status,
+            } if previous else None,
         }
 
     async def get_review_status(self, user_id: str) -> dict:

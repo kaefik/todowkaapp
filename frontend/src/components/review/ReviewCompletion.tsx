@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { reviewApi } from '../../api/review'
 import { useReviewStore } from '../../stores/reviewStore'
+import { computeDeltas, computeHealthDelta } from '../../utils/reviewDelta'
 
 interface ReviewCompletionProps {
   onGoHome: () => void
@@ -12,7 +13,6 @@ export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
   const { stats, data, summary } = useReviewStore()
   const [isCompleting, setIsCompleting] = useState(true)
   const [completedAt, setCompletedAt] = useState<string | null>(null)
-  const [healthAfter, setHealthAfter] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -25,7 +25,6 @@ export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
       .then((response) => {
         if (!cancelled) {
           setCompletedAt(response.completed_at)
-          setHealthAfter(response.snapshot_health)
         }
       })
       .catch(() => {})
@@ -47,6 +46,9 @@ export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
   }
 
   const healthBefore = summary?.health_status ?? null
+  const previous = summary?.previous_snapshot
+  const deltas = previous && summary ? computeDeltas(summary, previous) : null
+  const healthDelta = previous && healthBefore ? computeHealthDelta(healthBefore, previous.health_status) : null
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8">
@@ -84,10 +86,44 @@ export function ReviewCompletion({ onGoHome }: ReviewCompletionProps) {
         </div>
       </div>
 
-      {healthBefore && healthAfter && (
+      {previous && deltas && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-3 w-full max-w-md mb-4">
-          <div className="text-sm text-gray-700 dark:text-gray-300">
-            Health: {healthBefore} → {healthAfter}
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            {t('comparisonTitle')}
+          </div>
+          <div className="space-y-1.5">
+            {[
+              { key: 'inbox', label: t('dashboardInbox') },
+              { key: 'overdue', label: t('dashboardOverdue') },
+              { key: 'done', label: t('dashboardDone') },
+              { key: 'stale', label: t('dashboardStale') },
+            ].map(({ key, label }) => {
+              const d = deltas[key]
+              if (!d || d.delta === 0) return null
+              const isUp = d.delta > 0
+              const color = d.improved
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400'
+              return (
+                <div key={key} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">{label}</span>
+                  <span className={color}>
+                    {d.previous} → {d.current} ({isUp ? '↑' : '↓'}{Math.abs(d.delta)})
+                  </span>
+                </div>
+              )
+            })}
+            {healthDelta && healthDelta.delta !== 0 && healthBefore && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Health</span>
+                <span className={healthDelta.improved ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                  {previous.health_status} → {healthBefore}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+            {t('comparisonPreviousDate', { date: new Date(previous.created_at).toLocaleDateString() })}
           </div>
         </div>
       )}

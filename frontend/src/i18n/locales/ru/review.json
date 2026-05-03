@@ -94,5 +94,7 @@
   "overdueTitle": "Просроченные задачи",
   "overdueDescription": "У вас {{count}} просроченных задач. Решите что с ними делать.",
   "overdueReschedule": "Перенести дату",
-  "overdueSetDate": "Перенести"
+  "overdueSetDate": "Перенести",
+  "comparisonTitle": "Сравнение с прошлым обзором",
+  "comparisonPreviousDate": "Прошлый обзор: {{date}}"
 }

@@ -329,6 +329,7 @@
 - **Someday Review:** Карточный режим с возрастом задачи (DaysAgo), 3 кнопки (Активировать/Оставить/Корзина) + Skip
 - **Completion:** Health до/после, статистика обработанных задач, номер обзора, дата следующего (использует review_frequency_days)
 - **Skip:** Задача остаётся в текущем статусе, не помечается как обработанная
+- **Сравнение с предыдущим обзором:** Дельта метрик (inbox/overdue/done/stale) на Dashboard (стрелки ↑↓) и на Completion (блок сравнения). Backend: previous_snapshot в /review/summary из review_snapshots. Утилита: computeDeltas в `frontend/src/utils/reviewDelta.ts`
 - **Progress Dots:** Визуализация прогресса внутри каждой секции
 - **Zustand:** reviewStore (dashboard/overdue/inbox/projects/someday/completion шаги, summary, fetchSummary, overdueProgress)
 - **Backend:** ReviewSnapshot модель + `/review/summary` (метрики) + `/review/complete` (сохраняет snapshot + принимает stats)

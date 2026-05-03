@@ -94,5 +94,7 @@
   "overdueTitle": "Overdue Tasks",
   "overdueDescription": "You have {{count}} overdue task(s). Decide what to do with them.",
   "overdueReschedule": "Reschedule",
-  "overdueSetDate": "Reschedule"
+  "overdueSetDate": "Reschedule",
+  "comparisonTitle": "Compared to last review",
+  "comparisonPreviousDate": "Last review: {{date}}"
 }

@@ -1,11 +1,42 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useReviewStore } from '../../stores/reviewStore'
+import { computeDeltas } from '../../utils/reviewDelta'
 
-function MetricCard({ value, label, color }: { value: number; label: string; color: string }) {
+function DeltaIndicator({ delta, improved }: { delta: number; improved: boolean }) {
+  if (delta === 0) {
+    return <span className="text-[10px] text-gray-400 dark:text-gray-500">—</span>
+  }
+  const isUp = delta > 0
+  const color = improved
+    ? 'text-green-600 dark:text-green-400'
+    : 'text-red-600 dark:text-red-400'
+  return (
+    <span className={`text-[10px] font-medium ${color}`}>
+      {isUp ? '↑' : '↓'}{Math.abs(delta)}
+    </span>
+  )
+}
+
+function MetricCard({
+  value,
+  label,
+  color,
+  delta,
+  improved,
+}: {
+  value: number
+  label: string
+  color: string
+  delta?: number
+  improved?: boolean
+}) {
   return (
     <div className={`rounded-lg p-4 text-center ${color}`}>
-      <div className="text-2xl font-bold">{value}</div>
+      <div className="flex items-center justify-center gap-1.5">
+        <span className="text-2xl font-bold">{value}</span>
+        {delta !== undefined && <DeltaIndicator delta={delta} improved={improved ?? false} />}
+      </div>
       <div className="text-xs mt-1 opacity-80">{label}</div>
     </div>
   )
@@ -95,6 +126,8 @@ export function ReviewDashboard() {
 
   if (!summary) return null
 
+  const deltas = summary.previous_snapshot ? computeDeltas(summary, summary.previous_snapshot) : null
+
   const weekTotal = Object.values(summary.week_activity).reduce((a, b) => a + b, 0)
 
   return (
@@ -108,21 +141,29 @@ export function ReviewDashboard() {
           value={summary.inbox_count}
           label={t('dashboardInbox')}
           color="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+          delta={deltas?.inbox?.delta}
+          improved={deltas?.inbox?.improved}
         />
         <MetricCard
           value={summary.overdue_count}
           label={t('dashboardOverdue')}
           color="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300"
+          delta={deltas?.overdue?.delta}
+          improved={deltas?.overdue?.improved}
         />
         <MetricCard
           value={summary.done_this_week}
           label={t('dashboardDone')}
           color="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300"
+          delta={deltas?.done?.delta}
+          improved={deltas?.done?.improved}
         />
         <MetricCard
           value={summary.stale_count}
           label={t('dashboardStale')}
           color="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300"
+          delta={deltas?.stale?.delta}
+          improved={deltas?.stale?.improved}
         />
       </div>
 

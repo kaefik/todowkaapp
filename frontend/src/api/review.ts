@@ -24,6 +24,16 @@ export interface ReviewAlert {
   project_id: string | null
 }
 
+export interface PreviousSnapshot {
+  created_at: string
+  inbox_count: number
+  overdue_count: number
+  done_count: number
+  stale_count: number
+  projects_without_next: number
+  health_status: 'ok' | 'attention' | 'problems'
+}
+
 export interface ReviewSummary {
   inbox_count: number
   overdue_count: number
@@ -37,6 +47,7 @@ export interface ReviewSummary {
   review_frequency_days: number
   week_activity: Record<string, number>
   alerts: ReviewAlert[]
+  previous_snapshot: PreviousSnapshot | null
 }
 
 export interface OverdueTaskItem {

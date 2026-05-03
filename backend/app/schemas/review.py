@@ -29,6 +29,16 @@ class ReviewAlert(BaseModel):
     project_id: str | None = None
 
 
+class PreviousSnapshot(BaseModel):
+    created_at: datetime
+    inbox_count: int
+    overdue_count: int
+    done_count: int
+    stale_count: int
+    projects_without_next: int
+    health_status: str
+
+
 class ReviewSummaryResponse(BaseModel):
     inbox_count: int
     overdue_count: int
@@ -42,6 +52,7 @@ class ReviewSummaryResponse(BaseModel):
     review_frequency_days: int = 7
     week_activity: dict[str, int] = {}
     alerts: list[ReviewAlert] = []
+    previous_snapshot: PreviousSnapshot | None = None
 
 
 class OverdueTaskItem(BaseModel):
