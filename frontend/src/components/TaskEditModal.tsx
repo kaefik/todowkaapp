@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { normalizeTimeInput } from '../utils/time'
+import { TatarKeyboardBar } from './TatarKeyboardBar'
 
 function toLocalDateStr(isoString: string | null | undefined): string | null {
   if (!isoString) return null
@@ -217,11 +218,16 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema) as unknown as never,
     defaultValues: defaultValues ?? { title: '', context_id: null, area_id: null, project_id: null, due_date: null, due_time: null },
   })
+
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const descInputRef = useRef<HTMLTextAreaElement>(null)
+  const notesInputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (task && isOpen) {
@@ -427,8 +433,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 {...register('title')}
                 type="text"
                 id="title"
+                ref={titleInputRef}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                 placeholder={t('taskTitle')}
+              />
+              <TatarKeyboardBar
+                inputRef={titleInputRef}
+                value={getValues('title') || ''}
+                onChange={(v) => setValue('title', v, { shouldDirty: true })}
               />
               {errors.title && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
@@ -443,8 +455,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 {...register('description')}
                 id="description"
                 rows={3}
+                ref={descInputRef}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                 placeholder={t('taskDescription')}
+              />
+              <TatarKeyboardBar
+                inputRef={descInputRef}
+                value={getValues('description') || ''}
+                onChange={(v) => setValue('description', v, { shouldDirty: true })}
               />
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description.message}</p>
@@ -689,8 +707,14 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 {...register('notes')}
                 id="notes"
                 rows={3}
+                ref={notesInputRef}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
                 placeholder={t('notesOptional')}
+              />
+              <TatarKeyboardBar
+                inputRef={notesInputRef}
+                value={getValues('notes') || ''}
+                onChange={(v) => setValue('notes', v, { shouldDirty: true })}
               />
             </div>
           </Accordion>

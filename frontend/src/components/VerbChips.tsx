@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { VerbTemplate } from '../hooks/useVerbTemplates'
+import { TatarKeyboardBar } from './TatarKeyboardBar'
 
 interface VerbChipsProps {
   templates: VerbTemplate[]
@@ -13,6 +14,7 @@ export function VerbChips({ templates, activeVerb, onSelect, onAddCustom }: Verb
   const { t } = useTranslation('verbs')
   const [showAddInput, setShowAddInput] = useState(false)
   const [newVerbText, setNewVerbText] = useState('')
+  const verbInputRef = useRef<HTMLInputElement>(null)
 
   const handleChipClick = (template: VerbTemplate) => {
     if (activeVerb === template.id) {
@@ -60,7 +62,13 @@ export function VerbChips({ templates, activeVerb, onSelect, onAddCustom }: Verb
             maxLength={30}
             autoFocus
             onBlur={() => { if (!newVerbText.trim()) setShowAddInput(false) }}
+            ref={verbInputRef}
             className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+          />
+          <TatarKeyboardBar
+            inputRef={verbInputRef}
+            value={newVerbText}
+            onChange={setNewVerbText}
           />
         </form>
       ) : (

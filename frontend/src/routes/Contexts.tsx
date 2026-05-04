@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { useContexts, type Context } from '../hooks/useContexts'
 import { ColorPickerField } from '../components/ColorPickerField'
+import { TatarKeyboardBar } from '../components/TatarKeyboardBar'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 
 const colorHexRegex = /^#[0-9A-Fa-f]{6}$/
@@ -89,6 +90,8 @@ function ContextForm({
     register,
     handleSubmit,
     control,
+    setValue: setFormValue,
+    getValues,
     formState: { errors },
   } = useForm<ContextFormData>({
     resolver: zodResolver(contextSchema),
@@ -99,6 +102,8 @@ function ContextForm({
     },
   })
 
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-4 space-y-3">
       <div className="flex gap-2">
@@ -107,12 +112,18 @@ function ContextForm({
             {...register('name')}
             type="text"
             placeholder={t('contextName')}
+            ref={nameInputRef}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400 sm:text-sm"
             autoFocus
           />
           {errors.name && (
             <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name.message}</p>
           )}
+          <TatarKeyboardBar
+            inputRef={nameInputRef}
+            value={getValues('name') || ''}
+            onChange={(v) => setFormValue('name', v, { shouldValidate: true })}
+          />
         </div>
         <div className="w-28">
           <Controller

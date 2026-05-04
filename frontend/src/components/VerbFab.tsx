@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { VerbTemplate } from '../hooks/useVerbTemplates'
+import { TatarKeyboardBar } from './TatarKeyboardBar'
 
 interface VerbFabProps {
   templates: VerbTemplate[]
@@ -15,6 +16,7 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
   const { t } = useTranslation('verbs')
   const [showAddInput, setShowAddInput] = useState(false)
   const [newVerbText, setNewVerbText] = useState('')
+  const verbInputRef = useRef<HTMLInputElement>(null)
 
   const handleVerbClick = (template: VerbTemplate) => {
     onSelect(template)
@@ -99,7 +101,13 @@ export function VerbFab({ templates, activeVerb, onSelect, onAddCustom, isOpen, 
               placeholder={t('verbPlaceholder')}
               maxLength={30}
               autoFocus
+              ref={verbInputRef}
               className="w-24 px-2 py-2 text-sm bg-transparent text-gray-900 dark:text-gray-100 focus:outline-none"
+            />
+            <TatarKeyboardBar
+              inputRef={verbInputRef}
+              value={newVerbText}
+              onChange={setNewVerbText}
             />
           </form>
         ) : (

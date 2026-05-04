@@ -14,6 +14,7 @@ import { HighlightText } from './TaskFilterPanel'
 import { TruncatedDescription } from './TruncatedDescription'
 import { VerbChips } from './VerbChips'
 import { VerbFab } from './VerbFab'
+import { TatarKeyboardBar } from './TatarKeyboardBar'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -209,6 +210,7 @@ export function TaskListView({
   const { t, i18n } = useTranslation('tasks')
   const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US'
   const inputRef = useRef<HTMLInputElement>(null)
+  const mobileInputRef = useRef<HTMLInputElement>(null)
   const initialFocusDone = useRef(false)
   const [showDescription, setShowDescription] = useLocalStorage(
     'ui-tasklist-show-description',
@@ -229,6 +231,8 @@ export function TaskListView({
     register,
     handleSubmit,
     reset,
+    setValue: setFormValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<TaskCreateFormData>({
     resolver: zodResolver(taskCreateSchema),
@@ -406,6 +410,11 @@ export function TaskListView({
                 {errors.title && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.title.message}</p>
                 )}
+                <TatarKeyboardBar
+                  inputRef={inputRef}
+                  value={getValues('title') || ''}
+                  onChange={(v) => setFormValue('title', v, { shouldValidate: true })}
+                />
               </div>
               <button
                 type="button"
@@ -450,6 +459,15 @@ export function TaskListView({
                   placeholder={activeVerb ? `${activeVerb.text} ...` : t('addTask')}
                   className="w-full px-3 py-2 border border-indigo-300 dark:border-indigo-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                   {...titleField}
+                  ref={(e) => {
+                    titleField.ref(e)
+                    mobileInputRef.current = e
+                  }}
+                />
+                <TatarKeyboardBar
+                  inputRef={mobileInputRef}
+                  value={getValues('title') || ''}
+                  onChange={(v) => setFormValue('title', v, { shouldValidate: true })}
                 />
               </div>
               <button
