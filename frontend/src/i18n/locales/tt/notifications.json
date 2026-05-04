@@ -1,0 +1,18 @@
+{
+  "notifications": "Хәбәрләр",
+  "unreadCount": "{{count}} укылмаган",
+  "allRead": "Барысы да укылган",
+  "markAllRead": "Барысын да укылган дип билгелә",
+  "clearRead": "Укылганнарны чистарт",
+  "confirmClearRead": "Бөтен укылган хәбәрләрне бетерергәме?",
+  "all": "Барысы",
+  "unread": "Укылмаганнар",
+  "noUnread": "Укылмаган хәбәрләр юк",
+  "noNotifications": "Хәбәрләр юк",
+  "loadMore": "Тагын йөклә",
+  "allNotifications": "Бөтен хәбәрләр",
+  "newVersionAvailable": "Яңа версия бар",
+  "updateApp": "Соңгы версияне алу өчен кушымтаны яңартыгыз.",
+  "taskReminder": "Бурыч искәртүе",
+  "reminder": "Искәртү"
+}

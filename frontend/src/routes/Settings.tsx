@@ -518,6 +518,7 @@ function SettingsContent() {
               >
                 <option value="ru">Русский</option>
                 <option value="en">English</option>
+                <option value="tt">Татарча</option>
               </select>
             </div>
           </div>

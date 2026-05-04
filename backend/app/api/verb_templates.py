@@ -123,5 +123,5 @@ async def reset_verb_templates(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[VerbTemplateResponse]:
     service = VerbTemplateService(db)
-    verbs = await service.reset_verb_templates(user_id=current_user.id)
+    verbs = await service.reset_verb_templates(user_id=current_user.id, lang=getattr(current_user, 'language', None) or "ru")
     return [VerbTemplateResponse.model_validate(v) for v in verbs]

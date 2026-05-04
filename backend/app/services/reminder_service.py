@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
+from app.i18n import t as i18n_t
 from app.models.notification import Notification
 from app.models.task import Task
 from app.models.user import User
@@ -120,7 +121,8 @@ class ReminderService:
         if due_date.tzinfo is None:
             due_date = due_date.replace(tzinfo=ZoneInfo('UTC'))
 
-        message = f'Напоминание о задаче "{task.title}"'
+        lang = getattr(user, 'language', None) or "ru"
+        message = i18n_t('reminderMessage', lang, title=task.title)
 
         notification = await self.create_notification(
             user=user,

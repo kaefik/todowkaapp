@@ -5,6 +5,7 @@ import i18n, { SUPPORTED_LANGS } from '../i18n'
 const LANGUAGE_LABELS: Record<string, { flag: string; name: string }> = {
   ru: { flag: '🇷🇺', name: 'Русский' },
   en: { flag: '🇬🇧', name: 'English' },
+  tt: { flag: '🏳️', name: 'Татарча' },
 }
 
 interface OnboardingLanguageProps {

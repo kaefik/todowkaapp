@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.i18n import t as i18n_t
 from app.models.backup_schedule import BackupSchedule
 from app.models.user import User
 from app.services.export_import_service import ExportImportService
@@ -64,10 +65,11 @@ class BackupScheduleService:
             json_bytes = content.encode("utf-8")
 
             if len(json_bytes) > MAX_BACKUP_SIZE:
+                lang = getattr(user, 'language', None) or "ru"
                 await TelegramNotifierService.send_message(
                     user.telegram_bot_token,
                     user.telegram_chat_id,
-                    "\u26a0\ufe0f Резервная копия слишком большая (>50MB). Обратитесь в поддержку.",
+                    i18n_t("backupTooLarge", lang),
                 )
                 return False
 

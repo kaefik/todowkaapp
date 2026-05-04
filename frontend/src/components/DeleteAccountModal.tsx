@@ -50,7 +50,7 @@ export function DeleteAccountModal({ isOpen, onClose }: DeleteAccountModalProps)
       handleClose()
       navigate('/login', { replace: true })
     } catch (err) {
-      if (err instanceof Error && err.message === 'Неверный пароль') {
+      if (err instanceof Error && (err as Error & { status?: number }).status === 401) {
         setError(t('deleteAccountWrongPassword'))
         setStep(1)
         setPassword('')

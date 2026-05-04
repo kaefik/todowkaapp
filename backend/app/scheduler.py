@@ -8,6 +8,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import delete, select
 
 from app.database import AsyncSessionLocal
+from app.i18n import t as i18n_t
 from app.models.revoked_token import RevokedToken
 from app.models.task import Task
 from app.models.user import User
@@ -323,7 +324,8 @@ class TaskScheduler:
                             continue
 
                         rs = ReminderService(session)
-                        message = f'Дедлайн задачи "{task.title}" наступил'
+                        lang = getattr(user, 'language', None) or "ru"
+                        message = i18n_t('deadlineArrived', lang, title=task.title)
                         notification = await rs.create_notification(
                             user=user,
                             task=task,
@@ -355,11 +357,11 @@ class TaskScheduler:
                             try:
                                 from app.config import settings
                                 from app.services.telegram_notifier import TelegramNotifierService
-                                task_link = TelegramNotifierService._build_task_link(task.id, settings.frontend_url)
+                                task_link = TelegramNotifierService._build_task_link(task.id, settings.frontend_url, lang)
                                 await TelegramNotifierService.send_message(
                                     user.telegram_bot_token,
                                     user.telegram_chat_id,
-                                    f'⏰ Дедлайн задачи "{task.title}" наступил!\n\n{task_link}',
+                                    f'{i18n_t("deadlineArrivedTelegram", lang, title=task.title)}\n\n{task_link}',
                                 )
                             except Exception as tg_err:
                                 logger.error(f"Telegram deadline send failed for user {user.username}: {tg_err}")
@@ -477,10 +479,11 @@ async def _do_poll_telegram_bots():
                             f"Telegram chat_id {chat_id} linked for user {user.username}"
                         )
 
+                        lang = getattr(user, 'language', None) or "ru"
                         await TelegramNotifierService.send_message(
                             user.telegram_bot_token,
                             chat_id,
-                            "\u2705 Бот Todowka подключён! Теперь вы будете получать напоминания о задачах.",
+                            i18n_t("telegramBotConnected", lang),
                         )
                         break
 

@@ -6,6 +6,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.i18n import t as i18n_t
 from app.models.tag import Tag
 from app.models.task import GtdStatus, Task
 from app.models.user import User
@@ -252,7 +253,7 @@ class TaskService:
                         user=user,
                         task=new_task,
                         type='recurrence_created',
-                        message=f'Создана повторяющаяся задача: "{new_task.title}"'
+                        message=i18n_t('recurrenceCreated', getattr(user, 'language', None) or 'ru', title=new_task.title)
                     )
 
                     from app.event_bus import event_bus
@@ -322,7 +323,7 @@ class TaskService:
                         user=user,
                         task=new_task,
                         type='recurrence_created',
-                        message=f'Создана повторяющаяся задача: "{new_task.title}"'
+                        message=i18n_t('recurrenceCreated', getattr(user, 'language', None) or 'ru', title=new_task.title)
                     )
 
                     from app.event_bus import event_bus
@@ -396,7 +397,7 @@ class TaskService:
                         user=user,
                         task=new_task,
                         type='recurrence_created',
-                        message=f'Создана повторяющаяся задача: "{new_task.title}"'
+                        message=i18n_t('recurrenceCreated', getattr(user, 'language', None) or 'ru', title=new_task.title)
                     )
 
                     from app.event_bus import event_bus

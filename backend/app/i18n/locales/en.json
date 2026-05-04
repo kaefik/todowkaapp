@@ -1,0 +1,49 @@
+{
+  "wrongCurrentPassword": "Wrong current password",
+  "newPasswordSameAsCurrent": "New password is the same as the current one",
+  "passwordChanged": "Password changed successfully",
+  "wrongPassword": "Wrong password",
+  "accountDeleted": "Account deleted",
+
+  "telegramReminderTitle": "Task Reminder",
+  "telegramDescription": "Description:",
+  "telegramProject": "Project:",
+  "telegramArea": "Area:",
+  "telegramContext": "Context:",
+  "telegramTags": "Tags:",
+  "telegramDeadline": "Deadline:",
+  "telegramRecurrence": "Recurrence:",
+  "telegramStatus": "Status:",
+  "telegramNotes": "Notes:",
+  "telegramCreated": "Created:",
+  "telegramOpenTask": "🔗 Open task",
+
+  "gtdInbox": "Inbox",
+  "gtdActive": "Active",
+  "gtdNext": "Next",
+  "gtdWaiting": "Waiting",
+  "gtdSomeday": "Someday",
+  "gtdCompleted": "Completed",
+  "gtdTrash": "Trash",
+
+  "recurrenceDaily": "Daily (every {interval} days)",
+  "recurrenceWeekly": "Weekly (every {interval} week(s))",
+  "recurrenceMonthly": "Monthly (every {interval} month(s))",
+
+  "reminderMessage": "Reminder for task \"{title}\"",
+  "recurrenceCreated": "Recurring task created: \"{title}\"",
+  "deadlineArrived": "Deadline for task \"{title}\" has arrived",
+  "deadlineArrivedTelegram": "⏰ Deadline for task \"{title}\" has arrived!",
+
+  "verbAlreadyExists": "Verb \"{text}\" already exists",
+  "defaultBuy": "Buy",
+  "defaultDo": "Do",
+  "defaultCheck": "Check",
+  "defaultCall": "Call",
+  "defaultWrite": "Write",
+  "defaultFind": "Find",
+
+  "backupTooLarge": "⚠️ Backup file is too large (>50MB). Please contact support.",
+
+  "telegramBotConnected": "✅ Todowka bot is connected! You will now receive task reminders."
+}

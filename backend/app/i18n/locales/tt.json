@@ -1,0 +1,49 @@
+{
+  "wrongCurrentPassword": "Хәзерге серсүз дөрес түгел",
+  "newPasswordSameAsCurrent": "Яңа серсүз хәзерге серсүзгә туры килә",
+  "passwordChanged": "Серсүз уңышлы үзгәртелде",
+  "wrongPassword": "Серсүз дөрес түгел",
+  "accountDeleted": "Аккаунт бетерелде",
+
+  "telegramReminderTitle": "Бурыч искәртүе",
+  "telegramDescription": "Тасвирлама:",
+  "telegramProject": "Проект:",
+  "telegramArea": "Өлкә:",
+  "telegramContext": "Контекст:",
+  "telegramTags": "Теглар:",
+  "telegramDeadline": "Срок:",
+  "telegramRecurrence": "Кабатлау:",
+  "telegramStatus": "Статус:",
+  "telegramNotes": "Язмалар:",
+  "telegramCreated": "Булдырылган:",
+  "telegramOpenTask": "🔗 Бурычны ач",
+
+  "gtdInbox": "Кергән",
+  "gtdActive": "Актив",
+  "gtdNext": "Киләсе",
+  "gtdWaiting": "Көтү",
+  "gtdSomeday": "Кайчандыр",
+  "gtdCompleted": "Үтәлгән",
+  "gtdTrash": "Чүплек",
+
+  "recurrenceDaily": "Көн саен ({interval} көн саен)",
+  "recurrenceWeekly": "Атна саен ({interval} атна саен)",
+  "recurrenceMonthly": "Ай саен ({interval} ай саен)",
+
+  "reminderMessage": "Бурыч искәртүе \"{title}\"",
+  "recurrenceCreated": "Кабатлана торган бурыч булдырылды: \"{title}\"",
+  "deadlineArrived": "Бурыч сроклары \"{title}\" үтте",
+  "deadlineArrivedTelegram": "⏰ Бурыч сроклары \"{title}\" үтте!",
+
+  "verbAlreadyExists": "«{text}» фигыле инде бар",
+  "defaultBuy": "Сатып алырга",
+  "defaultDo": "Эшләргә",
+  "defaultCheck": "Тикшерергә",
+  "defaultCall": "Шалтыратырга",
+  "defaultWrite": "Язырга",
+  "defaultFind": "Таптырырга",
+
+  "backupTooLarge": "⚠️ Резерв күчермә бик зур (>50МБ). Ярдәмгә мөрәҗәгать итегез.",
+
+  "telegramBotConnected": "✅ Todowka боты тоташты! Хәзер сез бурычлар искәрмәләрен алачаксыз."
+}

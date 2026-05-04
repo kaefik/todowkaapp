@@ -27,6 +27,19 @@ import onboardingEn from './locales/en/onboarding.json'
 import reviewEn from './locales/en/review.json'
 import sessionsEn from './locales/en/sessions.json'
 
+import commonTt from './locales/tt/common.json'
+import navTt from './locales/tt/nav.json'
+import authTt from './locales/tt/auth.json'
+import tasksTt from './locales/tt/tasks.json'
+import settingsTt from './locales/tt/settings.json'
+import projectsTt from './locales/tt/projects.json'
+import notificationsTt from './locales/tt/notifications.json'
+import syncTt from './locales/tt/sync.json'
+import verbsTt from './locales/tt/verbs.json'
+import onboardingTt from './locales/tt/onboarding.json'
+import reviewTt from './locales/tt/review.json'
+import sessionsTt from './locales/tt/sessions.json'
+
 const resources = {
   ru: {
     common: commonRu,
@@ -56,9 +69,23 @@ const resources = {
     review: reviewEn,
     sessions: sessionsEn,
   },
+  tt: {
+    common: commonTt,
+    nav: navTt,
+    auth: authTt,
+    tasks: tasksTt,
+    settings: settingsTt,
+    projects: projectsTt,
+    notifications: notificationsTt,
+    sync: syncTt,
+    verbs: verbsTt,
+    onboarding: onboardingTt,
+    review: reviewTt,
+    sessions: sessionsTt,
+  },
 }
 
-const SUPPORTED_LANGS = ['ru', 'en']
+const SUPPORTED_LANGS = ['ru', 'en', 'tt']
 
 function detectLanguage(): string {
   const stored = localStorage.getItem('i18nextLng')

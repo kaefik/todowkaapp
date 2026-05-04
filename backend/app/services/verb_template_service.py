@@ -5,17 +5,38 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.i18n import t as i18n_t
 from app.models.verb_template import VerbTemplate
 from app.schemas.verb_template import VerbTemplateCreate, VerbTemplateUpdate
 
-DEFAULT_VERBS = [
-    {'text': 'Купить', 'icon': '🛒'},
-    {'text': 'Сделать', 'icon': '🔨'},
-    {'text': 'Проверить', 'icon': '✅'},
-    {'text': 'Позвонить', 'icon': '📞'},
-    {'text': 'Написать', 'icon': '✉️'},
-    {'text': 'Найти', 'icon': '🔍'},
-]
+DEFAULT_VERBS_BY_LANG = {
+    'ru': [
+        {'text': 'Купить', 'icon': '🛒'},
+        {'text': 'Сделать', 'icon': '🔨'},
+        {'text': 'Проверить', 'icon': '✅'},
+        {'text': 'Позвонить', 'icon': '📞'},
+        {'text': 'Написать', 'icon': '✉️'},
+        {'text': 'Найти', 'icon': '🔍'},
+    ],
+    'en': [
+        {'text': 'Buy', 'icon': '🛒'},
+        {'text': 'Do', 'icon': '🔨'},
+        {'text': 'Check', 'icon': '✅'},
+        {'text': 'Call', 'icon': '📞'},
+        {'text': 'Write', 'icon': '✉️'},
+        {'text': 'Find', 'icon': '🔍'},
+    ],
+    'tt': [
+        {'text': 'Сатып алырга', 'icon': '🛒'},
+        {'text': 'Эшләргә', 'icon': '🔨'},
+        {'text': 'Тикшерергә', 'icon': '✅'},
+        {'text': 'Шалтыратырга', 'icon': '📞'},
+        {'text': 'Язырга', 'icon': '✉️'},
+        {'text': 'Таптырырга', 'icon': '🔍'},
+    ],
+}
+
+DEFAULT_VERBS = DEFAULT_VERBS_BY_LANG['ru']
 
 
 class VerbTemplateService:
@@ -52,9 +73,10 @@ class VerbTemplateService:
         )
         if (await self.db.execute(dup_q)).scalar() > 0:
             from fastapi import HTTPException
+            user_lang = 'ru'
             raise HTTPException(
                 status_code=409,
-                detail=f'Глагол «{data.text}» уже существует',
+                detail=i18n_t('verbAlreadyExists', user_lang, text=data.text),
             )
 
         max_pos_q = select(func.coalesce(func.max(VerbTemplate.position), -1)).where(
@@ -117,13 +139,14 @@ class VerbTemplateService:
         await self.db.flush()
         return True
 
-    async def reset_verb_templates(self, user_id: UUID) -> list[VerbTemplate]:
+    async def reset_verb_templates(self, user_id: UUID, lang: str = "ru") -> list[VerbTemplate]:
         delete_q = VerbTemplate.__table__.delete().where(VerbTemplate.user_id == str(user_id))
         await self.db.execute(delete_q)
         await self.db.flush()
 
+        verbs_data = DEFAULT_VERBS_BY_LANG.get(lang, DEFAULT_VERBS)
         verbs = []
-        for i, default in enumerate(DEFAULT_VERBS):
+        for i, default in enumerate(verbs_data):
             verb = VerbTemplate(
                 user_id=str(user_id),
                 text=default['text'],

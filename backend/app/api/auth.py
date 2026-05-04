@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.i18n import t as i18n_t
 from app.models.revoked_token import RevokedToken
 from app.models.user import User
 from app.schemas.auth import ChangePasswordRequest, DeleteAccountRequest
@@ -323,13 +324,13 @@ async def change_password(
     if not verify_password(data.current_password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Неверный текущий пароль",
+            detail=i18n_t("wrongCurrentPassword"),
         )
 
     if data.current_password == data.new_password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Новый пароль совпадает с текущим",
+            detail=i18n_t("newPasswordSameAsCurrent"),
         )
 
     if settings.hibp_enabled:
@@ -376,7 +377,7 @@ async def change_password(
         except Exception:
             logger.warning("Failed to create session after password change", exc_info=True)
 
-    return {"message": "Пароль успешно изменён"}
+    return {"message": i18n_t("passwordChanged")}
 
 
 @auth_router.get("/me", response_model=UserResponse)
@@ -395,7 +396,7 @@ async def delete_account(
     if not verify_password(data.password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный пароль",
+            detail=i18n_t("wrongPassword"),
         )
 
     if refresh_token:
@@ -410,4 +411,4 @@ async def delete_account(
     clear_refresh_cookie(response)
     clear_access_cookie(response)
 
-    return {"message": "Аккаунт удалён"}
+    return {"message": i18n_t("accountDeleted")}

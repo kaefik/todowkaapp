@@ -12,6 +12,9 @@ import projectsRu from '../i18n/locales/ru/projects.json'
 import notificationsRu from '../i18n/locales/ru/notifications.json'
 import syncRu from '../i18n/locales/ru/sync.json'
 import verbsRu from '../i18n/locales/ru/verbs.json'
+import onboardingRu from '../i18n/locales/ru/onboarding.json'
+import reviewRu from '../i18n/locales/ru/review.json'
+import sessionsRu from '../i18n/locales/ru/sessions.json'
 
 const translations: Record<string, Record<string, string>> = {
   common: commonRu,
@@ -23,6 +26,9 @@ const translations: Record<string, Record<string, string>> = {
   notifications: notificationsRu,
   sync: syncRu,
   verbs: verbsRu,
+  onboarding: onboardingRu,
+  review: reviewRu,
+  sessions: sessionsRu,
 }
 
 vi.mock('react-i18next', () => ({

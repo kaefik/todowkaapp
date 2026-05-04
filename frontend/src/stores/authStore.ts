@@ -314,7 +314,9 @@ export const useAuthStore = create<AuthState>()(
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.detail || 'Failed to delete account')
+      const err: Error & { status?: number } = new Error(error.detail || 'Failed to delete account')
+      err.status = response.status
+      throw err
     }
 
     if (userId) {

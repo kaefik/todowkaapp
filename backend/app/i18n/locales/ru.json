@@ -1,0 +1,49 @@
+{
+  "wrongCurrentPassword": "Неверный текущий пароль",
+  "newPasswordSameAsCurrent": "Новый пароль совпадает с текущим",
+  "passwordChanged": "Пароль успешно изменён",
+  "wrongPassword": "Неверный пароль",
+  "accountDeleted": "Аккаунт удалён",
+
+  "telegramReminderTitle": "Напоминание о задаче",
+  "telegramDescription": "Описание:",
+  "telegramProject": "Проект:",
+  "telegramArea": "Область:",
+  "telegramContext": "Контекст:",
+  "telegramTags": "Теги:",
+  "telegramDeadline": "Дедлайн:",
+  "telegramRecurrence": "Повторение:",
+  "telegramStatus": "Статус:",
+  "telegramNotes": "Заметки:",
+  "telegramCreated": "Создано:",
+  "telegramOpenTask": "🔗 Открыть задачу",
+
+  "gtdInbox": "Входящие",
+  "gtdActive": "Активно",
+  "gtdNext": "Следующее",
+  "gtdWaiting": "Ожидание",
+  "gtdSomeday": "Когда-нибудь",
+  "gtdCompleted": "Выполнено",
+  "gtdTrash": "Корзина",
+
+  "recurrenceDaily": "Ежедневно (каждые {interval} дней)",
+  "recurrenceWeekly": "Еженедельно (каждую {interval} неделю)",
+  "recurrenceMonthly": "Ежемесячно (каждые {interval} месяц(ев))",
+
+  "reminderMessage": "Напоминание о задаче \"{title}\"",
+  "recurrenceCreated": "Создана повторяющаяся задача: \"{title}\"",
+  "deadlineArrived": "Дедлайн задачи \"{title}\" наступил",
+  "deadlineArrivedTelegram": "⏰ Дедлайн задачи \"{title}\" наступил!",
+
+  "verbAlreadyExists": "Глагол «{text}» уже существует",
+  "defaultBuy": "Купить",
+  "defaultDo": "Сделать",
+  "defaultCheck": "Проверить",
+  "defaultCall": "Позвонить",
+  "defaultWrite": "Написать",
+  "defaultFind": "Найти",
+
+  "backupTooLarge": "⚠️ Резервная копия слишком большая (>50MB). Обратитесь в поддержку.",
+
+  "telegramBotConnected": "✅ Бот Todowka подключён! Теперь вы будете получать напоминания о задачах."
+}
