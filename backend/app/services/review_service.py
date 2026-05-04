@@ -44,7 +44,7 @@ class ReviewService:
 
     async def get_summary(self, user_id: str) -> dict:
         user = await self._get_user(user_id)
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
         week_ago = now - timedelta(days=7)
         stale_cutoff = now - timedelta(days=STALE_DAYS)
 
@@ -169,7 +169,7 @@ class ReviewService:
 
     async def get_review_status(self, user_id: str) -> dict:
         user = await self._get_user(user_id)
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
 
         inbox_result = await self.db.execute(
             select(Task.id, Task.title, Task.description, Task.due_date, Task.created_at).where(
@@ -312,7 +312,7 @@ class ReviewService:
         if user is None:
             return {'success': False, 'error': 'User not found'}
 
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
         user.last_review_at = now
         user.review_count = (user.review_count or 0) + 1
 
