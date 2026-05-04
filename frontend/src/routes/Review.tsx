@@ -107,7 +107,13 @@ export function Review() {
           </div>
         )}
         {currentStep === 'dashboard' && (
-          <div className="absolute top-4 right-4 z-10">
+          <div className="absolute top-4 right-4 z-10 flex items-center gap-3">
+            <button
+              onClick={handleCancel}
+              className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              {t('goHome')}
+            </button>
             <button
               onClick={handleCancel}
               className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
