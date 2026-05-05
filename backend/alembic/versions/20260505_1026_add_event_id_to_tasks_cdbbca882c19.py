@@ -20,9 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    result = op.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'")
-    columns = result.fetchone()
-    if columns and 'event_id' not in columns[0]:
+    from sqlalchemy import text
+    result = op.get_bind().execute(text("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'"))
+    row = result.fetchone()
+    if row and row[0] and 'event_id' not in row[0]:
         op.add_column('tasks', sa.Column('event_id', sa.String(length=36), nullable=True))
         op.execute("CREATE INDEX IF NOT EXISTS ix_tasks_event_id ON tasks(event_id)")
 
