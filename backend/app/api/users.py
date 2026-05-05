@@ -236,9 +236,9 @@ async def verify_email(
 
     code = "".join(random.choices(string.digits, k=6))
 
-    from app.services.email_service import get_email_service
+    from app.services.email_service import get_email_service_from_db
 
-    email_service = get_email_service()
+    email_service = await get_email_service_from_db(db)
     if not email_service:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -280,15 +280,33 @@ async def confirm_email(
             detail="Invalid verification code",
         )
 
+    notification_email = user.notification_email
+    user_name = user.username
+
     await db.execute(
         update(User)
         .where(User.id == current_user.id)
         .values(email_verification_code=None, email_verified_at=datetime.now())
     )
     await db.commit()
-    await db.refresh(user)
+
+    if notification_email:
+        from app.config import settings
+        from app.services.email_service import get_email_service_from_db
+
+        try:
+            email_service = await get_email_service_from_db(db)
+            if email_service:
+                await email_service.send_confirmation_success(
+                    email=notification_email,
+                    user_name=user_name,
+                    frontend_url=settings.frontend_url,
+                )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send confirmation email: {e}")
 
     return ConfirmEmailResponse(
         message="Email подтверждён",
-        notification_email=user.notification_email,
+        notification_email=notification_email,
     )

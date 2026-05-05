@@ -1500,6 +1500,7 @@ function EmailNotificationsSection() {
   const user = useAuthStore((s) => s.user)
   const setCurrentUser = useAuthStore((s) => s.setCurrentUser)
   const [email, setEmail] = useState('')
+  const [isChangingEmail, setIsChangingEmail] = useState(false)
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'input' | 'verify'>('input')
   const [loading, setLoading] = useState(false)
@@ -1534,6 +1535,7 @@ function EmailNotificationsSection() {
       setMessage(t('emailVerified'))
       setStep('input')
       setCode('')
+      setIsChangingEmail(false)
       if (user) {
         setCurrentUser({
           ...user,
@@ -1565,7 +1567,7 @@ function EmailNotificationsSection() {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('emailNotifications')}</h2>
       <div className="space-y-4">
-        {isVerified ? (
+        {isVerified && !isChangingEmail ? (
           <>
             <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1590,8 +1592,9 @@ function EmailNotificationsSection() {
             </div>
             <button
               onClick={() => {
+                setEmail('')
+                setIsChangingEmail(true)
                 setStep('input')
-                setEmail(user?.notification_email || '')
               }}
               className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
             >

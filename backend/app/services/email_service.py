@@ -108,6 +108,17 @@ class EmailService:
 Открой Todowka: {frontend_url}/review"""
         return await self._send(email, subject, body)
 
+    async def send_confirmation_success(self, email: str, user_name: str, frontend_url: str) -> bool:
+        subject = "Доступ подтвержден — Todowka готова к работе"
+        body = f"""Привет, {user_name}!
+
+Отлично! Ваш email подтвержден.
+
+Теперь вы будете получать напоминания о задачах с приближающимися дедлайнами и еженедельные напоминания о review.
+
+Открой Todowka: {frontend_url}/tasks"""
+        return await self._send(email, subject, body)
+
 
 async def get_email_service_from_db(db) -> EmailService | None:
     from sqlalchemy import text
