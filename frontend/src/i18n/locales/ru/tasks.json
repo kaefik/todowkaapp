@@ -25,6 +25,8 @@
   "gtdStatus": "GTD-статус",
   "project": "Проект",
   "noProject": "Без проекта",
+  "event": "Событие",
+  "noEvent": "Без события",
   "context": "Контекст",
   "noContext": "Без контекста",
   "area": "Область",

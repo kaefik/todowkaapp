@@ -39,6 +39,9 @@ class Task(Base):
     project_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey('projects.id', ondelete='SET NULL'), nullable=True
     )
+    event_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey('calendar_events.id', ondelete='SET NULL'), nullable=True
+    )
 
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -60,6 +63,7 @@ class Task(Base):
     context = relationship('Context', back_populates='tasks')
     area = relationship('Area', back_populates='tasks')
     project = relationship('Project', back_populates='tasks')
+    event = relationship('CalendarEvent', back_populates='tasks')
     checklist_items = relationship('ChecklistItem', back_populates='task', cascade='all, delete-orphan')
     tags = relationship('Tag', secondary='task_tags', back_populates='tasks', lazy='selectin')
     recurrences = relationship('TaskRecurrence', back_populates='task', cascade='all, delete-orphan', foreign_keys='TaskRecurrence.task_id')

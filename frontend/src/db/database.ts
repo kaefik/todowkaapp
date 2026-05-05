@@ -13,6 +13,7 @@ export interface DbTask {
   contextId: string | null
   areaId: string | null
   projectId: string | null
+  eventId: string | null
   position: number
   dueDate: string | null
   notes: string | null
@@ -134,6 +135,8 @@ export interface DbCalendarEvent {
   endTime: string | null
   allDay: boolean
   color: string | null
+  location: string | null
+  attendees: string[] | null
   createdAt: string
   updatedAt: string
   _syncStatus: SyncStatus

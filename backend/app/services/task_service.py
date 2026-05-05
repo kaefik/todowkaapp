@@ -158,6 +158,7 @@ class TaskService:
             context_id=data.context_id,
             area_id=data.area_id,
             project_id=data.project_id,
+            event_id=data.event_id,
             due_date=data.due_date,
             notes=data.notes,
             recurrence_type=data.recurrence_type,

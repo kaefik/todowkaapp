@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.calendar_event import CalendarEvent
@@ -65,6 +65,8 @@ class CalendarEventService:
             end_time=data.end_time,
             all_day=data.all_day,
             color=data.color,
+            location=data.location,
+            attendees=data.attendees,
         )
         self.db.add(event)
         await self.db.flush()
@@ -93,3 +95,11 @@ class CalendarEventService:
         await self.db.delete(event)
         await self.db.flush()
         return True
+
+    async def get_events_for_select(self, user_id: UUID) -> list[CalendarEvent]:
+        result = await self.db.execute(
+            select(CalendarEvent)
+            .where(CalendarEvent.user_id == user_id)
+            .order_by(CalendarEvent.start_time.asc())
+        )
+        return list(result.scalars().all())

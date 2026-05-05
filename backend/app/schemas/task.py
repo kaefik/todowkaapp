@@ -37,6 +37,7 @@ class TaskCreate(BaseModel):
     context_id: str | None = Field(default=None, max_length=36)
     area_id: str | None = Field(default=None, max_length=36)
     project_id: str | None = Field(default=None, max_length=36)
+    event_id: str | None = Field(default=None, max_length=36)
     due_date: datetime | None = None
     notes: str | None = None
     tag_ids: list[str] | None = None
@@ -55,6 +56,7 @@ class TaskUpdate(BaseModel):
     context_id: str | None = Field(default=None, max_length=36)
     area_id: str | None = Field(default=None, max_length=36)
     project_id: str | None = Field(default=None, max_length=36)
+    event_id: str | None = Field(default=None, max_length=36)
     due_date: datetime | None = None
     notes: str | None = None
     tag_ids: list[str] | None = None
@@ -84,6 +86,7 @@ class TaskResponse(BaseResponseSchema):
     context_id: UUID | None
     area_id: UUID | None
     project_id: UUID | None
+    event_id: UUID | None
     position: int
     due_date: datetime | None
     notes: str | None

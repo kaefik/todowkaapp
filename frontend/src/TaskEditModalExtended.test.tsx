@@ -25,6 +25,21 @@ vi.mock('./hooks/useProjects', () => ({
   useProjects: vi.fn(),
 }))
 
+vi.mock('./hooks/useCalendarEvents', () => ({
+  useCalendarEvents: vi.fn().mockReturnValue({ events: [], isLoading: false }),
+}))
+
+vi.mock('./hooks/useChecklist', () => ({
+  useChecklist: vi.fn().mockReturnValue({
+    items: [],
+    isLoading: false,
+    addItem: vi.fn(),
+    toggleItem: vi.fn(),
+    deleteItem: vi.fn(),
+    refetch: vi.fn(),
+  }),
+}))
+
 import { useTasks } from './hooks/useTasks'
 import { useContexts } from './hooks/useContexts'
 import { useAreas } from './hooks/useAreas'

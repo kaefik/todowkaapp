@@ -11,6 +11,7 @@ export interface UiTask {
   area_id: string | null
   area: { id: string; name: string; color: string | null } | null
   project_id: string | null
+  event_id: string | null
   project: { id: string; name: string; color: string | null; is_active: boolean } | null
   context: { id: string; name: string; color: string | null; icon: string | null } | null
   position: number
@@ -101,6 +102,7 @@ export async function dbTasksToUiBatch(tasks: DbTask[]): Promise<UiTask[]> {
       context_id: task.contextId,
       area_id: task.areaId,
       project_id: task.projectId,
+      event_id: task.eventId,
       project,
       context,
       area,
@@ -146,6 +148,7 @@ export function apiTaskToDb(
     contextId: (apiTask.context_id as string | null) ?? null,
     areaId: (apiTask.area_id as string | null) ?? null,
     projectId: (apiTask.project_id as string | null) ?? null,
+    eventId: (apiTask.event_id as string | null) ?? null,
     position: (apiTask.position as number) ?? 0,
     dueDate: (apiTask.due_date as string | null) ?? null,
     notes: (apiTask.notes as string | null) ?? null,

@@ -40,7 +40,7 @@ function tomorrowLocalDateStr(): string {
   return `${y}-${m}-${day}`
 }
 import { createPortal } from 'react-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { Task, UpdateTask, GtdStatus, RecurrenceConfig } from '../hooks/useTasks'
@@ -48,6 +48,7 @@ import { useContexts } from '../hooks/useContexts'
 import { useAreas } from '../hooks/useAreas'
 import { useTags, type Tag } from '../hooks/useTags'
 import { useProjects } from '../hooks/useProjects'
+import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { useOnlineStatus } from '../db/hooks'
 import { useChecklist } from '../hooks/useChecklist'
 import { RecurrenceEditor } from './RecurrenceEditor'
@@ -109,6 +110,7 @@ const editTaskSchema = z.object({
   context_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   area_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   project_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
+  event_id: z.string().nullable().optional().transform(v => v === '' ? null : v),
   gtd_status: z.string().optional(),
   due_date: z.string().nullable().optional().transform(v => v === '' ? null : v),
   due_time: z.string().nullable().optional().transform(v => v === '' ? null : v),
@@ -165,6 +167,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const { areas } = useAreas()
   const { tags } = useTags()
   const { projects } = useProjects()
+  const { events } = useCalendarEvents()
   const isOnline = useOnlineStatus()
   const [isMobile, setIsMobile] = useState(false)
   const [accordionStates, setAccordionStates] = useState({
@@ -197,20 +200,19 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
   const [newChecklistTitle, setNewChecklistTitle] = useState('')
   const [isAddingChecklist, setIsAddingChecklist] = useState(false)
   const { items: checklistItems, isLoading: isLoadingChecklist, addItem, toggleItem, deleteItem, refetch: refetchChecklist } = useChecklist(task?.id ?? null)
-  const defaultValues = useMemo(() => {
-    if (!task) return undefined
-    return {
-      title: task.title,
-      description: task.description,
-      context_id: task.context_id ?? null,
-      area_id: task.area_id ?? null,
-      project_id: task.project_id ?? null,
-      gtd_status: task.gtd_status,
-      due_date: toLocalDateStr(task.due_date),
-      due_time: toLocalTimeStr(task.due_date),
-      notes: task.notes ?? null,
-    }
-  }, [task])
+
+  const defaultValues = useMemo(() => task ? {
+    title: task.title,
+    description: task.description,
+    context_id: task.context_id ?? null,
+    area_id: task.area_id ?? null,
+    project_id: task.project_id ?? null,
+    event_id: task.event_id ?? null,
+    gtd_status: task.gtd_status,
+    due_date: toLocalDateStr(task.due_date),
+    due_time: toLocalTimeStr(task.due_date),
+    notes: task.notes ?? null,
+  } : undefined, [task])
 
   const {
     register,
@@ -218,11 +220,11 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
     reset,
     watch,
     setValue,
-    getValues,
+    control: formControl,
     formState: { errors },
   } = useForm<EditTaskFormData>({
     resolver: zodResolver(editTaskSchema) as unknown as never,
-    defaultValues: defaultValues ?? { title: '', context_id: null, area_id: null, project_id: null, due_date: null, due_time: null },
+    values: defaultValues,
   })
 
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -259,9 +261,42 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       })
       setIsTodayDue(dueDateStr === today)
       setIsTomorrowDue(dueDateStr === tomorrow)
+    }
+  }, [task, isOpen])
+
+  useEffect(() => {
+    if (task && isOpen) {
+      const dueDateStr = toLocalDateStr(task.due_date)
+      const dueTimeStr = toLocalTimeStr(task.due_date)
+      const today = todayLocalDateStr()
+      const tomorrow = tomorrowLocalDateStr()
+
+      reset({
+        title: task.title,
+        description: task.description,
+        context_id: task.context_id ?? null,
+        area_id: task.area_id ?? null,
+        project_id: task.project_id ?? null,
+        gtd_status: task.gtd_status,
+        due_date: dueDateStr,
+        due_time: dueTimeStr,
+        notes: task.notes ?? null,
+      })
+      setSelectedTagIds(task.tags.map((t: Tag) => t.id))
+      setRecurrenceData({
+        recurrence_type: task.recurrence_type,
+        recurrence_config: task.recurrence_config,
+        recurrence_end_date: task.recurrence_end_date,
+      })
+      setReminderData({
+        reminder_time: task.reminder_time ? task.reminder_time.slice(0, 5) : null,
+        reminder_offsets: task.reminder_offsets,
+      })
+      setIsTodayDue(dueDateStr === today)
+      setIsTomorrowDue(dueDateStr === tomorrow)
       setNewChecklistTitle('')
     }
-  }, [task, isOpen, reset])
+  }, [task])
 
   useEffect(() => {
     const checkMobile = () => {
@@ -373,6 +408,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
       context_id: data.context_id,
       area_id: data.area_id,
       project_id: data.project_id,
+      event_id: data.event_id,
       due_date: dueDateValue,
       notes: data.notes,
       tag_ids: selectedTagIds,
@@ -429,17 +465,27 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('taskTitle')}
               </label>
-              <input
-                {...register('title')}
-                type="text"
-                id="title"
-                ref={titleInputRef}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                placeholder={t('taskTitle')}
+              <Controller
+                name="title"
+                control={formControl}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    type="text"
+                    id="title"
+                    ref={(e) => {
+                      field.ref(e)
+                      titleInputRef.current = e
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                    placeholder={t('taskTitle')}
+                    value={field.value ?? ''}
+                  />
+                )}
               />
               <TatarKeyboardBar
                 inputRef={titleInputRef}
-                value={getValues('title') || ''}
+                value={watch('title') ?? ''}
                 onChange={(v) => setValue('title', v, { shouldDirty: true })}
               />
               {errors.title && (
@@ -451,17 +497,28 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('taskDescription')}
               </label>
-              <textarea
-                {...register('description')}
-                id="description"
-                rows={3}
-                ref={descInputRef}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                placeholder={t('taskDescription')}
+              <Controller
+                name="description"
+                control={formControl}
+                defaultValue={task?.description ?? ''}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    value={field.value ?? ''}
+                    id="description"
+                    rows={3}
+                    ref={(e) => {
+                      field.ref(e)
+                      descInputRef.current = e
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                    placeholder={t('taskDescription')}
+                  />
+                )}
               />
               <TatarKeyboardBar
                 inputRef={descInputRef}
-                value={getValues('description') || ''}
+                value={watch('description') || ''}
                 onChange={(v) => setValue('description', v, { shouldDirty: true })}
               />
               {errors.description && (
@@ -585,6 +642,23 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="event_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('event')}
+              </label>
+              <select
+                {...register('event_id')}
+                id="event_id"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+              >
+                <option value="">{t('noEvent')}</option>
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <Accordion
@@ -703,17 +777,28 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('notes')}
               </label>
-              <textarea
-                {...register('notes')}
-                id="notes"
-                rows={3}
-                ref={notesInputRef}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-                placeholder={t('notesOptional')}
+              <Controller
+                name="notes"
+                control={formControl}
+                defaultValue={task?.notes ?? ''}
+                render={({ field }) => (
+                  <textarea
+                    {...field}
+                    value={field.value ?? ''}
+                    id="notes"
+                    rows={3}
+                    ref={(e) => {
+                      field.ref(e)
+                      notesInputRef.current = e
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                    placeholder={t('notesOptional')}
+                  />
+                )}
               />
               <TatarKeyboardBar
                 inputRef={notesInputRef}
-                value={getValues('notes') || ''}
+                value={watch('notes') || ''}
                 onChange={(v) => setValue('notes', v, { shouldDirty: true })}
               />
             </div>
@@ -730,7 +815,7 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
           </button>
           <button
             type="button"
-            onClick={handleSubmit(onSubmit as never)}
+            onClick={() => handleSubmit(onSubmit as never)()}
             className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
           >
             {t('save', { ns: 'common' })}

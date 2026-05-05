@@ -53,6 +53,7 @@ export interface Task {
   area: AreaBrief | null
   project_id: string | null
   project: ProjectBrief | null
+  event_id: string | null
   context: ContextBrief | null
   position: number
   due_date: string | null
@@ -94,6 +95,7 @@ export interface UpdateTask {
   context_id?: string | null
   area_id?: string | null
   project_id?: string | null
+  event_id?: string | null
   due_date?: string | null
   notes?: string | null
   tag_ids?: string[]

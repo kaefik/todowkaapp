@@ -11,6 +11,8 @@ export interface CalendarEvent {
   end_time: string | null
   all_day: boolean
   color: string | null
+  location: string | null
+  attendees: string[] | null
   user_id: string
   created_at: string
   updated_at: string
@@ -23,6 +25,8 @@ export interface CreateCalendarEvent {
   end_time?: string | null
   all_day?: boolean
   color?: string | null
+  location?: string | null
+  attendees?: string[] | null
 }
 
 export interface UpdateCalendarEvent {
@@ -32,6 +36,8 @@ export interface UpdateCalendarEvent {
   end_time?: string | null
   all_day?: boolean
   color?: string | null
+  location?: string | null
+  attendees?: string[] | null
 }
 
 export function useCalendarEvents() {
@@ -49,6 +55,8 @@ export function useCalendarEvents() {
         end_time: e.endTime,
         all_day: e.allDay,
         color: e.color,
+        location: e.location,
+        attendees: e.attendees,
         user_id: e.userId,
         created_at: e.createdAt,
         updated_at: e.updatedAt,
@@ -70,6 +78,8 @@ export function useCalendarEvents() {
       endTime: data.end_time ?? null,
       allDay: data.all_day ?? false,
       color: data.color ?? null,
+      location: data.location ?? null,
+      attendees: data.attendees ?? null,
       createdAt: now,
       updatedAt: now,
       _syncStatus: 'local',
@@ -97,6 +107,8 @@ export function useCalendarEvents() {
     if (data.end_time !== undefined) updates.endTime = data.end_time
     if (data.all_day !== undefined) updates.allDay = data.all_day
     if (data.color !== undefined) updates.color = data.color
+    if (data.location !== undefined) updates.location = data.location
+    if (data.attendees !== undefined) updates.attendees = data.attendees
     await db.calendarEvents.update(id, updates)
     await db.mutations.add({
       id: uuidv4(),

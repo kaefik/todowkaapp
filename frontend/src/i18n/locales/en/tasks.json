@@ -25,6 +25,8 @@
   "gtdStatus": "GTD Status",
   "project": "Project",
   "noProject": "No project",
+  "event": "Event",
+  "noEvent": "No event",
   "context": "Context",
   "noContext": "No context",
   "area": "Area",

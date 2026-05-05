@@ -11,6 +11,7 @@ from app.schemas.calendar_event import (
     CalendarEventCreate,
     CalendarEventListResponse,
     CalendarEventResponse,
+    CalendarEventSelectItem,
     CalendarEventUpdate,
 )
 from app.services.calendar_event_service import CalendarEventService
@@ -38,22 +39,19 @@ async def list_events(
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CalendarEventListResponse:
-    from datetime import datetime as dt
-
-    parsed_start_from = dt.fromisoformat(start_from) if start_from else None
-    parsed_start_to = dt.fromisoformat(start_to) if start_to else None
-    parsed_updated_since = dt.fromisoformat(updated_since) if updated_since else None
-
-    service = CalendarEventService(db)
-    events, total = await service.get_events(
-        user_id=current_user.id,
-        start_from=parsed_start_from,
-        start_to=parsed_start_to,
-        updated_since=parsed_updated_since,
-        limit=limit,
-        offset=offset,
-    )
     return CalendarEventListResponse(items=events, total=total)
+
+
+@calendar_events_router.get('/for-select', response_model=list[CalendarEventSelectItem])
+@limiter.limit(read_limit)
+async def get_events_for_select(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[CalendarEventSelectItem]:
+    service = CalendarEventService(db)
+    events = await service.get_events_for_select(user_id=current_user.id)
+    return events
 
 
 @calendar_events_router.post('', status_code=status.HTTP_201_CREATED, response_model=CalendarEventResponse)

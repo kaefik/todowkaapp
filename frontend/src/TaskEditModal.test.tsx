@@ -24,6 +24,21 @@ vi.mock('./hooks/useProjects', () => ({
   useProjects: vi.fn(),
 }))
 
+vi.mock('./hooks/useCalendarEvents', () => ({
+  useCalendarEvents: vi.fn().mockReturnValue({ events: [], isLoading: false }),
+}))
+
+vi.mock('./hooks/useChecklist', () => ({
+  useChecklist: vi.fn().mockReturnValue({
+    items: [],
+    isLoading: false,
+    addItem: vi.fn(),
+    toggleItem: vi.fn(),
+    deleteItem: vi.fn(),
+    refetch: vi.fn(),
+  }),
+}))
+
 vi.mock('./db/hooks', () => ({
   useOnlineStatus: vi.fn().mockReturnValue(true),
   useDexieQuery: vi.fn().mockReturnValue({ data: [], isLoading: false }),
@@ -304,6 +319,7 @@ describe('TaskEditModal', () => {
           context_id: null,
           area_id: null,
           project_id: null,
+          event_id: null,
           gtd_status: 'inbox',
           due_date: null,
           notes: null,
@@ -339,6 +355,7 @@ describe('TaskEditModal', () => {
           context_id: null,
           area_id: null,
           project_id: null,
+          event_id: null,
           gtd_status: 'inbox',
           due_date: null,
           notes: null,

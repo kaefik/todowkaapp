@@ -25,6 +25,7 @@ import { Notifications } from './routes/Notifications'
 import { Onboarding } from './routes/Onboarding'
 import { Review } from './routes/Review'
 import { Calendar } from './routes/Calendar'
+import { Events } from './routes/Events'
 
 const VALID_SECTIONS = new Set([
   'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
@@ -145,6 +146,14 @@ const routes: RouteObject[] = [
       {
         path: 'projects/:id',
         element: <ProjectDetail />,
+      },
+      {
+        path: 'calendar',
+        element: <Calendar />,
+      },
+{
+        path: 'events',
+        element: <Events />,
       },
       {
         path: 'calendar',
