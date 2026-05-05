@@ -2,6 +2,7 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
 import commonRu from './locales/ru/common.json'
+import calendarRu from './locales/ru/calendar.json'
 import navRu from './locales/ru/nav.json'
 import authRu from './locales/ru/auth.json'
 import tasksRu from './locales/ru/tasks.json'
@@ -15,6 +16,7 @@ import reviewRu from './locales/ru/review.json'
 import sessionsRu from './locales/ru/sessions.json'
 
 import commonEn from './locales/en/common.json'
+import calendarEn from './locales/en/calendar.json'
 import navEn from './locales/en/nav.json'
 import authEn from './locales/en/auth.json'
 import tasksEn from './locales/en/tasks.json'
@@ -28,6 +30,7 @@ import reviewEn from './locales/en/review.json'
 import sessionsEn from './locales/en/sessions.json'
 
 import commonTt from './locales/tt/common.json'
+import calendarTt from './locales/tt/calendar.json'
 import navTt from './locales/tt/nav.json'
 import authTt from './locales/tt/auth.json'
 import tasksTt from './locales/tt/tasks.json'
@@ -43,6 +46,7 @@ import sessionsTt from './locales/tt/sessions.json'
 const resources = {
   ru: {
     common: commonRu,
+    calendar: calendarRu,
     nav: navRu,
     auth: authRu,
     tasks: tasksRu,
@@ -57,6 +61,7 @@ const resources = {
   },
   en: {
     common: commonEn,
+    calendar: calendarEn,
     nav: navEn,
     auth: authEn,
     tasks: tasksEn,
@@ -71,6 +76,7 @@ const resources = {
   },
   tt: {
     common: commonTt,
+    calendar: calendarTt,
     nav: navTt,
     auth: authTt,
     tasks: tasksTt,
@@ -99,7 +105,7 @@ i18n.use(initReactI18next).init({
   resources,
   lng: detectLanguage(),
   fallbackLng: 'ru',
-  ns: ['common', 'nav', 'auth', 'tasks', 'settings', 'projects', 'notifications', 'sync', 'verbs', 'onboarding', 'review', 'sessions'],
+  ns: ['calendar', 'common', 'nav', 'auth', 'tasks', 'settings', 'projects', 'notifications', 'sync', 'verbs', 'onboarding', 'review', 'sessions'],
   defaultNS: 'common',
   interpolation: {
     escapeValue: false,
