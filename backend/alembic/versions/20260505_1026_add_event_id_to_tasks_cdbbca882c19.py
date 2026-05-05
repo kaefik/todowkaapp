@@ -20,15 +20,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    with op.batch_alter_table('tasks', recreate=False) as batch_op:
-        batch_op.add_column(sa.Column('event_id', sa.String(length=36), nullable=True))
-        batch_op.create_foreign_key(
-            None, 'tasks', 'calendar_events', ['event_id'], ['id'], ondelete='SET NULL'
-        )
+    op.add_column('tasks', sa.Column('event_id', sa.String(length=36), nullable=True))
+    op.execute("CREATE INDEX IF NOT EXISTS ix_tasks_event_id ON tasks(event_id)")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    with op.batch_alter_table('tasks', recreate=False) as batch_op:
-        batch_op.drop_constraint(None, type_='foreignkey')
-        batch_op.drop_column('event_id')
+    op.execute("DROP INDEX IF EXISTS ix_tasks_event_id")
+    op.drop_column('tasks', 'event_id')
