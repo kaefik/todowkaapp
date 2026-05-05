@@ -357,6 +357,14 @@
 - Миграция: `alembic/versions/20260504_1558_add_calendar_events_table_*.py`
 - Drag-and-drop задач между днями (отложено в фазу 2)
 - Файлы: `backend/app/models/calendar_event.py`, `backend/app/schemas/calendar_event.py`, `backend/app/services/calendar_event_service.py`, `backend/app/api/calendar_events.py`, `frontend/src/routes/Calendar.tsx`, `frontend/src/components/calendar/*`, `frontend/src/hooks/useCalendarEvents.ts`, `frontend/src/hooks/useCalendarTasks.ts`, `frontend/src/stores/calendarStore.ts`, `frontend/src/i18n/locales/{ru,en}/calendar.json`
+- **Расширения (05.05.2026):**
+  - Страница `/events` — отдельный роут для списка всех событий с CRUD
+  - Привязка задач к событиям: поле `event_id` в Task (миграция: `20260505_1026_add_event_id_to_tasks_*.py`)
+  - API endpoint `/api/calendar-events/for-select` — для выбора событий в формах
+  - Поля `location` и `attendees` в CalendarEvent (миграция: `20260505_1024_add_location_and_attendees_*.py`)
+  - EventEditModal — модальное окно редактирования событий
+  - Выбор события в TaskEditModal через dropdown
+- Файлы расширений: `frontend/src/routes/Events.tsx`, `frontend/src/components/EventEditModal.tsx`, `backend/app/schemas/task.py`
 
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта

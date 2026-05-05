@@ -20,11 +20,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('tasks', sa.Column('event_id', sa.String(length=36), nullable=True))
-    op.create_foreign_key(None, 'tasks', 'calendar_events', ['event_id'], ['id'], ondelete='SET NULL')
+    with op.batch_alter_table('tasks', recreate=False) as batch_op:
+        batch_op.add_column(sa.Column('event_id', sa.String(length=36), nullable=True))
+        batch_op.create_foreign_key(
+            None, 'tasks', 'calendar_events', ['event_id'], ['id'], ondelete='SET NULL'
+        )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_constraint(None, 'tasks', type_='foreignkey')
-    op.drop_column('tasks', 'event_id')
+    with op.batch_alter_table('tasks', recreate=False) as batch_op:
+        batch_op.drop_constraint(None, type_='foreignkey')
+        batch_op.drop_column('event_id')
