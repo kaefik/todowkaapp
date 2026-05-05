@@ -141,6 +141,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           { path: '/contexts', label: t('contexts') },
           { path: '/areas', label: t('areas') },
           { path: '/tags', label: t('tags') },
+          { path: '/calendar', label: '📅 ' + t('calendar') },
           { path: '/review', label: '📅 ' + t('reviewLink') },
         ].map((item) => (
           <NavItem

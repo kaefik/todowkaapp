@@ -24,6 +24,7 @@ import { AppLayout } from './components/AppLayout'
 import { Notifications } from './routes/Notifications'
 import { Onboarding } from './routes/Onboarding'
 import { Review } from './routes/Review'
+import { Calendar } from './routes/Calendar'
 
 const VALID_SECTIONS = new Set([
   'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
@@ -144,6 +145,10 @@ const routes: RouteObject[] = [
       {
         path: 'projects/:id',
         element: <ProjectDetail />,
+      },
+      {
+        path: 'calendar',
+        element: <Calendar />,
       },
     ],
   },

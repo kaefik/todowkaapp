@@ -342,6 +342,22 @@
 - **Файлы:** `frontend/src/components/review/ReviewDashboard.tsx`, `ReviewOverdue.tsx`, `ReviewInbox.tsx`, `ReviewSomeday.tsx`, `ReviewProjects.tsx`, `ReviewCompletion.tsx`, `frontend/src/routes/Review.tsx`, `frontend/src/stores/reviewStore.ts`, `frontend/src/api/review.ts`, `backend/app/services/review_service.py`, `backend/app/schemas/review.py`, `backend/app/api/review.py`, `backend/app/models/review_snapshot.py`
 - **Phase 2 (отложено):** Activity strip (done-per-day), `/review/history` для сравнения недель, resume progress
 
+#### Календарь ✅ (Реализовано 05.05.2026)
+- Страница `/calendar` с 4 видами: День, Неделя, Месяц, Год
+- Виртуальные события из задач с `due_date` (маппинг GTD-статус → цвет)
+- Простые календарные события (CalendarEvent) — без GTD-статусов, проектов, контекстов
+- Создание/редактирование/удаление событий через EventEditorModal
+- DayDetailDrawer — боковая панель деталей дня в MonthView
+- Навигация: стрелки ← → по периодам + кнопка «Сегодня»
+- Выбранный вид сохраняется в localStorage (`calendar-view`)
+- Zustand store: calendarStore (вид, дата, drawer)
+- Backend: модель CalendarEvent, CRUD API `/api/calendar-events`
+- Dexie: таблица `calendarEvents` + sync mapping
+- i18n: namespace `calendar` (ru/en)
+- Миграция: `alembic/versions/20260504_1558_add_calendar_events_table_*.py`
+- Drag-and-drop задач между днями (отложено в фазу 2)
+- Файлы: `backend/app/models/calendar_event.py`, `backend/app/schemas/calendar_event.py`, `backend/app/services/calendar_event_service.py`, `backend/app/api/calendar_events.py`, `frontend/src/routes/Calendar.tsx`, `frontend/src/components/calendar/*`, `frontend/src/hooks/useCalendarEvents.ts`, `frontend/src/hooks/useCalendarTasks.ts`, `frontend/src/stores/calendarStore.ts`, `frontend/src/i18n/locales/{ru,en}/calendar.json`
+
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта
 - Показывается название задачи + deadline (если установлен)

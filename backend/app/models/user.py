@@ -41,6 +41,7 @@ class User(Base):
     projects = relationship('Project', back_populates='user', cascade='all, delete-orphan')
     verb_templates = relationship('VerbTemplate', back_populates='user', cascade='all, delete-orphan')
     review_snapshots = relationship('ReviewSnapshot', back_populates='user', cascade='all, delete-orphan')
+    calendar_events = relationship('CalendarEvent', back_populates='user', cascade='all, delete-orphan')
 
     def __repr__(self) -> str:
         return f'<User(id={self.id}, username={self.username}, email={self.email})>'

@@ -11,6 +11,7 @@ from starlette.responses import Response
 from app.api.areas import areas_router
 from app.api.auth import auth_router
 from app.api.backup_schedules import backup_schedules_router
+from app.api.calendar_events import calendar_events_router
 from app.api.checklist import checklist_router
 from app.api.config import config_router
 from app.api.contexts import contexts_router
@@ -91,6 +92,7 @@ def create_app() -> FastAPI:
     api_router.include_router(areas_router)
     api_router.include_router(auth_router)
     api_router.include_router(sessions_router)
+    api_router.include_router(calendar_events_router)
     api_router.include_router(checklist_router)
     api_router.include_router(config_router)
     api_router.include_router(contexts_router)

@@ -6,7 +6,7 @@ import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
 import i18n from '../i18n'
 
-export type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem'
+export type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem' | 'calendarEvent'
 
 export type ResourceType = EntityType
 
@@ -22,6 +22,7 @@ const SSE_TO_RESOURCE: Record<string, ResourceType> = {
   area_created: 'area', area_updated: 'area', area_deleted: 'area',
   context_created: 'context', context_updated: 'context', context_deleted: 'context',
   tag_created: 'tag', tag_updated: 'tag', tag_deleted: 'tag',
+  calendar_event_created: 'calendarEvent', calendar_event_updated: 'calendarEvent', calendar_event_deleted: 'calendarEvent',
   verb_template_created: 'verbTemplate', verb_template_updated: 'verbTemplate', verb_template_deleted: 'verbTemplate',
 }
 
@@ -31,7 +32,7 @@ export function getResourceTypeFromSSE(eventType: string): ResourceType | null {
 
 interface SyncResourceConfig {
   endpoint: string
-  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags | typeof db.verbTemplates | typeof db.checklistItems
+  table: typeof db.tasks | typeof db.projects | typeof db.areas | typeof db.contexts | typeof db.tags | typeof db.verbTemplates | typeof db.checklistItems | typeof db.calendarEvents
   entityType: EntityType
   transform: (item: Record<string, unknown>, userId: string) => Record<string, unknown> & { updatedAt: string; _syncStatus: SyncStatus; _lastSyncedAt: string | null }
 }
@@ -144,6 +145,25 @@ const RESOURCES: SyncResourceConfig[] = [
       isCompleted: (item.is_completed as boolean) ?? false,
       position: (item.position as number) ?? 0,
       completedAt: (item.completed_at as string | null) ?? null,
+      createdAt: (item.created_at as string) ?? new Date().toISOString(),
+      updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
+      _syncStatus: 'synced' as SyncStatus,
+      _lastSyncedAt: new Date().toISOString(),
+    })),
+  },
+  {
+    endpoint: '/calendar-events',
+    table: db.calendarEvents,
+    entityType: 'calendarEvent',
+    transform: makeTransform((item, userId) => ({
+      id: item.id as string,
+      userId,
+      title: item.title as string,
+      description: (item.description as string | null) ?? null,
+      startTime: (item.start_time as string) ?? new Date().toISOString(),
+      endTime: (item.end_time as string | null) ?? null,
+      allDay: (item.all_day as boolean) ?? false,
+      color: (item.color as string | null) ?? null,
       createdAt: (item.created_at as string) ?? new Date().toISOString(),
       updatedAt: (item.updated_at as string) ?? new Date().toISOString(),
       _syncStatus: 'synced' as SyncStatus,
@@ -447,6 +467,7 @@ function getTableForType(entityType: EntityType) {
     case 'tag': return db.tags
     case 'verbTemplate': return db.verbTemplates
     case 'checklistItem': return db.checklistItems
+    case 'calendarEvent': return db.calendarEvents
   }
 }
 
@@ -459,6 +480,7 @@ function getEndpointForType(entityType: EntityType): string {
     case 'tag': return '/tags'
     case 'verbTemplate': return '/verb-templates'
     case 'checklistItem': return '/tasks'
+    case 'calendarEvent': return '/calendar-events'
   }
 }
 

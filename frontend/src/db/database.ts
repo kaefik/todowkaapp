@@ -97,7 +97,7 @@ export interface DbVerbTemplate {
 
 export interface DbMutation {
   id: string
-  entityType: 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem'
+  entityType: 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem' | 'calendarEvent'
   entityId: string
   action: 'create' | 'update' | 'delete' | 'toggle' | 'move' | 'reorder'
   payload: string | null
@@ -125,6 +125,21 @@ export interface DbSyncMeta {
   value: string
 }
 
+export interface DbCalendarEvent {
+  id: string
+  userId: string
+  title: string
+  description: string | null
+  startTime: string
+  endTime: string | null
+  allDay: boolean
+  color: string | null
+  createdAt: string
+  updatedAt: string
+  _syncStatus: SyncStatus
+  _lastSyncedAt: string | null
+}
+
 export class TodowkaDB extends Dexie {
   tasks!: Table<DbTask>
   projects!: Table<DbProject>
@@ -135,6 +150,7 @@ export class TodowkaDB extends Dexie {
   checklistItems!: Table<DbChecklistItem>
   mutations!: Table<DbMutation>
   syncMeta!: Table<DbSyncMeta>
+  calendarEvents!: Table<DbCalendarEvent>
 
   constructor() {
     super('todowka')
@@ -230,6 +246,10 @@ export class TodowkaDB extends Dexie {
       await tx.table('checklistItems').toCollection().modify(item => {
         item.userId = ''
       })
+    })
+
+    this.version(8).stores({
+      calendarEvents: 'id, userId, _syncStatus, updatedAt, startTime',
     })
   }
 }
