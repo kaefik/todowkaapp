@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '../../stores/calendarStore'
 import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
 import { useCalendarTasks } from '../../hooks/useCalendarTasks'
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
+import { TaskDetailModal } from '../TaskDetailModal'
+import type { Task } from '../../api'
 
 const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
@@ -26,12 +29,18 @@ function getWeekDays(date: Date): Date[] {
 }
 
 export function WeekView() {
+  const navigate = useNavigate()
   const { t } = useTranslation('calendar')
-  const { currentDate } = useCalendarStore()
+  const { currentDate, openTaskDetail, selectedTaskId, closeTaskDetail } = useCalendarStore()
   const { events } = useCalendarEvents()
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+
+  const handleTaskEdit = (task: Task) => {
+    closeTaskDetail()
+    navigate(`/tasks?editTaskId=${task.id}`)
+  }
 
   const today = new Date()
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate])
@@ -92,7 +101,7 @@ export function WeekView() {
                   <CalendarEventCard key={e.id} event={e} compact />
                 ))}
                 {dayAllDayTasks.map((t) => (
-                  <CalendarTaskCard key={t.id} task={t} compact />
+                  <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
                 ))}
               </div>
             )
@@ -119,7 +128,7 @@ export function WeekView() {
                     <CalendarEventCard key={e.id} event={e} compact />
                   ))}
                   {hourTasks.map((t) => (
-                    <CalendarTaskCard key={t.id} task={t} compact />
+                    <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
                   ))}
                 </div>
               )
@@ -135,6 +144,13 @@ export function WeekView() {
           onClose={() => { setEditorEvent(null); setEditorDefaultStart(undefined) }}
         />
       ) : null}
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={!!selectedTaskId}
+        onClose={closeTaskDetail}
+        onEdit={handleTaskEdit}
+      />
     </div>
   )
 }

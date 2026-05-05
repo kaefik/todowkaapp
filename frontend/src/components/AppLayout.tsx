@@ -50,12 +50,12 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   const gtdItems = [
     { path: '/inbox', label: t('inbox'), count: counts.inbox },
-    { path: '/active', label: t('active'), count: counts.active },
     { path: '/today', label: t('today'), count: counts.today },
     { path: '/tomorrow', label: t('tomorrow'), count: counts.tomorrow },
     { path: '/next', label: t('nextActions'), count: counts.next },
     { path: '/waiting', label: t('waitingFor'), count: counts.waiting },
     { path: '/someday', label: t('someday'), count: counts.someday },
+    { path: '/active', label: t('active'), count: counts.active },
   ]
 
   const isActive = (path: string) => location.pathname === path

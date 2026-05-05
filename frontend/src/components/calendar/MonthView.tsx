@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '../../stores/calendarStore'
 import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
 import { useCalendarTasks, type CalendarTaskItem } from '../../hooks/useCalendarTasks'
@@ -7,6 +8,8 @@ import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { DayDetailDrawer } from './DayDetailDrawer'
 import { EventEditorModal } from './EventEditorModal'
+import { TaskDetailModal } from '../TaskDetailModal'
+import type { Task } from '../../api'
 
 const MAX_VISIBLE = 3
 
@@ -48,11 +51,17 @@ function toLocalDayEnd(d: Date): Date {
 
 export function MonthView() {
   const { t } = useTranslation('calendar')
-  const { currentDate, openDetailDrawer } = useCalendarStore()
+  const navigate = useNavigate()
+  const { currentDate, openDetailDrawer, openTaskDetail, selectedTaskId, closeTaskDetail } = useCalendarStore()
   const { events } = useCalendarEvents()
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+
+  const handleTaskEdit = (task: Task) => {
+    closeTaskDetail()
+    navigate(`/tasks?editTaskId=${task.id}`)
+  }
 
   const days = useMemo(() => getMonthGrid(currentDate), [currentDate])
 
@@ -119,7 +128,7 @@ export function MonthView() {
               <div className="space-y-0.5">
                 {allItems.slice(0, MAX_VISIBLE).map((item, idx) =>
                   item.type === 'task' ? (
-                    <CalendarTaskCard key={`t-${idx}`} task={item.data} compact />
+                    <CalendarTaskCard key={`t-${idx}`} task={item.data} compact onClick={() => openTaskDetail(item.data.id)} />
                   ) : (
                     <CalendarEventCard key={`e-${idx}`} event={item.data} compact />
                   ),
@@ -144,6 +153,13 @@ export function MonthView() {
           onClose={() => { setEditorEvent(null); setEditorDefaultStart(undefined) }}
         />
       ) : null}
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={!!selectedTaskId}
+        onClose={closeTaskDetail}
+        onEdit={handleTaskEdit}
+      />
     </div>
   )
 }

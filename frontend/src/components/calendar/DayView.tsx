@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '../../stores/calendarStore'
 import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
 import { useCalendarTasks, type CalendarTaskItem } from '../../hooks/useCalendarTasks'
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
+import { TaskDetailModal } from '../TaskDetailModal'
+import type { Task } from '../../api'
 
 type SlotItem =
   | { type: 'task'; data: CalendarTaskItem }
@@ -19,11 +22,17 @@ function toHourKey(d: Date): string {
 }
 
 export function DayView() {
-  const { currentDate } = useCalendarStore()
+  const navigate = useNavigate()
+  const { currentDate, openTaskDetail, selectedTaskId, closeTaskDetail } = useCalendarStore()
   const { events } = useCalendarEvents()
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+
+  const handleTaskEdit = (task: Task) => {
+    closeTaskDetail()
+    navigate(`/tasks?editTaskId=${task.id}`)
+  }
 
   const today = new Date()
   const isCurrentToday = isSameDay(currentDate, today)
@@ -81,7 +90,7 @@ export function DayView() {
             <CalendarEventCard key={e.id} event={e} compact />
           ))}
           {allDayTasks.map((t) => (
-            <CalendarTaskCard key={t.id} task={t} compact />
+            <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
           ))}
         </div>
       )}
@@ -108,7 +117,7 @@ export function DayView() {
                 )}
                 {items.map((item) =>
                   item.type === 'task' ? (
-                    <CalendarTaskCard key={item.data.id} task={item.data} compact />
+                    <CalendarTaskCard key={item.data.id} task={item.data} compact onClick={() => openTaskDetail(item.data.id)} />
                   ) : (
                     <CalendarEventCard key={item.data.id} event={item.data} compact />
                   ),
@@ -126,6 +135,13 @@ export function DayView() {
           onClose={() => { setEditorEvent(null); setEditorDefaultStart(undefined) }}
         />
       ) : null}
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={!!selectedTaskId}
+        onClose={closeTaskDetail}
+        onEdit={handleTaskEdit}
+      />
     </div>
   )
 }

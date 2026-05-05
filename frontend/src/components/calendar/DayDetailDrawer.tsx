@@ -1,17 +1,21 @@
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '../../stores/calendarStore'
 import type { CalendarTaskItem } from '../../hooks/useCalendarTasks'
 import type { CalendarEvent } from '../../hooks/useCalendarEvents'
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
+import { TaskDetailModal } from '../TaskDetailModal'
+import type { Task } from '../../api'
 
 interface DayDetailDrawerProps {
   getItemsForDay: (day: Date) => { events: CalendarEvent[]; tasks: CalendarTaskItem[] }
 }
 
 export function DayDetailDrawer({ getItemsForDay }: DayDetailDrawerProps) {
+  const navigate = useNavigate()
   const { t } = useTranslation('calendar')
-  const { selectedDate, detailDrawerOpen, closeDetailDrawer } = useCalendarStore()
+  const { selectedDate, detailDrawerOpen, closeDetailDrawer, selectedTaskId, openTaskDetail, closeTaskDetail } = useCalendarStore()
 
   if (!detailDrawerOpen || !selectedDate) return null
 
@@ -21,6 +25,11 @@ export function DayDetailDrawer({ getItemsForDay }: DayDetailDrawerProps) {
     day: 'numeric',
     month: 'long',
   })
+
+  const handleTaskEdit = (task: Task) => {
+    closeTaskDetail()
+    navigate(`/tasks?editTaskId=${task.id}`)
+  }
 
   return (
     <>
@@ -54,7 +63,7 @@ export function DayDetailDrawer({ getItemsForDay }: DayDetailDrawerProps) {
             ) : (
               <div className="space-y-1">
                 {tasks.map((task) => (
-                  <CalendarTaskCard key={task.id} task={task} />
+                  <CalendarTaskCard key={task.id} task={task} onClick={() => openTaskDetail(task.id)} />
                 ))}
               </div>
             )}
@@ -76,6 +85,13 @@ export function DayDetailDrawer({ getItemsForDay }: DayDetailDrawerProps) {
           </div>
         </div>
       </div>
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={!!selectedTaskId}
+        onClose={closeTaskDetail}
+        onEdit={handleTaskEdit}
+      />
     </>
   )
 }

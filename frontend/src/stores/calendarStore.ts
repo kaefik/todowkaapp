@@ -7,6 +7,7 @@ interface CalendarState {
   currentDate: Date
   selectedDate: Date | null
   detailDrawerOpen: boolean
+  selectedTaskId: number | null
   setView: (view: CalendarViewType) => void
   setCurrentDate: (date: Date) => void
   goToday: () => void
@@ -14,6 +15,8 @@ interface CalendarState {
   goPrev: () => void
   openDetailDrawer: (date: Date) => void
   closeDetailDrawer: () => void
+  openTaskDetail: (taskId: number) => void
+  closeTaskDetail: () => void
 }
 
 function getSavedView(): CalendarViewType {
@@ -29,6 +32,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   currentDate: new Date(),
   selectedDate: null,
   detailDrawerOpen: false,
+  selectedTaskId: null,
 
   setView: (view) => {
     localStorage.setItem('calendar-view', view)
@@ -61,4 +65,6 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
   openDetailDrawer: (date) => set({ selectedDate: date, detailDrawerOpen: true }),
   closeDetailDrawer: () => set({ detailDrawerOpen: false, selectedDate: null }),
+  openTaskDetail: (taskId) => set({ selectedTaskId: taskId }),
+  closeTaskDetail: () => set({ selectedTaskId: null }),
 }))
