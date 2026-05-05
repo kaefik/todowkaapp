@@ -11,11 +11,23 @@ export interface SessionData {
   is_current: boolean
 }
 
+export interface SessionListResponse {
+  items: SessionData[]
+}
+
 export const sessionsApi = {
   getSessions: async (currentSessionId?: string): Promise<SessionData[]> => {
     const params = currentSessionId ? `?current_session_id=${encodeURIComponent(currentSessionId)}` : ''
-    const response = await httpClient.get<SessionData[]>(`/sessions${params}`)
-    return response.data
+
+    const response = await httpClient.get<SessionListResponse>(`/sessions${params}`)
+    if (response.data && Array.isArray(response.data.items)) {
+      return response.data.items
+    }
+    if (Array.isArray(response.data)) {
+      return response.data
+    }
+    console.warn('Unexpected sessions response:', response.data)
+    return []
   },
 
   revokeSession: async (sessionId: string): Promise<void> => {

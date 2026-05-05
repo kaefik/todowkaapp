@@ -22,6 +22,9 @@ export interface User {
   review_count: number
   review_frequency_days: number
   review_notifications_enabled: boolean
+  email_notifications_enabled: boolean
+  notification_email: string | null
+  email_verified_at: string | null
 }
 
 interface AuthState {

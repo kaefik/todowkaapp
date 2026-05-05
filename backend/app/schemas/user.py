@@ -39,6 +39,9 @@ class UserResponse(BaseResponseSchema):
     review_count: int = 0
     review_frequency_days: int = 7
     review_notifications_enabled: bool = False
+    email_notifications_enabled: bool = False
+    notification_email: str | None = None
+    email_verified_at: datetime | None = None
     created_at: datetime
     last_login_at: datetime | None = None
 
@@ -65,6 +68,7 @@ class UserUpdate(BaseModel):
     capitalize_first: bool | None = None
     review_frequency_days: int | None = None
     review_notifications_enabled: bool | None = None
+    email_notifications_enabled: bool | None = None
 
     @field_validator('default_section')
     @classmethod

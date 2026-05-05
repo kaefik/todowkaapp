@@ -46,7 +46,7 @@ export function SessionList() {
     )
   }
 
-  if (sessions.length === 0) {
+  if (!Array.isArray(sessions) || sessions.length === 0) {
     return (
       <p className="text-center text-gray-500 dark:text-gray-400 py-8">
         {t('noSessions')}

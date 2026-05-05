@@ -1,7 +1,10 @@
+import random
+import string
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -192,3 +195,100 @@ async def validate_telegram_token(
             bot_name=result["bot_name"],
         )
     return TelegramTokenResponse(valid=False, error="Invalid token or Telegram API unreachable")
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyEmailResponse(BaseModel):
+    message: str
+
+
+class ConfirmEmailRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class ConfirmEmailResponse(BaseModel):
+    message: str
+    notification_email: str
+
+
+@users_router.post("/verify-email", response_model=VerifyEmailResponse)
+@limiter.limit(write_limit)
+async def verify_email(
+    request: Request,
+    data: VerifyEmailRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> VerifyEmailResponse:
+    email = data.email.lower().strip()
+
+    result = await db.execute(
+        select(User).where(User.email == email, User.id != current_user.id)
+    )
+    existing = result.scalar_one_or_none()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already used by another user",
+        )
+
+    code = "".join(random.choices(string.digits, k=6))
+
+    from app.services.email_service import get_email_service
+
+    email_service = get_email_service()
+    if not email_service:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email service not configured",
+        )
+
+    await email_service.send_verification_email(email, code)
+
+    await db.execute(
+        update(User)
+        .where(User.id == current_user.id)
+        .values(email_verification_code=code, notification_email=email)
+    )
+    await db.commit()
+
+    return VerifyEmailResponse(message="Код отправлен")
+
+
+@users_router.post("/confirm-email", response_model=ConfirmEmailResponse)
+@limiter.limit(write_limit)
+async def confirm_email(
+    request: Request,
+    data: ConfirmEmailRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ConfirmEmailResponse:
+    result = await db.execute(select(User).where(User.id == current_user.id))
+    user = result.scalar_one()
+
+    if not user.email_verification_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No verification code requested",
+        )
+
+    if user.email_verification_code != data.code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid verification code",
+        )
+
+    await db.execute(
+        update(User)
+        .where(User.id == current_user.id)
+        .values(email_verification_code=None, email_verified_at=datetime.now())
+    )
+    await db.commit()
+    await db.refresh(user)
+
+    return ConfirmEmailResponse(
+        message="Email подтверждён",
+        notification_email=user.notification_email,
+    )

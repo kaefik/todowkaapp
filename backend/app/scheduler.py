@@ -183,6 +183,31 @@ class TaskScheduler:
                                         f"Telegram send failed for user {task.user.username}: {tg_err}"
                                     )
 
+                                if (
+                                    task.user.email_notifications_enabled
+                                    and task.user.notification_email
+                                ):
+                                    try:
+                                        from app.config import settings
+                                        from app.services.email_service import (
+                                            get_email_service_from_db,
+                                        )
+
+                                        async with AsyncSessionLocal() as email_db:
+                                            email_service = await get_email_service_from_db(email_db)
+                                            if email_service and task.due_date:
+                                                await email_service.send_deadline_reminder(
+                                                task.user.notification_email,
+                                                task.title,
+                                                task.due_date,
+                                                task.user.username,
+                                                settings.frontend_url,
+                                            )
+                                    except Exception as em_err:
+                                        logger.error(
+                                            f"Email send failed for user {task.user.username}: {em_err}"
+                                        )
+
                             sent_count += 1
                     except Exception as e:
                         logger.error(f"Recovery error for task '{task.title}': {e}")
@@ -295,6 +320,30 @@ class TaskScheduler:
                                     logger.error(
                                         f"Telegram send failed for user {user.username}: {tg_err}"
                                     )
+
+                            if (
+                                user.email_notifications_enabled
+                                and user.notification_email
+                            ):
+                                try:
+                                    from app.config import settings
+                                    from app.services.email_service import (
+                                        get_email_service_from_db,
+                                    )
+
+                                    email_service = await get_email_service_from_db(session)
+                                    if email_service and task.due_date:
+                                        await email_service.send_deadline_reminder(
+                                            user.notification_email,
+                                            task.title,
+                                            task.due_date,
+                                            user.username,
+                                            settings.frontend_url,
+                                        )
+                                except Exception as em_err:
+                                    logger.error(
+                                        f"Email send failed for user {user.username}: {em_err}"
+                                    )
                     except Exception as e:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()
@@ -365,6 +414,28 @@ class TaskScheduler:
                                 )
                             except Exception as tg_err:
                                 logger.error(f"Telegram deadline send failed for user {user.username}: {tg_err}")
+
+                        if (
+                            user.email_notifications_enabled
+                            and user.notification_email
+                        ):
+                            try:
+                                from app.config import settings
+                                from app.services.email_service import (
+                                    get_email_service_from_db,
+                                )
+
+                                email_service = await get_email_service_from_db(session)
+                                if email_service and task.due_date:
+                                    await email_service.send_deadline_reminder(
+                                        user.notification_email,
+                                        task.title,
+                                        task.due_date,
+                                        user.username,
+                                        settings.frontend_url,
+                                    )
+                            except Exception as em_err:
+                                logger.error(f"Email deadline send failed for user {user.username}: {em_err}")
 
                     except Exception as e:
                         logger.error(f"Error sending deadline notification for task '{task.title}': {e}")

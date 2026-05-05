@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     rate_limit_read: str = "60/minute"
     rate_limit_sse: str = "5/minute"
     rate_limit_export: str = "5/minute"
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
 
     @property
     def frontend_url(self) -> str:

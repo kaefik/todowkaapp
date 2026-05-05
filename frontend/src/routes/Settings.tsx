@@ -523,6 +523,8 @@ function SettingsContent() {
             </div>
           </div>
 
+          <EmailNotificationsSection />
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('aboutApp')}</h2>
             <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
@@ -886,6 +888,7 @@ function SettingsContent() {
         <VerbSettings />
       )}
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
+      {activeTab === 'users' && user?.is_admin && <SMTPSettingsSection />}
       {activeTab === 'backup' && <BackupScheduleSettings user={user!} />}
       {activeTab === 'review' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 space-y-6">
@@ -1392,6 +1395,266 @@ function UsersTab({ currentUser }: { currentUser: User }) {
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function SMTPSettingsSection() {
+  const { t } = useTranslation('settings')
+  const user = useAuthStore((s) => s.user)
+  const [smtpSettings, setSmtpSettings] = useState<{ smtp_host: string | null; smtp_port: number | null; smtp_user: string | null; smtp_from: string | null; smtp_configured: boolean } | null>(null)
+  const [formData, setFormData] = useState({ smtp_host: '', smtp_port: '587', smtp_user: '', smtp_password: '', smtp_from: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (user?.is_admin) {
+      usersApi.getSmtpSettings()
+        .then((data) => {
+          setSmtpSettings(data)
+          if (data.smtp_host) {
+            setFormData({
+              smtp_host: data.smtp_host || '',
+              smtp_port: String(data.smtp_port || 587),
+              smtp_user: data.smtp_user || '',
+              smtp_password: '',
+              smtp_from: data.smtp_from || '',
+            })
+          }
+        })
+        .catch(console.error)
+    }
+  }, [user?.is_admin])
+
+  async function handleSave() {
+    setLoading(true)
+    setError(null)
+    setSaved(false)
+    try {
+      const result = await usersApi.updateSmtpSettings({
+        smtp_host: formData.smtp_host || null,
+        smtp_port: formData.smtp_port ? parseInt(formData.smtp_port) : 587,
+        smtp_user: formData.smtp_user || null,
+        smtp_password: formData.smtp_password || null,
+        smtp_from: formData.smtp_from || null,
+      })
+      setSmtpSettings(result)
+      setSaved(true)
+      setFormData({ ...formData, smtp_password: '' })
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('errorSaving'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (!user?.is_admin) return null
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('smtpSettings')}</h2>
+      <div className="space-y-4 max-w-lg">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('smtpHost')}</label>
+          <input type="text" value={formData.smtp_host} onChange={(e) => setFormData({ ...formData, smtp_host: e.target.value })} placeholder="smtp.example.com"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('smtpPort')}</label>
+          <input type="number" value={formData.smtp_port} onChange={(e) => setFormData({ ...formData, smtp_port: e.target.value })} placeholder="587"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('smtpUser')}</label>
+          <input type="email" value={formData.smtp_user} onChange={(e) => setFormData({ ...formData, smtp_user: e.target.value })} placeholder="your-email@example.com"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('smtpPassword')}</label>
+          <input type="password" value={formData.smtp_password} onChange={(e) => setFormData({ ...formData, smtp_password: e.target.value })} placeholder={smtpSettings?.smtp_configured ? '******' : ''}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('smtpFrom')}</label>
+          <input type="text" value={formData.smtp_from} onChange={(e) => setFormData({ ...formData, smtp_from: e.target.value })} placeholder="Todowka <your-email@example.com>"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        </div>
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {saved && <p className="text-sm text-green-600 dark:text-green-400">{t('smtpSaved')}</p>}
+        <button onClick={handleSave} disabled={loading} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50">
+          {loading ? t('saving', { defaultValue: 'Сохранение...' }) : t('saveChanges')}
+        </button>
+        {smtpSettings && <div className="pt-2 text-sm text-gray-500 dark:text-gray-400">
+          {smtpSettings.smtp_configured ? <span className="text-green-600 dark:text-green-400">{t('smtpConfigured')}</span> : <span>{t('smtpNotConfigured')}</span>}
+        </div>}
+      </div>
+    </div>
+  )
+}
+
+function EmailNotificationsSection() {
+  const { t } = useTranslation('settings')
+  const user = useAuthStore((s) => s.user)
+  const setCurrentUser = useAuthStore((s) => s.setCurrentUser)
+  const [email, setEmail] = useState('')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState<'input' | 'verify'>('input')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+
+  const isVerified = user?.email_verified_at != null
+
+  async function handleSendCode() {
+    if (!email) return
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+    try {
+      await usersApi.verifyEmail(email)
+      setMessage(t('emailVerificationSent'))
+      setStep('verify')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('emailVerificationError'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleConfirm() {
+    if (!code || code.length !== 6) return
+    setLoading(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const result = await usersApi.confirmEmail(code)
+      setMessage(t('emailVerified'))
+      setStep('input')
+      setCode('')
+      if (user) {
+        setCurrentUser({
+          ...user,
+          notification_email: result.notification_email,
+          email_verified_at: new Date().toISOString(),
+        })
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('emailConfirmError'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleToggleNotifications(enabled: boolean) {
+    if (!isVerified) {
+      setStep('input')
+      return
+    }
+    try {
+      const updated = await usersApi.updateCurrentUser({ email_notifications_enabled: enabled })
+      setCurrentUser(updated)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('emailToggleError'))
+    }
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('emailNotifications')}</h2>
+      <div className="space-y-4">
+        {isVerified ? (
+          <>
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-sm">{user?.notification_email}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-300">{t('emailEnableNotifications')}</span>
+              <button
+                onClick={() => handleToggleNotifications(!user?.email_notifications_enabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                  user?.email_notifications_enabled ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+                role="switch"
+                aria-checked={user?.email_notifications_enabled}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  user?.email_notifications_enabled ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setStep('input')
+                setEmail(user?.notification_email || '')
+              }}
+              className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              {t('emailChange')}
+            </button>
+          </>
+        ) : (
+          <>
+            {step === 'input' ? (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('emailAddress')}</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+                <button
+                  onClick={handleSendCode}
+                  disabled={loading || !email}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {loading ? t('emailSending') : t('emailSendCode')}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('emailEnterCode')}</p>
+                <div>
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    maxLength={6}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-center tracking-widest"
+                  />
+                </div>
+                <button
+                  onClick={handleConfirm}
+                  disabled={loading || code.length !== 6}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {loading ? t('emailConfirming') : t('emailConfirm')}
+                </button>
+                <button
+                  onClick={() => {
+                    setStep('input')
+                    setCode('')
+                  }}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                >
+                  {t('emailBack')}
+                </button>
+              </>
+            )}
+          </>
+        )}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {message && <p className="text-sm text-green-600 dark:text-green-400">{message}</p>}
       </div>
     </div>
   )

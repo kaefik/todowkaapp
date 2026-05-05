@@ -26,6 +26,7 @@ from app.api.tags import tags_router
 from app.api.tasks import tasks_router
 from app.api.users import users_router
 from app.api.verb_templates import verb_templates_router
+from app.api.settings import settings_router
 from app.config import settings
 from app.rate_limit import get_client_ip, limiter
 
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     api_router.include_router(users_router)
     api_router.include_router(backup_schedules_router)
     api_router.include_router(verb_templates_router)
+    api_router.include_router(settings_router)
     app.include_router(api_router)
 
     @app.get("/")
