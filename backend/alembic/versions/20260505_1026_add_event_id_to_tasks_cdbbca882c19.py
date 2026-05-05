@@ -20,8 +20,11 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('tasks', sa.Column('event_id', sa.String(length=36), nullable=True))
-    op.execute("CREATE INDEX IF NOT EXISTS ix_tasks_event_id ON tasks(event_id)")
+    result = op.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='tasks'")
+    columns = result.fetchone()
+    if columns and 'event_id' not in columns[0]:
+        op.add_column('tasks', sa.Column('event_id', sa.String(length=36), nullable=True))
+        op.execute("CREATE INDEX IF NOT EXISTS ix_tasks_event_id ON tasks(event_id)")
 
 
 def downgrade() -> None:
