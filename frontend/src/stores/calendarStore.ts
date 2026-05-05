@@ -7,7 +7,7 @@ interface CalendarState {
   currentDate: Date
   selectedDate: Date | null
   detailDrawerOpen: boolean
-  selectedTaskId: number | null
+  selectedTaskId: string | null
   setView: (view: CalendarViewType) => void
   setCurrentDate: (date: Date) => void
   goToday: () => void
@@ -15,7 +15,7 @@ interface CalendarState {
   goPrev: () => void
   openDetailDrawer: (date: Date) => void
   closeDetailDrawer: () => void
-  openTaskDetail: (taskId: number) => void
+  openTaskDetail: (taskId: string) => void
   closeTaskDetail: () => void
 }
 

@@ -6,7 +6,7 @@ import type { CalendarEvent } from '../../hooks/useCalendarEvents'
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { TaskDetailModal } from '../TaskDetailModal'
-import type { Task } from '../../api'
+import type { Task } from '../../hooks/useTasks'
 
 interface DayDetailDrawerProps {
   getItemsForDay: (day: Date) => { events: CalendarEvent[]; tasks: CalendarTaskItem[] }

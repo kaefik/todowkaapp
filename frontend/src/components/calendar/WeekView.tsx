@@ -8,7 +8,7 @@ import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
 import { TaskDetailModal } from '../TaskDetailModal'
-import type { Task } from '../../api'
+import type { Task } from '../../hooks/useTasks'
 
 const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 

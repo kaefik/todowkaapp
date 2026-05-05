@@ -9,7 +9,7 @@ import { CalendarEventCard } from './CalendarEventCard'
 import { DayDetailDrawer } from './DayDetailDrawer'
 import { EventEditorModal } from './EventEditorModal'
 import { TaskDetailModal } from '../TaskDetailModal'
-import type { Task } from '../../api'
+import type { Task } from '../../hooks/useTasks'
 
 const MAX_VISIBLE = 3
 

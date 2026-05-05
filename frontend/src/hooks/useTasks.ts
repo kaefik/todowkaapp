@@ -81,6 +81,7 @@ export interface CreateTask {
   context_id?: string | null
   area_id?: string | null
   project_id?: string | null
+  event_id?: string | null
   tag_ids?: string[]
   recurrence_type?: string | null
   recurrence_config?: RecurrenceConfig | null
@@ -229,9 +230,10 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       completedAt: null,
       gtdStatus: data.gtd_status ?? (data.due_date ? 'active' : 'someday'),
       contextId: data.context_id ?? null,
-        areaId: data.area_id ?? null,
-        projectId: data.project_id ?? null,
-        position: 0,
+      areaId: data.area_id ?? null,
+      projectId: data.project_id ?? null,
+      eventId: data.event_id ?? null,
+      position: 0,
       dueDate: data.due_date ?? null,
       notes: null,
       recurrenceType: data.recurrence_type ?? null,
