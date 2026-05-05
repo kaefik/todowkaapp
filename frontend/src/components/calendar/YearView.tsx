@@ -4,13 +4,9 @@ import { useCalendarStore } from '../../stores/calendarStore'
 import { useCalendarEvents } from '../../hooks/useCalendarEvents'
 import { useCalendarTasks } from '../../hooks/useCalendarTasks'
 
-const MONTH_KEYS = [
-  'months.jan', 'months.feb', 'months.mar', 'months.apr',
-  'months.may', 'months.jun', 'months.jul', 'months.aug',
-  'months.sep', 'months.oct', 'months.nov', 'months.dec',
-] as const
+const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
-const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
@@ -71,7 +67,7 @@ export function YearView() {
             onClick={() => handleMonthClick(month)}
           >
             <div className={`text-sm font-semibold mb-2 ${isCurrentMonth ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-700 dark:text-gray-300'}`}>
-              {t(MONTH_KEYS[month])}
+              {t(`months.${MONTH_KEYS[month]}`)}
             </div>
 
             <div className="grid grid-cols-7 gap-0">

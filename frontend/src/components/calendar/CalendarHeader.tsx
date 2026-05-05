@@ -1,17 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { useCalendarStore, type CalendarViewType } from '../../stores/calendarStore'
 
-const MONTH_KEYS = [
-  'months.jan', 'months.feb', 'months.mar', 'months.apr',
-  'months.may', 'months.jun', 'months.jul', 'months.aug',
-  'months.sep', 'months.oct', 'months.nov', 'months.dec',
-] as const
-
-const MONTH_SHORT_KEYS = [
-  'monthsShort.jan', 'monthsShort.feb', 'monthsShort.mar', 'monthsShort.apr',
-  'monthsShort.may', 'monthsShort.jun', 'monthsShort.jul', 'monthsShort.aug',
-  'monthsShort.sep', 'monthsShort.oct', 'monthsShort.nov', 'monthsShort.dec',
-] as const
+const MONTH_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const MONTH_SHORT_KEYS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
 const VIEW_KEYS: Record<CalendarViewType, string> = {
   day: 'viewDay',
@@ -32,7 +23,7 @@ export function CalendarHeader() {
   const { t } = useTranslation('calendar')
   const { view, currentDate, setView, goToday, goNext, goPrev } = useCalendarStore()
 
-  const monthName = t(MONTH_KEYS[currentDate.getMonth()])
+  const monthName = t(`months.${MONTH_KEYS[currentDate.getMonth()]}`)
   const year = currentDate.getFullYear()
   const day = currentDate.getDate()
 
@@ -43,8 +34,8 @@ export function CalendarHeader() {
     const start = getStartOfWeek(currentDate)
     const end = new Date(start)
     end.setDate(end.getDate() + 6)
-    const startMonth = t(MONTH_SHORT_KEYS[start.getMonth()])
-    const endMonth = t(MONTH_SHORT_KEYS[end.getMonth()])
+    const startMonth = t(`monthsShort.${MONTH_SHORT_KEYS[start.getMonth()]}`)
+    const endMonth = t(`monthsShort.${MONTH_SHORT_KEYS[end.getMonth()]}`)
     periodLabel = end.getFullYear() !== start.getFullYear()
       ? `${start.getDate()} ${startMonth} ${start.getFullYear()} — ${end.getDate()} ${endMonth} ${end.getFullYear()}`
       : `${start.getDate()} ${startMonth} — ${end.getDate()} ${endMonth} ${year}`
