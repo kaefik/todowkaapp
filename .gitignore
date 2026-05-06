@@ -214,6 +214,7 @@ yarn-error.log*
 pnpm-debug.log*
 dist/
 dist-ssr/
+dist-tg/
 *.local
 .DS_Store
 
