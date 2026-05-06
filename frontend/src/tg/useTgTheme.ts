@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getTgTheme, getColorScheme, TgThemeParams } from './WebApp'
+import { getTgTheme, getColorScheme, type TgThemeParams } from './WebApp'
 
 export function useTgTheme() {
   const [themeParams, setThemeParams] = useState<TgThemeParams>(getTgTheme)
