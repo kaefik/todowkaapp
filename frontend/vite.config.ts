@@ -1,14 +1,21 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const isTelegram = mode === 'telegram'
+  
+  const plugins = [
     react(),
     tailwindcss(),
-    VitePWA({
+  ]
+  
+  // PWA only for non-Telegram build
+  if (!isTelegram) {
+    plugins.push(VitePWA({
       registerType: 'prompt',
       srcDir: 'src',
       filename: 'sw.ts',
@@ -55,42 +62,60 @@ export default defineConfig({
         enabled: true,
         type: 'module'
       }
-    })
-  ],
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.match(/\/(react|react-dom|react-router-dom|scheduler)\//)) return 'vendor-react'
-            if (id.match(/\/@dnd-kit\//)) return 'vendor-ui'
-            if (id.match(/\/(zustand|dexie|dexie-react-hooks)\//)) return 'vendor-data'
-            if (id.match(/\/(i18next|react-i18next)\//)) return 'vendor-i18n'
-            if (id.match(/\/(react-hook-form|@hookform|zod)\//)) return 'vendor-forms'
-            if (id.match(/\/(react-colorful|uuid)\//)) return 'vendor-utils'
+    }))
+  }
+  
+  return {
+    base: isTelegram ? './' : '/',
+    plugins,
+    build: {
+      outDir: isTelegram ? 'dist-tg' : 'dist',
+      rollupOptions: isTelegram ? undefined : {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.match(/\/(react|react-dom|react-router-dom|scheduler)\//)) return 'vendor-react'
+              if (id.match(/\/@dnd-kit\//)) return 'vendor-ui'
+              if (id.match(/\/(zustand|dexie|dexie-react-hooks)\//)) return 'vendor-data'
+              if (id.match(/\/(i18next|react-i18next)\//)) return 'vendor-i18n'
+              if (id.match(/\/(react-hook-form|@hookform|zod)\//)) return 'vendor-forms'
+              if (id.match(/\/(react-colorful|uuid)\//)) return 'vendor-utils'
+            }
           }
         }
       }
-    }
-  },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        configure: (proxy) => {
-          proxy.on('proxyReq', (_proxyReq, req) => {
-            console.log('[Proxy] Forwarding request:', req.method, req.url)
-          })
-          proxy.on('proxyRes', (proxyRes, req) => {
-            console.log('[Proxy] Response status:', proxyRes.statusCode, req.url)
-          })
-        },
-      },
-      '/health': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
+    },
+    build: isTelegram ? {
+      outDir: 'dist-tg',
+      rollupOptions: {
+        input: {
+          main: 'index-tg.html'
+        }
       }
+    } : {
+      outDir: 'dist',
+      rollupOptions: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('proxyReq', (_proxyReq, req) => {
+              console.log('[Proxy] Forwarding request:', req.method, req.url)
+            })
+            proxy.on('proxyRes', (proxyRes, req) => {
+              console.log('[Proxy] Response status:', proxyRes.statusCode, req.url)
+            })
+          },
+        },
+        '/health': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+        }
+      }
+    },
+    define: {
+      'import.meta.env.VITE_TELEGRAM_MODE': JSON.stringify(isTelegram)
     }
   }
 })
