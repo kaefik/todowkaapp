@@ -365,6 +365,14 @@
   - EventEditModal — модальное окно редактирования событий
   - Выбор события в TaskEditModal через dropdown
 - Файлы расширений: `frontend/src/routes/Events.tsx`, `frontend/src/components/EventEditModal.tsx`, `backend/app/schemas/task.py`
+- **Исправление дублирования задач в календаре** ✅ (Реализовано 06.05.2026)
+  - Проблема: задачи с одинаковым названием и дедлайном отображались несколько раз
+  - Причина 1 (frontend): `useCalendarTasks` не дедуплицировал задачи по title + due_date
+  - Причина 2 (backend): `generate_next_task` в recurrence_service не проверял существующие задачи
+  - Fix 1 (frontend): дедупликация через Map по ключу `title::dueDate` в `useCalendarTasks.ts`
+  - Fix 2 (backend): добавлена проверка `existing = await self._find_existing_generated_task()` перед созданием задачи
+  - Работает для всех видов календаря: месяц, неделя, день, год
+  - Файлы: `frontend/src/hooks/useCalendarTasks.ts`, `backend/app/services/recurrence_service.py`
 
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта

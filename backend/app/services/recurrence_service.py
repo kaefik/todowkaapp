@@ -34,6 +34,10 @@ class RecurrenceService:
         if next_due_date is None:
             return None
 
+        existing = await self._find_existing_generated_task(task.id, next_due_date)
+        if existing:
+            return None
+
         if task.recurrence_end_date:
             end = task.recurrence_end_date.replace(tzinfo=None) if task.recurrence_end_date.tzinfo else task.recurrence_end_date
             if next_due_date > end:
