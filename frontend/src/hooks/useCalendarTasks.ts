@@ -38,18 +38,26 @@ export function useCalendarTasks() {
       const records = await activeTable(db.tasks, user.id)
         .filter(t => !!t.dueDate)
         .toArray()
-      return records.map(t => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        start_time: t.dueDate!,
-        end_time: null,
-        all_day: t.dueDate ? isAllDayDueDate(t.dueDate) : true,
-        gtd_status: t.gtdStatus,
-        is_completed: t.isCompleted,
-        project_id: t.projectId,
-        color: GTD_STATUS_COLORS[t.gtdStatus] || '#6b7280',
-      })) as CalendarTaskItem[]
+      
+      const uniqueMap = new Map<string, CalendarTaskItem>()
+      for (const t of records) {
+        const key = `${t.title.trim().toLowerCase()}::${t.dueDate}`
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            id: t.id,
+            title: t.title,
+            description: t.description,
+            start_time: t.dueDate!,
+            end_time: null,
+            all_day: t.dueDate ? isAllDayDueDate(t.dueDate) : true,
+            gtd_status: t.gtdStatus,
+            is_completed: t.isCompleted,
+            project_id: t.projectId,
+            color: GTD_STATUS_COLORS[t.gtdStatus] || '#6b7280',
+          })
+        }
+      }
+      return Array.from(uniqueMap.values()) as CalendarTaskItem[]
     },
     [user?.id]
   )
