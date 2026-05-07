@@ -26,7 +26,7 @@ export function CalendarEventCard({ event, onClick, compact }: CalendarEventCard
         color,
       }}
     >
-      <span className="truncate block">{event.title}</span>
+      <span className="truncate block">📅 {event.title}</span>
       {!compact && !event.all_day && event.start_time && (
         <span className="text-[10px] opacity-70 block">
           {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
