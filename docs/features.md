@@ -378,6 +378,28 @@
   - Fix 2 (backend): добавлена проверка `existing = await self._find_existing_generated_task()` перед созданием задачи
   - Работает для всех видов календаря: месяц, неделя, день, год
   - Файлы: `frontend/src/hooks/useCalendarTasks.ts`, `backend/app/services/recurrence_service.py`
+- **Повторяющиеся события** ✅ (Реализовано 07.05.2026)
+  - При создании/редактировании события можно включить повторение через RecurrenceEditor
+  - Типы повторения: ежедневно (daily), еженедельно (weekly), ежемесячно (monthly), ежегодно (yearly)
+  - Настраиваемый интервал (каждые N дней/недель/месяцев/лет)
+  - Для weekly: выбор конкретных дней недели
+  - Для monthly: по числу месяца или по неделе+день недели
+  - Для yearly: выбор месяца и дня
+  - Дата окончания повторений (опционально)
+  - Событие считается "прошедшим" когда:
+    - наступит `end_time` (если указан)
+    - или пройдёт 1 час от `start_time` (если end_time не указан)
+  - Scheduler job `_job_generate_recurring_events` (каждые 5 минут) проверяет прошедшие события и генерирует следующие
+  - При старте приложения генерируется только одно следующее событие (без catch-up за прошлые дни)
+  - Копирование в новое событие: заголовок, описание, время, длительность, цвет, location, attendees, настройки повторения
+  - Индикатор 🔄 в CalendarEventCard для повторяющихся событий
+  - API: GET /calendar-events/{id}/recurrences (история), POST /calendar-events/{id}/stop-recurrence (остановка)
+  - Модель EventRecurrence для хранения истории генераций
+  - Валидация: start_time обязателен при recurrence_type
+  - Backend: CalendarEvent + recurrence поля, EventRecurrence модель, EventRecurrenceService
+  - Frontend: RecurrenceEditor в EventEditorModal, поля recurrence в useCalendarEvents
+  - Миграция: `alembic/versions/20260507_1500_add_recurrence_to_calendar_events.py`
+  - Файлы: `backend/app/models/calendar_event.py`, `backend/app/models/event_recurrence.py`, `backend/app/services/event_recurrence_service.py`, `backend/app/services/calendar_event_service.py`, `backend/app/schemas/calendar_event.py`, `backend/app/api/calendar_events.py`, `backend/app/scheduler.py`, `frontend/src/components/calendar/EventEditorModal.tsx`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `frontend/src/hooks/useCalendarEvents.ts`, `frontend/src/db/database.ts`
 
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта

@@ -137,6 +137,9 @@ export interface DbCalendarEvent {
   color: string | null
   location: string | null
   attendees: string[] | null
+  recurrenceType: string | null
+  recurrenceConfig: string | null
+  recurrenceEndDate: string | null
   createdAt: string
   updatedAt: string
   _syncStatus: SyncStatus

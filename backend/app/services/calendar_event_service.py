@@ -67,6 +67,9 @@ class CalendarEventService:
             color=data.color,
             location=data.location,
             attendees=data.attendees,
+            recurrence_type=data.recurrence_type,
+            recurrence_config=data.recurrence_config,
+            recurrence_end_date=data.recurrence_end_date,
         )
         self.db.add(event)
         await self.db.flush()
@@ -103,3 +106,16 @@ class CalendarEventService:
             .order_by(CalendarEvent.start_time.asc())
         )
         return list(result.scalars().all())
+
+    async def stop_recurrence(self, user_id: UUID, event_id: UUID) -> CalendarEvent | None:
+        event = await self.get_event(user_id, event_id)
+        if event is None:
+            return None
+
+        event.recurrence_type = None
+        event.recurrence_config = None
+        event.recurrence_end_date = None
+
+        await self.db.flush()
+        await self.db.refresh(event)
+        return event

@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
+import { useCalendarEvents, type CalendarEvent, type RecurrenceConfig } from '../../hooks/useCalendarEvents'
+import { RecurrenceEditor } from '../RecurrenceEditor'
 
 const COLORS = [
   '#10b981', '#3b82f6', '#6366f1', '#f59e0b', '#ef4444',
@@ -44,6 +45,15 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
     if (event && event.end_time) return toInputDateTimeFormat(event.end_time)
     return ''
   })
+  const [recurrenceData, setRecurrenceData] = useState<{
+    recurrence_type: string | null
+    recurrence_config: RecurrenceConfig | null
+    recurrence_end_date: string | null
+  }>({
+    recurrence_type: event?.recurrence_type ?? null,
+    recurrence_config: event?.recurrence_config ?? null,
+    recurrence_end_date: event?.recurrence_end_date ?? null,
+  })
 
   const schema = useMemo(() => createSchema, [])
 
@@ -69,6 +79,11 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
       end_time: event?.end_time ? toInputDateFormat(event.end_time) : null,
       all_day: event?.all_day ?? false,
       color: event?.color ?? null,
+    })
+    setRecurrenceData({
+      recurrence_type: event?.recurrence_type ?? null,
+      recurrence_config: event?.recurrence_config ?? null,
+      recurrence_end_date: event?.recurrence_end_date ?? null,
     })
   }, [event, defaultStart, reset])
 
@@ -151,6 +166,9 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
       end_time: endTime,
       all_day: data.all_day,
       color: data.color,
+      recurrence_type: recurrenceData.recurrence_type,
+      recurrence_config: recurrenceData.recurrence_config,
+      recurrence_end_date: recurrenceData.recurrence_end_date,
     }
 
     if (isEditing && event) {
@@ -273,6 +291,16 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
                 />
               ))}
             </div>
+          </div>
+
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+            <RecurrenceEditor
+              recurrenceType={recurrenceData.recurrence_type}
+              recurrenceConfig={recurrenceData.recurrence_config}
+              recurrenceEndDate={recurrenceData.recurrence_end_date}
+              dueDate={localStartTime || null}
+              onChange={setRecurrenceData}
+            />
           </div>
 
           <div className="flex items-center justify-between pt-2">

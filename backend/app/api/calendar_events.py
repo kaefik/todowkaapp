@@ -13,6 +13,7 @@ from app.schemas.calendar_event import (
     CalendarEventResponse,
     CalendarEventSelectItem,
     CalendarEventUpdate,
+    EventRecurrenceListResponse,
 )
 from app.services.calendar_event_service import CalendarEventService
 
@@ -129,3 +130,44 @@ async def delete_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Event not found')
     await _publish_calendar_event(current_user.id, event_id, 'deleted')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@calendar_events_router.get('/{event_id}/recurrences', response_model=EventRecurrenceListResponse)
+@limiter.limit(read_limit)
+async def get_event_recurrences(
+    request: Request,
+    event_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> EventRecurrenceListResponse:
+    from app.schemas.calendar_event import EventRecurrenceResponse
+
+    service = CalendarEventService(db)
+    event = await service.get_event(user_id=current_user.id, event_id=event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Event not found')
+
+    from app.services.event_recurrence_service import EventRecurrenceService
+    recurrence_service = EventRecurrenceService(db)
+    recurrences, total = await recurrence_service.get_recurrence_history(event_id, limit=limit, offset=offset)
+
+    items = [EventRecurrenceResponse.model_validate(r) for r in recurrences]
+    return EventRecurrenceListResponse(items=items, total=total)
+
+
+@calendar_events_router.post('/{event_id}/stop-recurrence', response_model=CalendarEventResponse)
+@limiter.limit(write_limit)
+async def stop_event_recurrence(
+    request: Request,
+    event_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> CalendarEventResponse:
+    service = CalendarEventService(db)
+    event = await service.stop_recurrence(user_id=current_user.id, event_id=event_id)
+    if event is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Event not found')
+    await _publish_calendar_event(current_user.id, event_id, 'recurrence_stopped')
+    return event

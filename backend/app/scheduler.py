@@ -41,6 +41,15 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
+                self._job_generate_recurring_events,
+                'interval',
+                minutes=5,
+                id='generate_recurring_events',
+                replace_existing=True,
+                max_instances=1
+            )
+
+            self.scheduler.add_job(
                 self._job_send_due_reminders,
                 'interval',
                 minutes=1,
@@ -266,6 +275,38 @@ class TaskScheduler:
 
         except Exception as e:
             logger.error(f"Error in job_generate_recurring_tasks: {e}")
+
+    @staticmethod
+    async def _job_generate_recurring_events():
+        logger.info("Running job: generate_recurring_events")
+
+        try:
+            from app.models.calendar_event import CalendarEvent
+            from app.services.event_recurrence_service import EventRecurrenceService
+
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(CalendarEvent).where(
+                        CalendarEvent.recurrence_type.isnot(None),
+                        CalendarEvent.start_time.isnot(None)
+                    )
+                )
+                recurring_events = list(result.scalars().all())
+
+                recurrence_service = EventRecurrenceService(session)
+
+                generated_count = 0
+                for event in recurring_events:
+                    if recurrence_service.should_generate_event(event):
+                        new_event = await recurrence_service.generate_next_event(event)
+                        if new_event:
+                            generated_count += 1
+
+                await session.commit()
+                logger.info(f"Generated {generated_count} new events from {len(recurring_events)} recurring events")
+
+        except Exception as e:
+            logger.error(f"Error in job_generate_recurring_events: {e}")
 
     @staticmethod
     async def _job_send_due_reminders():

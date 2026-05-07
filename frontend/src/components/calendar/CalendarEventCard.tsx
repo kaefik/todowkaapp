@@ -8,6 +8,7 @@ interface CalendarEventCardProps {
     end_time: string | null
     all_day: boolean
     color: string | null
+    recurrence_type: string | null
   }
   onClick?: () => void
   compact?: boolean
@@ -26,7 +27,10 @@ export function CalendarEventCard({ event, onClick, compact }: CalendarEventCard
         color,
       }}
     >
-      <span className="truncate block">📅 {event.title}</span>
+      <span className="truncate block">
+        📅 {event.title}
+        {event.recurrence_type && <span className="ml-1">🔄</span>}
+      </span>
       {!compact && !event.all_day && event.start_time && (
         <span className="text-[10px] opacity-70 block">
           {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

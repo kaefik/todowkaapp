@@ -20,11 +20,19 @@ class CalendarEvent(Base):
     color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     location: Mapped[str | None] = mapped_column(String(500), nullable=True)
     attendees: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    recurrence_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    recurrence_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recurrence_end_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     user = relationship('User', back_populates='calendar_events')
     tasks = relationship('Task', back_populates='event')
+    recurrences = relationship('EventRecurrence', back_populates='event', cascade='all, delete-orphan', foreign_keys='EventRecurrence.event_id')
 
     def __repr__(self) -> str:
         return f'<CalendarEvent(id={self.id}, title={self.title})>'
+
+    @property
+    def is_recurring(self) -> bool:
+        return self.recurrence_type is not None

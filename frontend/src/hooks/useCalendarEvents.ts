@@ -13,9 +13,22 @@ export interface CalendarEvent {
   color: string | null
   location: string | null
   attendees: string[] | null
+  recurrence_type: string | null
+  recurrence_config: RecurrenceConfig | null
+  recurrence_end_date: string | null
   user_id: string
   created_at: string
   updated_at: string
+}
+
+export interface RecurrenceConfig {
+  type?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
+  interval: number
+  days?: number[]
+  day_of_month?: number
+  week_of_month?: number
+  day_of_week?: number
+  month?: number
 }
 
 export interface CreateCalendarEvent {
@@ -27,6 +40,9 @@ export interface CreateCalendarEvent {
   color?: string | null
   location?: string | null
   attendees?: string[] | null
+  recurrence_type?: string | null
+  recurrence_config?: RecurrenceConfig | null
+  recurrence_end_date?: string | null
 }
 
 export interface UpdateCalendarEvent {
@@ -38,6 +54,9 @@ export interface UpdateCalendarEvent {
   color?: string | null
   location?: string | null
   attendees?: string[] | null
+  recurrence_type?: string | null
+  recurrence_config?: RecurrenceConfig | null
+  recurrence_end_date?: string | null
 }
 
 export function useCalendarEvents() {
@@ -57,6 +76,9 @@ export function useCalendarEvents() {
         color: e.color,
         location: e.location,
         attendees: e.attendees,
+        recurrence_type: e.recurrenceType,
+        recurrence_config: e.recurrenceConfig ? JSON.parse(e.recurrenceConfig) : null,
+        recurrence_end_date: e.recurrenceEndDate,
         user_id: e.userId,
         created_at: e.createdAt,
         updated_at: e.updatedAt,
@@ -80,6 +102,9 @@ export function useCalendarEvents() {
       color: data.color ?? null,
       location: data.location ?? null,
       attendees: data.attendees ?? null,
+      recurrenceType: data.recurrence_type ?? null,
+      recurrenceConfig: data.recurrence_config ? JSON.stringify(data.recurrence_config) : null,
+      recurrenceEndDate: data.recurrence_end_date ?? null,
       createdAt: now,
       updatedAt: now,
       _syncStatus: 'local',
@@ -109,6 +134,11 @@ export function useCalendarEvents() {
     if (data.color !== undefined) updates.color = data.color
     if (data.location !== undefined) updates.location = data.location
     if (data.attendees !== undefined) updates.attendees = data.attendees
+    if (data.recurrence_type !== undefined) updates.recurrenceType = data.recurrence_type
+    if (data.recurrence_config !== undefined) {
+      updates.recurrenceConfig = data.recurrence_config ? JSON.stringify(data.recurrence_config) : null
+    }
+    if (data.recurrence_end_date !== undefined) updates.recurrenceEndDate = data.recurrence_end_date
     await db.calendarEvents.update(id, updates)
     await db.mutations.add({
       id: uuidv4(),
@@ -158,6 +188,9 @@ export function useCalendarEvents() {
         color: e.color,
         location: e.location,
         attendees: e.attendees,
+        recurrence_type: e.recurrenceType,
+        recurrence_config: e.recurrenceConfig ? JSON.parse(e.recurrenceConfig) : null,
+        recurrence_end_date: e.recurrenceEndDate,
         user_id: e.userId,
         created_at: e.createdAt,
         updated_at: e.updatedAt,
@@ -165,6 +198,28 @@ export function useCalendarEvents() {
     },
     [user?.id]
   )
+
+  const stopRecurrence = async (eventId: string) => {
+    if (!user) return
+    const now = new Date().toISOString()
+    await db.calendarEvents.update(eventId, {
+      recurrenceType: null,
+      recurrenceConfig: null,
+      recurrenceEndDate: null,
+      updatedAt: now,
+      _syncStatus: 'modified',
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'calendarEvent',
+      entityId: eventId,
+      action: 'stop_recurrence',
+      payload: JSON.stringify({ eventId }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
 
   const restoreEvent = async (id: string) => {
     if (!user) return
@@ -200,5 +255,5 @@ export function useCalendarEvents() {
     })
   }
 
-  return { events, isLoading, addEvent, updateEvent, deleteEvent, deletedEvents, restoreEvent, permanentDeleteEvent }
+  return { events, isLoading, addEvent, updateEvent, deleteEvent, deletedEvents, restoreEvent, permanentDeleteEvent, stopRecurrence }
 }
