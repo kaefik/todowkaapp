@@ -34,7 +34,7 @@ export interface RecurrenceConfig {
 export interface CreateCalendarEvent {
   title: string
   description?: string | null
-  start_time: string | null
+  start_time: string
   end_time?: string | null
   all_day?: boolean
   color?: string | null
