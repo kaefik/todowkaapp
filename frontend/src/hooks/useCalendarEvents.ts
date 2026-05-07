@@ -22,7 +22,7 @@ export interface CalendarEvent {
 }
 
 export interface RecurrenceConfig {
-  type?: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom'
+  type: 'daily' | 'weekly' | 'monthly' | 'yearly'
   interval: number
   days?: number[]
   day_of_month?: number
@@ -34,7 +34,7 @@ export interface RecurrenceConfig {
 export interface CreateCalendarEvent {
   title: string
   description?: string | null
-  start_time: string
+  start_time: string | null
   end_time?: string | null
   all_day?: boolean
   color?: string | null
@@ -48,7 +48,7 @@ export interface CreateCalendarEvent {
 export interface UpdateCalendarEvent {
   title?: string
   description?: string | null
-  start_time?: string
+  start_time?: string | null
   end_time?: string | null
   all_day?: boolean
   color?: string | null

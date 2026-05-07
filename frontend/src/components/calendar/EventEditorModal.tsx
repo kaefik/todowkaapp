@@ -4,7 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { useCalendarEvents, type CalendarEvent, type RecurrenceConfig } from '../../hooks/useCalendarEvents'
+import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
+import type { RecurrenceConfig } from '../../hooks/useTasks'
 import { RecurrenceEditor } from '../RecurrenceEditor'
 
 const COLORS = [
@@ -12,7 +13,10 @@ const COLORS = [
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6b7280',
 ]
 
-const getTodayDate = () => new Date().toISOString().split('T')[0]
+const getTodayDate = (): string => {
+  const parts = new Date().toISOString().split('T')
+  return parts[0] ?? ''
+}
 
 const createSchema = z.object({
   title: z.string().min(1).max(255),
@@ -123,7 +127,8 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
   function toInputDateFormat(value: string | null): string {
     if (!value) return ''
     if (value.includes('T')) {
-      return value.split('T')[0]
+      const parts = value.split('T')
+      return parts[0] ?? value
     }
     return value
   }
@@ -153,19 +158,28 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
       return
     }
 
-    const startValue = allDay ? localStartTime.split('T')[0] : localStartTime
-    const endValue = allDay ? (localEndTime.split('T')[0] || startValue) : localEndTime
+    const startValue = allDay 
+      ? (localStartTime.split('T')[0] ?? localStartTime) 
+      : localStartTime
+    const endValue = allDay 
+      ? (localEndTime.split('T')[0] ?? startValue) 
+      : localEndTime
 
-    const startTime = toIsoDateTime(startValue, data.all_day)
-    const endTime = toIsoDateTime(endValue, data.all_day)
+    const startTime = toIsoDateTime(startValue ?? null, data.all_day)
+    const endTime = toIsoDateTime(endValue ?? null, data.all_day)
+
+    if (!startTime || !endTime) {
+      alert(t('enterStartDate'))
+      return
+    }
 
     const eventData = {
       title: data.title,
-      description: data.description,
+      description: data.description ?? null,
       start_time: startTime,
       end_time: endTime,
       all_day: data.all_day,
-      color: data.color,
+      color: data.color ?? null,
       recurrence_type: recurrenceData.recurrence_type,
       recurrence_config: recurrenceData.recurrence_config,
       recurrence_end_date: recurrenceData.recurrence_end_date,

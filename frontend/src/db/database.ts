@@ -100,7 +100,7 @@ export interface DbMutation {
   id: string
   entityType: 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem' | 'calendarEvent'
   entityId: string
-  action: 'create' | 'update' | 'delete' | 'toggle' | 'move' | 'reorder'
+  action: 'create' | 'update' | 'delete' | 'toggle' | 'move' | 'reorder' | 'stop_recurrence' | 'restore' | 'permanent_delete'
   payload: string | null
   timestamp: number
   retryCount: number
