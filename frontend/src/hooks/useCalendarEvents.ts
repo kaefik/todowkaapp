@@ -140,5 +140,65 @@ export function useCalendarEvents() {
     })
   }
 
-  return { events, isLoading, addEvent, updateEvent, deleteEvent }
+  const { data: deletedEvents = [] } = useDexieQuery(
+    async () => {
+      if (!user) return []
+      const records = await db.calendarEvents
+        .where('userId')
+        .equals(user.id)
+        .filter(e => e._syncStatus === 'deleted')
+        .toArray()
+      return records.map(e => ({
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        start_time: e.startTime,
+        end_time: e.endTime,
+        all_day: e.allDay,
+        color: e.color,
+        location: e.location,
+        attendees: e.attendees,
+        user_id: e.userId,
+        created_at: e.createdAt,
+        updated_at: e.updatedAt,
+      })) as CalendarEvent[]
+    },
+    [user?.id]
+  )
+
+  const restoreEvent = async (id: string) => {
+    if (!user) return
+    const now = new Date().toISOString()
+    await db.calendarEvents.update(id, {
+      _syncStatus: 'modified',
+      updatedAt: now,
+    })
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'calendarEvent',
+      entityId: id,
+      action: 'restore',
+      payload: JSON.stringify({ action: 'restore' }),
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
+
+  const permanentDeleteEvent = async (id: string) => {
+    if (!user) return
+    await db.calendarEvents.delete(id)
+    await db.mutations.add({
+      id: uuidv4(),
+      entityType: 'calendarEvent',
+      entityId: id,
+      action: 'permanent_delete',
+      payload: null,
+      timestamp: Date.now(),
+      retryCount: 0,
+      lastError: null,
+    })
+  }
+
+  return { events, isLoading, addEvent, updateEvent, deleteEvent, deletedEvents, restoreEvent, permanentDeleteEvent }
 }

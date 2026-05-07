@@ -32,6 +32,8 @@
   "noLinkedTasks": "Нет связанных задач",
   "dateCannotBeInPast": "Дата не может быть в прошлом",
   "endDateCannotBeInPast": "Дата окончания не может быть в прошлом",
+  "deleteEventPermanentlyConfirm": "Удалить событие навсегда?",
+  "deleteEventPermanentlyMessage": "Это действие нельзя отменить.",
   "weekDays": {
     "mon": "Пн",
     "tue": "Вт",

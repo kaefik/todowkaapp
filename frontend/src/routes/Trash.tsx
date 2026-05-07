@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { db } from '../db/database'
 import { useGtdCounts } from '../hooks/useGtdCounts'
+import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { useAuthStore } from '../stores/authStore'
 import { v4 as uuidv4 } from 'uuid'
 import { GtdTaskList } from './GtdTaskList'
@@ -9,13 +10,16 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 
 export function Trash() {
   const { t } = useTranslation('tasks')
+  const { t: tCalendar } = useTranslation('calendar')
   const [isClearing, setIsClearing] = useState(false)
   const [clearError, setClearError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [deleteEventId, setDeleteEventId] = useState<string | null>(null)
   const { counts } = useGtdCounts()
+  const { deletedEvents, restoreEvent, permanentDeleteEvent } = useCalendarEvents()
   const user = useAuthStore(s => s.user)
-  const isEmpty = counts.trash === 0
+  const isEmpty = counts.trash === 0 && deletedEvents.length === 0
 
   const handleClearTrash = () => {
     setShowClearConfirm(true)
@@ -51,11 +55,33 @@ export function Trash() {
           lastError: null,
         })
       }
+
+      for (const event of deletedEvents) {
+        await permanentDeleteEvent(event.id)
+      }
+
       setRefreshKey((k) => k + 1)
     } catch {
       setClearError(t('clearTrashFailed'))
     } finally {
       setIsClearing(false)
+    }
+  }
+
+  const handleRestoreEvent = async (id: string) => {
+    await restoreEvent(id)
+    setRefreshKey((k) => k + 1)
+  }
+
+  const handlePermanentDeleteEvent = (id: string) => {
+    setDeleteEventId(id)
+  }
+
+  const confirmPermanentDelete = async () => {
+    if (deleteEventId) {
+      await permanentDeleteEvent(deleteEventId)
+      setDeleteEventId(null)
+      setRefreshKey((k) => k + 1)
     }
   }
 
@@ -90,6 +116,53 @@ export function Trash() {
 
       <GtdTaskList gtdStatus="trash" title="" key={refreshKey} />
 
+      {deletedEvents.length > 0 && (
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            {tCalendar('events')}
+          </h2>
+          <div className="space-y-2">
+            {deletedEvents.map(event => (
+              <div
+                key={event.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  {event.color && (
+                    <span
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: event.color }}
+                    />
+                  )}
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-gray-100 line-through opacity-60">
+                      {event.title}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(event.start_time).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleRestoreEvent(event.id)}
+                    className="px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md"
+                  >
+                    {t('restore')}
+                  </button>
+                  <button
+                    onClick={() => handlePermanentDeleteEvent(event.id)}
+                    className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
+                  >
+                    {t('deletePermanently')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <ConfirmDialog
         open={showClearConfirm}
         title={t('clearTrashConfirm')}
@@ -98,6 +171,16 @@ export function Trash() {
         variant="danger"
         onConfirm={confirmClearTrash}
         onCancel={() => setShowClearConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteEventId}
+        title={t('deleteEventPermanentlyConfirm') || 'Удалить событие навсегда?'}
+        message={t('deleteEventPermanentlyMessage') || 'Это действие нельзя отменить.'}
+        confirmText={t('delete')}
+        variant="danger"
+        onConfirm={confirmPermanentDelete}
+        onCancel={() => setDeleteEventId(null)}
       />
     </div>
   )

@@ -30,6 +30,8 @@
   "events": "Вакыганалар",
   "dateCannotBeInPast": "Кануннан башлап булмас",
   "endDateCannotBeInPast": "Ахыры көн кануннан башлап булмас",
+  "deleteEventPermanentlyConfirm": "Вакыгананы һеч кайтармыйча бетерергэме?",
+  "deleteEventPermanentlyMessage": "Бу гамэл кире кайтар булмас.",
   "weekDays": {
     "mon": "Дш",
     "tue": "Сиш",

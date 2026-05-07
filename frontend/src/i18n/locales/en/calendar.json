@@ -32,6 +32,8 @@
   "noLinkedTasks": "No linked tasks",
   "dateCannotBeInPast": "Date cannot be in the past",
   "endDateCannotBeInPast": "End date cannot be in the past",
+  "deleteEventPermanentlyConfirm": "Delete event permanently?",
+  "deleteEventPermanentlyMessage": "This action cannot be undone.",
   "weekDays": {
     "mon": "Mon",
     "tue": "Tue",
