@@ -88,6 +88,11 @@
   - Компоненты: `frontend/src/routes/Today.tsx`, `frontend/src/routes/Tomorrow.tsx`, `frontend/src/routes/DueDateTaskList.tsx`
   - Хук: `frontend/src/hooks/useDueDateTasks.ts`
   - Без изменений бэкенда
+  - Счётчик задач «Сегодня» включает просроченные задачи ✅ (Реализовано 07.05.2026)
+    - В сайдбаре напротив «Сегодня» показывается today + overdue
+    - Если есть просроченные задачи — бейдж красного цвета
+    - Хук: `frontend/src/hooks/useGtdCounts.ts` (поле overdue в GtdCounts)
+    - Компонент: `frontend/src/components/AppLayout.tsx`
 - Блок просроченных задач на странице «Сегодня» ✅ (Реализовано 29.04.2026)
   - Свёрнутый аккордеон «Просрочено (N)» вверху страницы Today
   - Показывает все невыполненные задачи с due_date < начало текущего дня (в timezone пользователя)

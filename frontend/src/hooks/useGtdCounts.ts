@@ -19,6 +19,7 @@ export interface GtdCounts {
   trash: number
   today: number
   tomorrow: number
+  overdue: number
 }
 
 interface UseGtdCountsReturn {
@@ -30,7 +31,7 @@ interface UseGtdCountsReturn {
 
 const defaultCounts: GtdCounts = {
   inbox: 0, active: 0, next: 0, waiting: 0, someday: 0,
-  completed: 0, trash: 0, today: 0, tomorrow: 0,
+  completed: 0, trash: 0, today: 0, tomorrow: 0, overdue: 0,
 }
 
 export function useGtdCounts(): UseGtdCountsReturn {
@@ -63,13 +64,16 @@ export function useGtdCounts(): UseGtdCountsReturn {
 
     let todayCount = 0
     let tomorrowCount = 0
+    let overdueCount = 0
     for (const t of allTasks) {
       if (t.isCompleted || !t.dueDate) continue
       if (t.dueDate >= todayBounds.start && t.dueDate <= todayBounds.end) todayCount++
       if (t.dueDate >= tomorrowBounds.start && t.dueDate <= tomorrowBounds.end) tomorrowCount++
+      if (t.dueDate < todayBounds.start) overdueCount++
     }
     result.today = todayCount
     result.tomorrow = tomorrowCount
+    result.overdue = overdueCount
 
     return result
   }, [user?.id])

@@ -81,14 +81,25 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             }`}
           >
             <span>{item.label}</span>
-            {showTaskCounts && item.count > 0 && (
-              <span className={`inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full ${
-                isActive(item.path)
-                  ? 'bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-                {item.count}
-              </span>
+            {showTaskCounts && (item.path === '/today' ? counts.today + counts.overdue : item.count) > 0 && (
+              item.path === '/today' && counts.overdue > 0 ? (
+                <span className="inline-flex items-center gap-1 text-xs font-medium">
+                  <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+                    {counts.today}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                    +{counts.overdue}
+                  </span>
+                </span>
+              ) : (
+                <span className={`inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium rounded-full ${
+                  isActive(item.path)
+                    ? 'bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                }`}>
+                  {item.count}
+                </span>
+              )
             )}
           </NavItem>
         ))}
