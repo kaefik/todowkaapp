@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -13,18 +13,11 @@ const COLORS = [
 
 const getTodayDate = () => new Date().toISOString().split('T')[0]
 
-const createSchema = (t: (key: string) => string) => z.object({
+const createSchema = z.object({
   title: z.string().min(1).max(255),
   description: z.string().nullable(),
-  start_time: z.string().min(1).refine((val) => val >= getTodayDate(), {
-    message: t('dateCannotBeInPast'),
-  }),
-  end_time: z.string().nullable().refine((val) => {
-    if (!val) return true
-    return val >= getTodayDate()
-  }, {
-    message: t('endDateCannotBeInPast'),
-  }),
+  start_time: z.string().nullable(),
+  end_time: z.string().nullable(),
   all_day: z.boolean(),
   color: z.string().nullable(),
 })
@@ -43,7 +36,16 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
 
   const isEditing = !!event
 
-  const schema = useMemo(() => createSchema((key) => t(key)), [t])
+  const [localStartTime, setLocalStartTime] = useState(() => {
+    if (event) return toInputDateTimeFormat(event.start_time)
+    return defaultStart ? toInputDateTimeFormat(defaultStart) : ''
+  })
+  const [localEndTime, setLocalEndTime] = useState(() => {
+    if (event && event.end_time) return toInputDateTimeFormat(event.end_time)
+    return ''
+  })
+
+  const schema = useMemo(() => createSchema, [])
 
   type FormData = z.infer<typeof schema>
 
@@ -72,11 +74,49 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
 
   const allDay = watch('all_day')
   const selectedColor = watch('color')
+  const allDayRef = useRef(allDay)
+
+  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalStartTime(e.target.value)
+  }
+
+  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalEndTime(e.target.value)
+  }
+
+  useEffect(() => {
+    const prevAllDay = allDayRef.current
+
+    if (allDay && !prevAllDay) {
+      if (!localStartTime && !localEndTime) {
+        const today = getTodayDate()
+        setLocalStartTime(today)
+        setLocalEndTime(today)
+      }
+    } else if (!allDay && prevAllDay) {
+      if (localStartTime && !localStartTime.includes('T')) {
+        setLocalStartTime(localStartTime + 'T00:00')
+      }
+      if (localEndTime && !localEndTime.includes('T')) {
+        setLocalEndTime(localEndTime + 'T23:59')
+      }
+    }
+
+    allDayRef.current = allDay
+  }, [allDay])
 
   function toInputDateFormat(value: string | null): string {
     if (!value) return ''
     if (value.includes('T')) {
       return value.split('T')[0]
+    }
+    return value
+  }
+
+  function toInputDateTimeFormat(value: string | null): string {
+    if (!value) return ''
+    if (value.includes('T')) {
+      return value.slice(0, 16)
     }
     return value
   }
@@ -87,33 +127,36 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
       return value + 'T00:00:00'
     }
     if (value.includes('T')) {
-      return value
+      return value + ':00'
     }
-    return value + ':00'
+    return value + 'T00:00'
   }
 
   const onSubmit = async (data: FormData) => {
-    const startTime = toIsoDateTime(data.start_time, data.all_day)
-    const endTime = toIsoDateTime(data.end_time, data.all_day)
+    if (!localStartTime) {
+      alert(t('enterStartDate'))
+      return
+    }
+
+    const startValue = allDay ? localStartTime.split('T')[0] : localStartTime
+    const endValue = allDay ? (localEndTime.split('T')[0] || startValue) : localEndTime
+
+    const startTime = toIsoDateTime(startValue, data.all_day)
+    const endTime = toIsoDateTime(endValue, data.all_day)
+
+    const eventData = {
+      title: data.title,
+      description: data.description,
+      start_time: startTime,
+      end_time: endTime,
+      all_day: data.all_day,
+      color: data.color,
+    }
 
     if (isEditing && event) {
-      await updateEvent(event.id, {
-        title: data.title,
-        description: data.description,
-        start_time: startTime,
-        end_time: endTime,
-        all_day: data.all_day,
-        color: data.color,
-      })
+      await updateEvent(event.id, eventData)
     } else {
-      await addEvent({
-        title: data.title,
-        description: data.description,
-        start_time: startTime,
-        end_time: endTime,
-        all_day: data.all_day,
-        color: data.color,
-      })
+      await addEvent(eventData)
     }
     onClose?.()
   }
@@ -193,7 +236,8 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
               </label>
               <input
                 type={allDay ? 'date' : 'datetime-local'}
-                {...register('start_time')}
+                value={allDay ? (localStartTime.split('T')[0] || '') : localStartTime}
+                onChange={handleStartTimeChange}
                 min={allDay ? getTodayDate() : undefined}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
               />
@@ -204,7 +248,8 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
               </label>
               <input
                 type={allDay ? 'date' : 'datetime-local'}
-                {...register('end_time')}
+                value={allDay ? (localEndTime.split('T')[0] || '') : localEndTime}
+                onChange={handleEndTimeChange}
                 min={allDay ? getTodayDate() : undefined}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
               />
