@@ -62,9 +62,11 @@ export function DayDetailDrawer({ getItemsForDay }: DayDetailDrawerProps) {
               <p className="text-xs text-gray-400 dark:text-gray-500">-</p>
             ) : (
               <div className="space-y-1">
-                {tasks.map((task) => (
-                  <CalendarTaskCard key={task.id} task={task} onClick={() => openTaskDetail(task.id)} />
-                ))}
+                {tasks
+                  .sort((a, b) => Number(b.is_completed) - Number(a.is_completed))
+                  .map((task) => (
+                    <CalendarTaskCard key={task.id} task={task} onClick={() => openTaskDetail(task.id)} />
+                  ))}
               </div>
             )}
           </div>

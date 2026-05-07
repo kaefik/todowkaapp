@@ -74,10 +74,12 @@ export function MonthView() {
           const s = new Date(e.start_time)
           return s >= dayStart && s <= dayEnd
         }),
-        tasks: tasks.filter((t) => {
-          const s = new Date(t.start_time)
-          return s >= dayStart && s <= dayEnd
-        }),
+        tasks: tasks
+          .filter((t) => {
+            const s = new Date(t.start_time)
+            return s >= dayStart && s <= dayEnd
+          })
+          .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
       }
     }
   }, [events, tasks])

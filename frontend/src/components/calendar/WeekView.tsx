@@ -51,7 +51,9 @@ export function WeekView() {
   )
 
   const allDayTasks = useMemo(
-    () => tasks.filter((t) => t.all_day && weekDays.some((d) => isSameDay(new Date(t.start_time), d))),
+    () => tasks
+      .filter((t) => t.all_day && weekDays.some((d) => isSameDay(new Date(t.start_time), d)))
+      .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
     [tasks, weekDays],
   )
 

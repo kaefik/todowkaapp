@@ -44,7 +44,9 @@ export function DayView() {
   )
 
   const allDayTasks = useMemo(
-    () => tasks.filter((t) => t.all_day && isSameDay(new Date(t.start_time), currentDate)),
+    () => tasks
+      .filter((t) => t.all_day && isSameDay(new Date(t.start_time), currentDate))
+      .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
     [tasks, currentDate],
   )
 
