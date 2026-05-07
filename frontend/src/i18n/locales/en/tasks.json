@@ -32,6 +32,7 @@
   "area": "Area",
   "noArea": "No area",
   "deadline": "Deadline",
+    "clearDeadline": "Clear",
   "notes": "Notes",
   "notesOptional": "Task notes (optional)",
   "today": "Today",

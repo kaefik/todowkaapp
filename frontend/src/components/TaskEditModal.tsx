@@ -688,14 +688,29 @@ export function TaskEditModal({ task, isOpen, onClose, onSave }: TaskEditModalPr
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">{t('tomorrow')}</span>
               </label>
-              <input
-                {...register('due_date', {
-                  onChange: handleDueDateChange
-                })}
-                type="date"
-                id="due_date"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  {...register('due_date', {
+                    onChange: handleDueDateChange
+                  })}
+                  type="date"
+                  id="due_date"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:focus:ring-indigo-400 dark:focus:border-indigo-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setValue('due_date', '')
+                    setValue('due_time', '')
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md"
+                  title={t('clearDeadline')}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
               {watch('due_date') && (
                 <div className="mt-2">
                   <label htmlFor="due_time" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
