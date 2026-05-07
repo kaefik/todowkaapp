@@ -6,6 +6,7 @@ import { useCalendarTasks, type CalendarTaskItem } from '../../hooks/useCalendar
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
+import { EventDetailModal } from '../EventDetailModal'
 import { TaskDetailModal } from '../TaskDetailModal'
 import type { Task } from '../../hooks/useTasks'
 
@@ -28,10 +29,16 @@ export function DayView() {
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
 
   const handleTaskEdit = (task: Task) => {
     closeTaskDetail()
     navigate(`/tasks?editTaskId=${task.id}`)
+  }
+
+  const handleEventEdit = (event: CalendarEvent) => {
+    setDetailEvent(null)
+    setEditorEvent(event)
   }
 
   const today = new Date()
@@ -89,7 +96,7 @@ export function DayView() {
       {(allDayEvents.length > 0 || allDayTasks.length > 0) && (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md p-2 mb-2 space-y-1">
           {allDayEvents.map((e) => (
-            <CalendarEventCard key={e.id} event={e} compact />
+            <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
           ))}
           {allDayTasks.map((t) => (
             <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
@@ -121,7 +128,7 @@ export function DayView() {
                   item.type === 'task' ? (
                     <CalendarTaskCard key={item.data.id} task={item.data} compact onClick={() => openTaskDetail(item.data.id)} />
                   ) : (
-                    <CalendarEventCard key={item.data.id} event={item.data} compact />
+                    <CalendarEventCard key={item.data.id} event={item.data} compact onClick={() => setDetailEvent(item.data)} />
                   ),
                 )}
               </div>
@@ -143,6 +150,13 @@ export function DayView() {
         isOpen={!!selectedTaskId}
         onClose={closeTaskDetail}
         onEdit={handleTaskEdit}
+      />
+
+      <EventDetailModal
+        event={detailEvent}
+        isOpen={!!detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onEdit={handleEventEdit}
       />
     </div>
   )

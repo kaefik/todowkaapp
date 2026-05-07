@@ -7,6 +7,7 @@ import { useCalendarTasks } from '../../hooks/useCalendarTasks'
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
+import { EventDetailModal } from '../EventDetailModal'
 import { TaskDetailModal } from '../TaskDetailModal'
 import type { Task } from '../../hooks/useTasks'
 
@@ -36,10 +37,16 @@ export function WeekView() {
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
 
   const handleTaskEdit = (task: Task) => {
     closeTaskDetail()
     navigate(`/tasks?editTaskId=${task.id}`)
+  }
+
+  const handleEventEdit = (event: CalendarEvent) => {
+    setDetailEvent(null)
+    setEditorEvent(event)
   }
 
   const today = new Date()
@@ -100,7 +107,7 @@ export function WeekView() {
             return (
               <div key={i} className="p-1 space-y-0.5 min-h-[28px]">
                 {dayAllDayEvents.map((e) => (
-                  <CalendarEventCard key={e.id} event={e} compact />
+                  <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
                 ))}
                 {dayAllDayTasks.map((t) => (
                   <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
@@ -127,7 +134,7 @@ export function WeekView() {
               return (
                 <div key={i} className="p-0.5 min-h-[40px] space-y-0.5">
                   {hourEvents.map((e) => (
-                    <CalendarEventCard key={e.id} event={e} compact />
+                    <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
                   ))}
                   {hourTasks.map((t) => (
                     <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
@@ -152,6 +159,13 @@ export function WeekView() {
         isOpen={!!selectedTaskId}
         onClose={closeTaskDetail}
         onEdit={handleTaskEdit}
+      />
+
+      <EventDetailModal
+        event={detailEvent}
+        isOpen={!!detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onEdit={handleEventEdit}
       />
     </div>
   )
