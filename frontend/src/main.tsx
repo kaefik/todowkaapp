@@ -11,6 +11,16 @@ import { UpdateNotification } from './components/UpdateNotification'
 import { OfflineBanner } from './components/OfflineBanner'
 import { migrateOldData } from './db/migration'
 
+const lockOrientation = () => {
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('portrait').catch(() => {})
+  }
+}
+if (screen.orientation) {
+  screen.orientation.addEventListener('change', lockOrientation)
+}
+lockOrientation()
+
 migrateOldData().catch(() => {})
 
 createRoot(document.getElementById('root')!).render(
