@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -11,52 +11,97 @@ const COLORS = [
   '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6b7280',
 ]
 
-const schema = z.object({
+const getTodayDate = () => new Date().toISOString().split('T')[0]
+
+const createSchema = (t: (key: string) => string) => z.object({
   title: z.string().min(1).max(255),
   description: z.string().nullable(),
-  start_time: z.string().min(1),
-  end_time: z.string().nullable(),
+  start_time: z.string().min(1).refine((val) => val >= getTodayDate(), {
+    message: t('dateCannotBeInPast'),
+  }),
+  end_time: z.string().nullable().refine((val) => {
+    if (!val) return true
+    return val >= getTodayDate()
+  }, {
+    message: t('endDateCannotBeInPast'),
+  }),
   all_day: z.boolean(),
   color: z.string().nullable(),
 })
-
-type FormData = z.infer<typeof schema>
 
 interface EventEditorModalProps {
   event?: CalendarEvent | null
   defaultStart?: string
   onClose?: () => void
+  isOpen?: boolean
 }
 
-export function EventEditorModal({ event, defaultStart, onClose }: EventEditorModalProps) {
+export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }: EventEditorModalProps) {
   const { t } = useTranslation('calendar')
   const { addEvent, updateEvent, deleteEvent } = useCalendarEvents()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const isEditing = !!event
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const schema = useMemo(() => createSchema((key) => t(key)), [t])
+
+  type FormData = z.infer<typeof schema>
+
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       title: event?.title ?? '',
       description: event?.description ?? null,
-      start_time: event?.start_time ?? defaultStart ?? '',
-      end_time: event?.end_time ?? null,
+      start_time: event ? toInputDateFormat(event.start_time) : (defaultStart ?? ''),
+      end_time: event?.end_time ? toInputDateFormat(event.end_time) : null,
       all_day: event?.all_day ?? false,
       color: event?.color ?? null,
     },
   })
 
+  useEffect(() => {
+    reset({
+      title: event?.title ?? '',
+      description: event?.description ?? null,
+      start_time: event ? toInputDateFormat(event.start_time) : (defaultStart ?? ''),
+      end_time: event?.end_time ? toInputDateFormat(event.end_time) : null,
+      all_day: event?.all_day ?? false,
+      color: event?.color ?? null,
+    })
+  }, [event, defaultStart, reset])
+
   const allDay = watch('all_day')
   const selectedColor = watch('color')
 
+  function toInputDateFormat(value: string | null): string {
+    if (!value) return ''
+    if (value.includes('T')) {
+      return value.split('T')[0]
+    }
+    return value
+  }
+
+  function toIsoDateTime(value: string | null, isAllDay: boolean): string | null {
+    if (!value) return null
+    if (isAllDay) {
+      return value + 'T00:00:00'
+    }
+    if (value.includes('T')) {
+      return value
+    }
+    return value + ':00'
+  }
+
   const onSubmit = async (data: FormData) => {
+    const startTime = toIsoDateTime(data.start_time, data.all_day)
+    const endTime = toIsoDateTime(data.end_time, data.all_day)
+
     if (isEditing && event) {
       await updateEvent(event.id, {
         title: data.title,
         description: data.description,
-        start_time: data.start_time,
-        end_time: data.end_time,
+        start_time: startTime,
+        end_time: endTime,
         all_day: data.all_day,
         color: data.color,
       })
@@ -64,8 +109,8 @@ export function EventEditorModal({ event, defaultStart, onClose }: EventEditorMo
       await addEvent({
         title: data.title,
         description: data.description,
-        start_time: data.start_time,
-        end_time: data.end_time,
+        start_time: startTime,
+        end_time: endTime,
         all_day: data.all_day,
         color: data.color,
       })
@@ -79,7 +124,7 @@ export function EventEditorModal({ event, defaultStart, onClose }: EventEditorMo
     onClose?.()
   }
 
-  if (!onClose) return null
+  if (!isOpen || !onClose) return null
 
   return createPortal(
     <div
@@ -149,6 +194,7 @@ export function EventEditorModal({ event, defaultStart, onClose }: EventEditorMo
               <input
                 type={allDay ? 'date' : 'datetime-local'}
                 {...register('start_time')}
+                min={allDay ? getTodayDate() : undefined}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
               />
             </div>
@@ -159,6 +205,7 @@ export function EventEditorModal({ event, defaultStart, onClose }: EventEditorMo
               <input
                 type={allDay ? 'date' : 'datetime-local'}
                 {...register('end_time')}
+                min={allDay ? getTodayDate() : undefined}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm"
               />
             </div>

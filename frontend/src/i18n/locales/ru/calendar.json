@@ -18,6 +18,8 @@
   "eventAttendees": "Участники",
   "allDay": "Весь день",
   "eventColor": "Цвет",
+  "eventDetail": "Детали события",
+  "location": "Место",
   "noEvents": "Нет событий",
   "moreEvents": "ещё {{count}}",
   "save": "Сохранить",
@@ -28,6 +30,8 @@
   "events": "События",
   "linkedTasks": "Связанные задачи",
   "noLinkedTasks": "Нет связанных задач",
+  "dateCannotBeInPast": "Дата не может быть в прошлом",
+  "endDateCannotBeInPast": "Дата окончания не может быть в прошлом",
   "weekDays": {
     "mon": "Пн",
     "tue": "Вт",

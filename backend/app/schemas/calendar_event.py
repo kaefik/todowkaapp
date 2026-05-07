@@ -27,7 +27,7 @@ class CalendarEventCreate(BaseModel):
 
     @model_validator(mode='after')
     def validate_times(self) -> 'CalendarEventCreate':
-        if self.end_time is not None and self.end_time <= self.start_time:
+        if self.end_time is not None and self.end_time < self.start_time:
             raise ValueError('end_time must be after start_time')
         return self
 
@@ -44,7 +44,7 @@ class CalendarEventUpdate(BaseModel):
 
     @model_validator(mode='after')
     def validate_times(self) -> 'CalendarEventUpdate':
-        if self.end_time is not None and self.start_time is not None and self.end_time <= self.start_time:
+        if self.end_time is not None and self.start_time is not None and self.end_time < self.start_time:
             raise ValueError('end_time must be after start_time')
         return self
 

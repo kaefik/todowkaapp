@@ -1,22 +1,39 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCalendarEvents } from '../hooks/useCalendarEvents'
+import { useCalendarEvents, type CalendarEvent } from '../hooks/useCalendarEvents'
+import { EventDetailModal } from '../components/EventDetailModal'
 import { EventEditModal } from '../components/EventEditModal'
 
 export function Events() {
   const { t } = useTranslation('calendar')
   const { events, isLoading } = useCalendarEvents()
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingEvent, setEditingEvent] = useState<string | null>(null)
+  const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
+  const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null)
+  const [isCreateMode, setIsCreateMode] = useState(false)
 
-  const handleCreate = () => {
-    setEditingEvent(null)
-    setIsModalOpen(true)
+  const handleView = (event: CalendarEvent) => {
+    setDetailEvent(event)
   }
 
-  const handleEdit = (id: string) => {
-    setEditingEvent(id)
-    setIsModalOpen(true)
+  const handleEdit = (event: CalendarEvent) => {
+    setDetailEvent(null)
+    setEditEvent(event)
+    setIsCreateMode(false)
+  }
+
+  const handleCloseDetail = () => {
+    setDetailEvent(null)
+  }
+
+  const handleCloseEdit = () => {
+    setEditEvent(null)
+    setIsCreateMode(false)
+  }
+
+  const openCreateModal = () => {
+    setEditEvent(null)
+    setDetailEvent(null)
+    setIsCreateMode(true)
   }
 
   if (isLoading) {
@@ -34,7 +51,7 @@ export function Events() {
           {t('events')}
         </h1>
         <button
-          onClick={handleCreate}
+          onClick={openCreateModal}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
         >
           + {t('createEvent')}
@@ -50,7 +67,7 @@ export function Events() {
           {events.map(event => (
             <div
               key={event.id}
-              onClick={() => handleEdit(event.id)}
+              onClick={() => handleView(event)}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 hover:shadow-md cursor-pointer transition-shadow"
             >
               <div className="flex items-center justify-between">
@@ -77,12 +94,18 @@ export function Events() {
         </div>
       )}
 
-      {isModalOpen && (
-        <EventEditModal
-          eventId={editingEvent}
-          onClose={() => setIsModalOpen(false)}
-        />
-      )}
+      <EventDetailModal
+        event={detailEvent}
+        isOpen={!!detailEvent}
+        onClose={handleCloseDetail}
+        onEdit={handleEdit}
+      />
+
+      <EventEditModal
+        event={editEvent}
+        onClose={handleCloseEdit}
+        isOpen={editEvent !== null || isCreateMode}
+      />
     </div>
   )
 }

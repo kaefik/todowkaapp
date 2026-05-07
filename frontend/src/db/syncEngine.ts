@@ -688,6 +688,7 @@ async function executeMutation(
 
   switch (mutation.action) {
     case 'create': {
+      console.log('[sync] POST', endpoint, 'payload:', payload)
       await httpClient.post(endpoint, payload)
       break
     }

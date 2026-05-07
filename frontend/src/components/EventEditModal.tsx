@@ -1,14 +1,13 @@
-import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { EventEditorModal } from './calendar/EventEditorModal'
+import type { CalendarEvent } from '../hooks/useCalendarEvents'
 
 interface EventEditModalProps {
-  eventId: string | null
+  event: CalendarEvent | null
   onClose: () => void
+  isOpen: boolean
 }
 
-export function EventEditModal({ eventId, onClose }: EventEditModalProps) {
-  const { events } = useCalendarEvents()
-  const event = eventId ? events.find(e => e.id === eventId) ?? null : null
-
-  return <EventEditorModal event={event} onClose={onClose} />
+export function EventEditModal({ event, onClose, isOpen }: EventEditModalProps) {
+  if (!isOpen) return null
+  return <EventEditorModal event={event} onClose={onClose} isOpen={isOpen} />
 }

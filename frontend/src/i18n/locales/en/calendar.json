@@ -18,6 +18,8 @@
   "eventAttendees": "Attendees",
   "allDay": "All day",
   "eventColor": "Color",
+  "eventDetail": "Event details",
+  "location": "Location",
   "noEvents": "No events",
   "moreEvents": "+{{count}} more",
   "save": "Save",
@@ -28,6 +30,8 @@
   "events": "Events",
   "linkedTasks": "Linked tasks",
   "noLinkedTasks": "No linked tasks",
+  "dateCannotBeInPast": "Date cannot be in the past",
+  "endDateCannotBeInPast": "End date cannot be in the past",
   "weekDays": {
     "mon": "Mon",
     "tue": "Tue",

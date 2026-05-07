@@ -39,6 +39,21 @@ async def list_events(
     limit: Annotated[int, Query(ge=1, le=100)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CalendarEventListResponse:
+    from datetime import datetime
+
+    service = CalendarEventService(db)
+    start_from_dt = datetime.fromisoformat(start_from) if start_from else None
+    start_to_dt = datetime.fromisoformat(start_to) if start_to else None
+    updated_since_dt = datetime.fromisoformat(updated_since) if updated_since else None
+
+    events, total = await service.get_events(
+        user_id=current_user.id,
+        start_from=start_from_dt,
+        start_to=start_to_dt,
+        updated_since=updated_since_dt,
+        limit=limit,
+        offset=offset,
+    )
     return CalendarEventListResponse(items=events, total=total)
 
 
