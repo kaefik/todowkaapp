@@ -30,6 +30,7 @@
   "events": "Events",
   "linkedTasks": "Linked tasks",
   "noLinkedTasks": "No linked tasks",
+  "overdueTasks": "Overdue tasks",
   "dateCannotBeInPast": "Date cannot be in the past",
   "endDateCannotBeInPast": "End date cannot be in the past",
   "deleteEventPermanentlyConfirm": "Delete event permanently?",

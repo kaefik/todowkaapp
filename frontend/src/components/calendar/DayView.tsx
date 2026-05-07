@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useCalendarStore } from '../../stores/calendarStore'
 import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
 import { useCalendarTasks, type CalendarTaskItem } from '../../hooks/useCalendarTasks'
@@ -24,6 +25,7 @@ function toHourKey(d: Date): string {
 
 export function DayView() {
   const navigate = useNavigate()
+  const { t } = useTranslation('calendar')
   const { currentDate, openTaskDetail, selectedTaskId, closeTaskDetail } = useCalendarStore()
   const { events } = useCalendarEvents()
   const { tasks } = useCalendarTasks()
@@ -67,6 +69,13 @@ export function DayView() {
     [tasks, currentDate],
   )
 
+  const overdueTasks = useMemo(() => {
+    if (!isCurrentToday) return []
+    const now = new Date()
+    now.setHours(0, 0, 0, 0)
+    return tasks.filter((t) => !t.is_completed && new Date(t.start_time) < now)
+  }, [tasks, isCurrentToday])
+
   const hours = useMemo(() => {
     const result: { hour: number; items: SlotItem[] }[] = []
     for (let h = 0; h < 24; h++) {
@@ -93,6 +102,17 @@ export function DayView() {
 
   return (
     <div>
+      {overdueTasks.length > 0 && (
+        <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-2 mb-2 space-y-1">
+          <div className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+            ⚠️ {t('overdueTasks')}
+          </div>
+          {overdueTasks.map((t) => (
+            <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
+          ))}
+        </div>
+      )}
+
       {(allDayEvents.length > 0 || allDayTasks.length > 0) && (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md p-2 mb-2 space-y-1">
           {allDayEvents.map((e) => (

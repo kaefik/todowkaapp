@@ -30,6 +30,7 @@
   "events": "События",
   "linkedTasks": "Связанные задачи",
   "noLinkedTasks": "Нет связанных задач",
+  "overdueTasks": "Просроченные задачи",
   "dateCannotBeInPast": "Дата не может быть в прошлом",
   "endDateCannotBeInPast": "Дата окончания не может быть в прошлом",
   "deleteEventPermanentlyConfirm": "Удалить событие навсегда?",
