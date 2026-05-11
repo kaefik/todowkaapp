@@ -10,18 +10,15 @@ import { EventEditorModal } from './EventEditorModal'
 import { EventDetailModal } from '../EventDetailModal'
 import { TaskDetailModal } from '../TaskDetailModal'
 import type { Task } from '../../hooks/useTasks'
+import {
+  isSameDay,
+  getEventCategory,
+  getDurationMinutes,
+  getOverlappingGroups,
+  pad,
+} from '../../utils/calendarEvents'
 
-type SlotItem =
-  | { type: 'task'; data: CalendarTaskItem }
-  | { type: 'event'; data: CalendarEvent }
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
-
-function toHourKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`
-}
+const HOUR_HEIGHT = 48
 
 export function DayView() {
   const navigate = useNavigate()
@@ -46,21 +43,32 @@ export function DayView() {
   const today = new Date()
   const isCurrentToday = isSameDay(currentDate, today)
   const currentHour = today.getHours()
+  const currentMinute = today.getMinutes()
 
-  const allDayEvents = useMemo(
-    () => events.filter((e) => e.all_day && isSameDay(new Date(e.start_time), currentDate)),
+  const topSectionEvents = useMemo(
+    () =>
+      events.filter((e) => {
+        if (!isSameDay(new Date(e.start_time), currentDate)) return false
+        const cat = getEventCategory(e)
+        return cat === 'all-day-single' || cat === 'all-day-multi' || cat === 'timed-multi'
+      }),
     [events, currentDate],
   )
 
   const allDayTasks = useMemo(
-    () => tasks
-      .filter((t) => t.all_day && isSameDay(new Date(t.start_time), currentDate))
-      .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
+    () =>
+      tasks
+        .filter((t) => t.all_day && isSameDay(new Date(t.start_time), currentDate))
+        .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
     [tasks, currentDate],
   )
 
   const timedEvents = useMemo(
-    () => events.filter((e) => !e.all_day && isSameDay(new Date(e.start_time), currentDate)),
+    () =>
+      events.filter((e) => {
+        if (!isSameDay(new Date(e.start_time), currentDate)) return false
+        return getEventCategory(e) === 'timed-single'
+      }),
     [events, currentDate],
   )
 
@@ -76,20 +84,54 @@ export function DayView() {
     return tasks.filter((t) => !t.is_completed && new Date(t.start_time) < now)
   }, [tasks, isCurrentToday])
 
-  const hours = useMemo(() => {
-    const result: { hour: number; items: SlotItem[] }[] = []
-    for (let h = 0; h < 24; h++) {
-      const items: SlotItem[] = []
-      timedEvents
-        .filter((e) => new Date(e.start_time).getHours() === h)
-        .forEach((e) => items.push({ type: 'event', data: e }))
-      timedTasks
-        .filter((t) => new Date(t.start_time).getHours() === h)
-        .forEach((t) => items.push({ type: 'task', data: t }))
-      result.push({ hour: h, items })
+  const positionedEvents = useMemo(() => {
+    const items = timedEvents.map((e) => {
+      const start = new Date(e.start_time)
+      const startMinute = start.getHours() * 60 + start.getMinutes()
+      const durationMin = getDurationMinutes(e)
+      return { event: e, startMinute, endMinute: startMinute + durationMin }
+    })
+
+    const grouped = getOverlappingGroups(items)
+
+    return grouped.map(({ item, column, totalColumns }) => {
+      const top = (item.startMinute / 60) * HOUR_HEIGHT
+      const height = Math.max(((item.endMinute - item.startMinute) / 60) * HOUR_HEIGHT, 20)
+      const widthPercent = 100 / totalColumns
+      const leftPercent = column * widthPercent
+
+      return {
+        event: item.event,
+        style: {
+          top,
+          height,
+          width: `${widthPercent - 1}%`,
+          left: `${leftPercent}%`,
+          zIndex: 2,
+        } as React.CSSProperties,
+      }
+    })
+  }, [timedEvents])
+
+  const positionedTasks = useMemo(() => {
+    return timedTasks.map((t) => {
+      const start = new Date(t.start_time)
+      const startMinute = start.getHours() * 60 + start.getMinutes()
+      const top = (startMinute / 60) * HOUR_HEIGHT
+      return { task: t, top }
+    })
+  }, [timedTasks])
+
+  const taskHours = useMemo(() => {
+    const map = new Map<number, CalendarTaskItem[]>()
+    for (const t of timedTasks) {
+      const h = new Date(t.start_time).getHours()
+      const arr = map.get(h) || []
+      arr.push(t)
+      map.set(h, arr)
     }
-    return result
-  }, [timedEvents, timedTasks])
+    return map
+  }, [timedTasks])
 
   const handleSlotClick = (hour: number) => {
     const d = new Date(currentDate)
@@ -98,7 +140,11 @@ export function DayView() {
     setEditorEvent(null)
   }
 
-  const pad = (n: number) => String(n).padStart(2, '0')
+  const nowIndicatorTop = isCurrentToday
+    ? ((currentHour * 60 + currentMinute) / 60) * HOUR_HEIGHT
+    : -1
+
+  const totalGridHeight = 24 * HOUR_HEIGHT
 
   return (
     <div>
@@ -113,9 +159,9 @@ export function DayView() {
         </div>
       )}
 
-      {(allDayEvents.length > 0 || allDayTasks.length > 0) && (
+      {(topSectionEvents.length > 0 || allDayTasks.length > 0) && (
         <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md p-2 mb-2 space-y-1">
-          {allDayEvents.map((e) => (
+          {topSectionEvents.map((e) => (
             <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
           ))}
           {allDayTasks.map((t) => (
@@ -124,44 +170,74 @@ export function DayView() {
         </div>
       )}
 
-      <div className="relative">
-        {hours.map(({ hour, items }) => {
-          const isCurrentHour = isCurrentToday && hour === currentHour
-          const key = toHourKey(currentDate)
-
-          return (
+      <div className="flex">
+        <div className="w-16 flex-shrink-0">
+          {Array.from({ length: 24 }, (_, hour) => (
             <div
-              key={`${key}-${hour}`}
-              className={`flex min-h-[48px] border-b border-gray-100 dark:border-gray-800 ${
-                isCurrentHour ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
-              }`}
-              onClick={() => items.length === 0 && handleSlotClick(hour)}
+              key={hour}
+              className="text-xs text-gray-400 dark:text-gray-500 pr-2 text-right"
+              style={{ height: HOUR_HEIGHT }}
             >
-              <div className="w-16 flex-shrink-0 text-xs text-gray-400 dark:text-gray-500 py-1 pr-2 text-right">
-                {pad(hour)}:00
-              </div>
-              <div className="flex-1 py-1 space-y-1 relative">
-                {isCurrentHour && (
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-red-500 z-10" />
-                )}
-                {items.map((item) =>
-                  item.type === 'task' ? (
-                    <CalendarTaskCard key={item.data.id} task={item.data} compact onClick={() => openTaskDetail(item.data.id)} />
-                  ) : (
-                    <CalendarEventCard key={item.data.id} event={item.data} compact onClick={() => setDetailEvent(item.data)} />
-                  ),
-                )}
-              </div>
+              <span className="relative -top-2 inline-block">{pad(hour)}:00</span>
             </div>
-          )
-        })}
+          ))}
+        </div>
+
+        <div className="flex-1 relative" style={{ height: totalGridHeight }}>
+          {Array.from({ length: 24 }, (_, hour) => {
+            const isCurrentHour = isCurrentToday && hour === currentHour
+            const hourTasks = taskHours.get(hour) || []
+            return (
+              <div
+                key={hour}
+                className={`absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 ${
+                  isCurrentHour ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                }`}
+                style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                onClick={() => hourTasks.length === 0 && handleSlotClick(hour)}
+              />
+            )
+          })}
+
+          {nowIndicatorTop >= 0 && (
+            <div
+              className="absolute left-0 right-0 h-0.5 bg-red-500 z-10"
+              style={{ top: nowIndicatorTop }}
+            >
+              <div className="absolute -left-1 -top-1 w-2 h-2 rounded-full bg-red-500" />
+            </div>
+          )}
+
+          {positionedEvents.map(({ event, style }) => (
+            <CalendarEventCard
+              key={event.id}
+              event={event}
+              showTimeRange
+              timedStyle={style}
+              onClick={() => setDetailEvent(event)}
+            />
+          ))}
+
+          {positionedTasks.map(({ task, top }) => (
+            <div
+              key={task.id}
+              className="absolute left-0 right-0 z-1 px-0.5"
+              style={{ top }}
+            >
+              <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {editorEvent !== null || editorDefaultStart !== undefined ? (
         <EventEditorModal
           event={editorEvent}
           defaultStart={editorDefaultStart}
-          onClose={() => { setEditorEvent(null); setEditorDefaultStart(undefined) }}
+          onClose={() => {
+            setEditorEvent(null)
+            setEditorDefaultStart(undefined)
+          }}
         />
       ) : null}
 

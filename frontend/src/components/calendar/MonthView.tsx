@@ -11,6 +11,7 @@ import { EventEditorModal } from './EventEditorModal'
 import { EventDetailModal } from '../EventDetailModal'
 import { TaskDetailModal } from '../TaskDetailModal'
 import type { Task } from '../../hooks/useTasks'
+import { isSameDay, eventOverlapsDay } from '../../utils/calendarEvents'
 
 const MAX_VISIBLE = 3
 
@@ -19,10 +20,6 @@ const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 type SlotItem =
   | { type: 'task'; data: CalendarTaskItem }
   | { type: 'event'; data: CalendarEvent }
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
 
 function getMonthGrid(date: Date): Date[] {
   const year = date.getFullYear()
@@ -77,10 +74,7 @@ export function MonthView() {
       const dayStart = toLocalDayStart(day)
       const dayEnd = toLocalDayEnd(day)
       return {
-        events: events.filter((e) => {
-          const s = new Date(e.start_time)
-          return s >= dayStart && s <= dayEnd
-        }),
+        events: events.filter((e) => eventOverlapsDay(e, day)),
         tasks: tasks
           .filter((t) => {
             const s = new Date(t.start_time)

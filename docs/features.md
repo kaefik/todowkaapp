@@ -400,6 +400,16 @@
   - Frontend: RecurrenceEditor в EventEditorModal, поля recurrence в useCalendarEvents
   - Миграция: `alembic/versions/20260507_1500_add_recurrence_to_calendar_events.py`
   - Файлы: `backend/app/models/calendar_event.py`, `backend/app/models/event_recurrence.py`, `backend/app/services/event_recurrence_service.py`, `backend/app/services/calendar_event_service.py`, `backend/app/schemas/calendar_event.py`, `backend/app/api/calendar_events.py`, `backend/app/scheduler.py`, `frontend/src/components/calendar/EventEditorModal.tsx`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `frontend/src/hooks/useCalendarEvents.ts`, `frontend/src/db/database.ts`
+- **Пропорциональное отображение событий по длительности** ✅ (Реализовано 11.05.2026)
+  - DayView и WeekView: события с часами отображаются с высотой, пропорциональной длительности (1 час = 48px в DayView, 40px в WeekView)
+  - Абсолютное позиционирование в сетке времени (как Google Calendar): top по времени начала, height по длительности
+  - Показ диапазона времени на карточке события ("10:00 — 13:00")
+  - Обработка пересекающихся событий: рядом (side-by-side columns)
+  - События на весь день (`all_day`): отображаются сверху дня
+  - Многодневные события: полоса через несколько дней в верхней секции WeekView
+  - MonthView: события показываются во все дни, которые они покрывают (не только start_time)
+  - Утилита `frontend/src/utils/calendarEvents.ts`: категоризация событий, расчёт длительности, обработка пересечений
+  - Файлы: `frontend/src/utils/calendarEvents.ts`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `frontend/src/components/calendar/DayView.tsx`, `frontend/src/components/calendar/WeekView.tsx`, `frontend/src/components/calendar/MonthView.tsx`
 
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта

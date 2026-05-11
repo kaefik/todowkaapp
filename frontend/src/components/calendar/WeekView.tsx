@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '../../stores/calendarStore'
@@ -10,12 +10,17 @@ import { EventEditorModal } from './EventEditorModal'
 import { EventDetailModal } from '../EventDetailModal'
 import { TaskDetailModal } from '../TaskDetailModal'
 import type { Task } from '../../hooks/useTasks'
+import {
+  isSameDay,
+  getEventCategory,
+  getDurationMinutes,
+  getOverlappingGroups,
+  isMultiDay,
+  pad,
+} from '../../utils/calendarEvents'
 
+const HOUR_HEIGHT = 40
 const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
 
 function getWeekDays(date: Date): Date[] {
   const d = new Date(date)
@@ -29,6 +34,40 @@ function getWeekDays(date: Date): Date[] {
   })
 }
 
+function dayIndexInWeek(event: CalendarEvent, weekDays: Date[]): number {
+  const start = new Date(event.start_time)
+  return weekDays.findIndex((d) => isSameDay(d, start))
+}
+
+function multiDaySpanInWeek(event: CalendarEvent, weekDays: Date[]): { startIdx: number; span: number } {
+  const start = new Date(event.start_time)
+  const end = event.end_time ? new Date(event.end_time) : start
+
+  let startIdx = weekDays.findIndex((d) => isSameDay(d, start))
+  if (startIdx === -1) {
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+    const weekStart = new Date(weekDays[0].getFullYear(), weekDays[0].getMonth(), weekDays[0].getDate())
+    if (startDay < weekStart) {
+      startIdx = 0
+    } else {
+      return { startIdx: -1, span: 0 }
+    }
+  }
+
+  const startBound = new Date(weekDays[startIdx].getFullYear(), weekDays[startIdx].getMonth(), weekDays[startIdx].getDate())
+  const endBound = new Date(weekDays[6].getFullYear(), weekDays[6].getMonth(), weekDays[6].getDate(), 23, 59, 59)
+
+  const eventEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+  if (event.all_day && event.end_time) {
+    eventEnd.setDate(eventEnd.getDate() - 1)
+  }
+
+  const clampedEnd = eventEnd > endBound ? endBound : eventEnd
+  const span = Math.round((clampedEnd.getTime() - startBound.getTime()) / (86400000)) + 1
+
+  return { startIdx, span: Math.min(span, 7 - startIdx) }
+}
+
 export function WeekView() {
   const navigate = useNavigate()
   const { t } = useTranslation('calendar')
@@ -38,6 +77,7 @@ export function WeekView() {
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
+  const allDayRef = useRef<HTMLDivElement>(null)
 
   const handleTaskEdit = (task: Task) => {
     closeTaskDetail()
@@ -52,21 +92,36 @@ export function WeekView() {
   const today = new Date()
   const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate])
 
-  const allDayEvents = useMemo(
-    () => events.filter((e) => e.all_day && weekDays.some((d) => isSameDay(new Date(e.start_time), d))),
-    [events, weekDays],
-  )
+  const categorized = useMemo(() => {
+    const topEvents: CalendarEvent[] = []
+    const timedByDay: Map<number, CalendarEvent[]> = new Map()
+
+    for (const e of events) {
+      const cat = getEventCategory(e)
+      if (cat === 'all-day-single' || cat === 'all-day-multi' || cat === 'timed-multi') {
+        topEvents.push(e)
+      } else {
+        const idx = dayIndexInWeek(e, weekDays)
+        if (idx !== -1) {
+          const arr = timedByDay.get(idx) || []
+          arr.push(e)
+          timedByDay.set(idx, arr)
+        }
+      }
+    }
+
+    return { topEvents, timedByDay }
+  }, [events, weekDays])
 
   const allDayTasks = useMemo(
-    () => tasks
-      .filter((t) => t.all_day && weekDays.some((d) => isSameDay(new Date(t.start_time), d)))
-      .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
+    () =>
+      tasks
+        .filter(
+          (t) =>
+            t.all_day && weekDays.some((d) => isSameDay(new Date(t.start_time), d)),
+        )
+        .sort((a, b) => Number(b.is_completed) - Number(a.is_completed)),
     [tasks, weekDays],
-  )
-
-  const timedEvents = useMemo(
-    () => events.filter((e) => !e.all_day && weekDays.some((d) => isSameDay(new Date(e.start_time), d))),
-    [events, weekDays],
   )
 
   const timedTasks = useMemo(
@@ -74,7 +129,106 @@ export function WeekView() {
     [tasks, weekDays],
   )
 
-  const pad = (n: number) => String(n).padStart(2, '0')
+  const multiDayBars = useMemo(() => {
+    const bars: { event: CalendarEvent; startIdx: number; span: number }[] = []
+    for (const e of categorized.topEvents) {
+      if (isMultiDay(e) || getEventCategory(e) === 'timed-multi') {
+        const { startIdx, span } = multiDaySpanInWeek(e, weekDays)
+        if (startIdx >= 0 && span > 0) {
+          bars.push({ event: e, startIdx, span })
+        }
+      }
+    }
+    return bars
+  }, [categorized.topEvents, weekDays])
+
+  const singleAllDayByDay = useMemo(() => {
+    const map = new Map<number, CalendarEvent[]>()
+    for (const e of categorized.topEvents) {
+      if (!isMultiDay(e) && getEventCategory(e) !== 'timed-multi') {
+        const idx = dayIndexInWeek(e, weekDays)
+        if (idx !== -1) {
+          const arr = map.get(idx) || []
+          arr.push(e)
+          map.set(idx, arr)
+        }
+      }
+    }
+    return map
+  }, [categorized.topEvents, weekDays])
+
+  const allDayTasksByDay = useMemo(() => {
+    const map = new Map<number, typeof allDayTasks>()
+    for (const t of allDayTasks) {
+      const idx = weekDays.findIndex((d) => isSameDay(d, new Date(t.start_time)))
+      if (idx !== -1) {
+        const arr = map.get(idx) || []
+        arr.push(t)
+        map.set(idx, arr)
+      }
+    }
+    return map
+  }, [allDayTasks, weekDays])
+
+  const allDayRowCount = useMemo(() => {
+    let maxRows = 1
+    for (let i = 0; i < 7; i++) {
+      const count = (singleAllDayByDay.get(i)?.length || 0) + (allDayTasksByDay.get(i)?.length || 0)
+      maxRows = Math.max(maxRows, count)
+    }
+    const barRows = multiDayBars.length
+    return maxRows + barRows
+  }, [singleAllDayByDay, allDayTasksByDay, multiDayBars])
+
+  const positionedDayEvents = useMemo(() => {
+    const result = new Map<number, { event: CalendarEvent; style: React.CSSProperties }[]>()
+    for (const [dayIdx, dayEvents] of categorized.timedByDay) {
+      const items = dayEvents.map((e) => {
+        const start = new Date(e.start_time)
+        const startMinute = start.getHours() * 60 + start.getMinutes()
+        const durationMin = getDurationMinutes(e)
+        return { event: e, startMinute, endMinute: startMinute + durationMin }
+      })
+
+      const grouped = getOverlappingGroups(items)
+      const positioned = grouped.map(({ item, column, totalColumns }) => {
+        const top = (item.startMinute / 60) * HOUR_HEIGHT
+        const height = Math.max(((item.endMinute - item.startMinute) / 60) * HOUR_HEIGHT, 18)
+        const widthPercent = 100 / totalColumns
+        const leftPercent = column * widthPercent
+        return {
+          event: item.event,
+          style: {
+            top,
+            height,
+            width: `${widthPercent - 1}%`,
+            left: `${leftPercent}%`,
+            zIndex: 2,
+          } as React.CSSProperties,
+        }
+      })
+      result.set(dayIdx, positioned)
+    }
+    return result
+  }, [categorized.timedByDay])
+
+  const timedTasksByDay = useMemo(() => {
+    const map = new Map<number, Map<number, typeof timedTasks>>()
+    for (const t of timedTasks) {
+      const dayIdx = weekDays.findIndex((d) => isSameDay(d, new Date(t.start_time)))
+      if (dayIdx !== -1) {
+        const hourMap = map.get(dayIdx) || new Map()
+        const h = new Date(t.start_time).getHours()
+        const arr = hourMap.get(h) || []
+        arr.push(t)
+        hourMap.set(h, arr)
+        map.set(dayIdx, hourMap)
+      }
+    }
+    return map
+  }, [timedTasks, weekDays])
+
+  const totalGridHeight = 24 * HOUR_HEIGHT
 
   return (
     <div>
@@ -98,20 +252,46 @@ export function WeekView() {
         })}
       </div>
 
-      {(allDayEvents.length > 0 || allDayTasks.length > 0) && (
-        <div className="grid grid-cols-[3.5rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-          <div />
-          {weekDays.map((day, i) => {
-            const dayAllDayEvents = allDayEvents.filter((e) => isSameDay(new Date(e.start_time), day))
-            const dayAllDayTasks = allDayTasks.filter((t) => isSameDay(new Date(t.start_time), day))
+      {(categorized.topEvents.length > 0 || allDayTasks.length > 0) && (
+        <div
+          ref={allDayRef}
+          className="grid grid-cols-[3.5rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 relative"
+          style={{ minHeight: allDayRowCount * 26 + 8 }}
+        >
+          <div className="text-xs text-gray-400 dark:text-gray-500 py-1 pr-2 text-right">
+            {t('allDay', { defaultValue: 'Весь день' })}
+          </div>
+          {weekDays.map((_, i) => {
+            const dayEvents = singleAllDayByDay.get(i) || []
+            const dayTasks = allDayTasksByDay.get(i) || []
             return (
-              <div key={i} className="p-1 space-y-0.5 min-h-[28px]">
-                {dayAllDayEvents.map((e) => (
+              <div key={i} className="p-0.5 space-y-0.5">
+                {dayEvents.map((e) => (
                   <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
                 ))}
-                {dayAllDayTasks.map((t) => (
+                {dayTasks.map((t) => (
                   <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
                 ))}
+              </div>
+            )
+          })}
+          {multiDayBars.map(({ event, startIdx, span }, barIdx) => {
+            const colStart = startIdx + 2
+            const colEnd = colStart + span
+            return (
+              <div
+                key={`bar-${event.id}-${barIdx}`}
+                className="px-0.5"
+                style={{
+                  gridColumn: `${colStart} / ${colEnd}`,
+                  gridRow: '1',
+                  position: 'relative',
+                  top: barIdx * 26,
+                  height: 22,
+                  zIndex: 3,
+                }}
+              >
+                <CalendarEventCard event={event} compact onClick={() => setDetailEvent(event)} />
               </div>
             )
           })}
@@ -119,38 +299,79 @@ export function WeekView() {
       )}
 
       <div className="max-h-[500px] overflow-y-auto">
-        {Array.from({ length: 24 }, (_, hour) => (
-          <div key={hour} className="grid grid-cols-[3.5rem_repeat(7,1fr)] border-b border-gray-100 dark:border-gray-800">
-            <div className="text-xs text-gray-400 dark:text-gray-500 py-1 pr-2 text-right">
-              {pad(hour)}:00
-            </div>
-            {weekDays.map((day, i) => {
-              const hourEvents = timedEvents.filter(
-                (e) => isSameDay(new Date(e.start_time), day) && new Date(e.start_time).getHours() === hour,
-              )
-              const hourTasks = timedTasks.filter(
-                (t) => isSameDay(new Date(t.start_time), day) && new Date(t.start_time).getHours() === hour,
-              )
+        <div className="flex">
+          <div className="w-14 flex-shrink-0">
+            {Array.from({ length: 24 }, (_, hour) => (
+              <div
+                key={hour}
+                className="text-xs text-gray-400 dark:text-gray-500 pr-2 text-right"
+                style={{ height: HOUR_HEIGHT }}
+              >
+                <span className="relative -top-2 inline-block">{pad(hour)}:00</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex-1 grid grid-cols-7 relative" style={{ height: totalGridHeight }}>
+            {weekDays.map((day, dayIdx) => {
+              const isCurrentDay = isSameDay(day, today)
+              const dayPositioned = positionedDayEvents.get(dayIdx) || []
+              const dayTaskMap = timedTasksByDay.get(dayIdx) || new Map()
+
               return (
-                <div key={i} className="p-0.5 min-h-[40px] space-y-0.5">
-                  {hourEvents.map((e) => (
-                    <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
+                <div
+                  key={dayIdx}
+                  className={`relative border-r border-gray-100 dark:border-gray-800 ${
+                    isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
+                  }`}
+                >
+                  {Array.from({ length: 24 }, (_, hour) => (
+                    <div
+                      key={hour}
+                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800"
+                      style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                    />
                   ))}
-                  {hourTasks.map((t) => (
-                    <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
+
+                  {dayPositioned.map(({ event, style }) => (
+                    <CalendarEventCard
+                      key={event.id}
+                      event={event}
+                      showTimeRange
+                      timedStyle={style}
+                      onClick={() => setDetailEvent(event)}
+                    />
                   ))}
+
+                  {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
+                    hourTasks.map((task) => {
+                      const top = hour * HOUR_HEIGHT
+                      return (
+                        <div
+                          key={task.id}
+                          className="absolute left-0 right-0 z-1 px-0.5"
+                          style={{ top }}
+                        >
+                          <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
+                        </div>
+                      )
+                    }),
+                  )}
                 </div>
               )
             })}
           </div>
-        ))}
+        </div>
       </div>
 
       {editorEvent !== null || editorDefaultStart !== undefined ? (
         <EventEditorModal
           event={editorEvent}
           defaultStart={editorDefaultStart}
-          onClose={() => { setEditorEvent(null); setEditorDefaultStart(undefined) }}
+          onClose={() => {
+            setEditorEvent(null)
+            setEditorDefaultStart(undefined)
+          }}
         />
       ) : null}
 
