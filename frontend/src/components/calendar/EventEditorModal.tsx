@@ -30,11 +30,12 @@ const createSchema = z.object({
 interface EventEditorModalProps {
   event?: CalendarEvent | null
   defaultStart?: string
+  defaultEnd?: string
   onClose?: () => void
   isOpen?: boolean
 }
 
-export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }: EventEditorModalProps) {
+export function EventEditorModal({ event, defaultStart, defaultEnd, onClose, isOpen = true }: EventEditorModalProps) {
   const { t } = useTranslation('calendar')
   const { addEvent, updateEvent, deleteEvent } = useCalendarEvents()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -47,7 +48,7 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
   })
   const [localEndTime, setLocalEndTime] = useState(() => {
     if (event && event.end_time) return toInputDateTimeFormat(event.end_time)
-    return ''
+    return defaultEnd ? toInputDateTimeFormat(defaultEnd) : ''
   })
   const [recurrenceData, setRecurrenceData] = useState<{
     recurrence_type: string | null
@@ -261,7 +262,7 @@ export function EventEditorModal({ event, defaultStart, onClose, isOpen = true }
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t('eventStart')}

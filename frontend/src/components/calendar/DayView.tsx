@@ -28,6 +28,7 @@ export function DayView() {
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+  const [editorDefaultEnd, setEditorDefaultEnd] = useState<string | undefined>(undefined)
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
 
   const handleTaskEdit = (task: Task) => {
@@ -133,10 +134,15 @@ export function DayView() {
     return map
   }, [timedTasks])
 
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+
   const handleSlotClick = (hour: number) => {
     const d = new Date(currentDate)
     d.setHours(hour, 0, 0, 0)
-    setEditorDefaultStart(d.toISOString())
+    setEditorDefaultStart(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`)
+    const end = new Date(d)
+    end.setHours(end.getHours() + 1)
+    setEditorDefaultEnd(`${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}T${pad2(end.getHours())}:${pad2(end.getMinutes())}`)
     setEditorEvent(null)
   }
 
@@ -234,9 +240,11 @@ export function DayView() {
         <EventEditorModal
           event={editorEvent}
           defaultStart={editorDefaultStart}
+          defaultEnd={editorDefaultEnd}
           onClose={() => {
             setEditorEvent(null)
             setEditorDefaultStart(undefined)
+            setEditorDefaultEnd(undefined)
           }}
         />
       ) : null}
