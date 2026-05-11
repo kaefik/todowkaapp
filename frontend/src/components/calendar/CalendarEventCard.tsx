@@ -2,6 +2,13 @@ import { formatTimeRange } from '../../utils/calendarEvents'
 
 const DEFAULT_COLOR = '#10b981'
 
+function isEventPast(event: { start_time: string; end_time: string | null; all_day: boolean }): boolean {
+  if (event.all_day) return false
+  const now = new Date()
+  const end = event.end_time ? new Date(event.end_time) : new Date(new Date(event.start_time).getTime() + 60 * 60 * 1000)
+  return now > end
+}
+
 interface CalendarEventCardProps {
   event: {
     id: string
@@ -21,14 +28,16 @@ interface CalendarEventCardProps {
 
 export function CalendarEventCard({ event, onClick, compact, timedStyle, showTimeRange, multiDay }: CalendarEventCardProps) {
   const color = event.color || DEFAULT_COLOR
+  const past = isEventPast(event)
 
   const isTimed = !!timedStyle
   const roundedClass = multiDay === 'start' ? 'rounded-l' : multiDay === 'end' ? 'rounded-r' : multiDay === 'middle' ? '' : 'rounded'
+  const opacityClass = past ? 'opacity-50' : ''
 
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-2 py-1 text-xs truncate border-l-2 ${isTimed ? 'absolute' : ''} ${roundedClass}`}
+      className={`w-full text-left px-2 py-1 text-xs truncate border-l-2 ${isTimed ? 'absolute' : ''} ${roundedClass} ${opacityClass}`}
       style={{
         backgroundColor: color + '20',
         borderLeftColor: color,

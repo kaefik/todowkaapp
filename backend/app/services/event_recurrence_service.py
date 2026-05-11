@@ -12,6 +12,18 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
 
+def _to_naive_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is not None:
+        return dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
+
+
+def _to_aware_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC)
+
+
 class EventRecurrenceService:
     DEFAULT_EVENT_DURATION_HOURS = 1
 
@@ -23,30 +35,17 @@ class EventRecurrenceService:
             return False
 
         now_aware = datetime.now(UTC)
-
-        if event.end_time:
-            event_end = event.end_time
-            if event_end.tzinfo is None:
-                event_end = event_end.replace(tzinfo=UTC)
-            return now_aware >= event_end
-        else:
-            event_end = event.start_time
-            if event_end.tzinfo is not None:
-                event_end = event_end.replace(tzinfo=None)
-            event_end = event_end + timedelta(hours=self.DEFAULT_EVENT_DURATION_HOURS)
-            event_end = event_end.replace(tzinfo=UTC)
-            return now_aware >= event_end
+        event_end = _to_aware_utc(event.end_time) if event.end_time else _to_aware_utc(event.start_time) + timedelta(hours=self.DEFAULT_EVENT_DURATION_HOURS)
+        return now_aware >= event_end
 
     async def generate_next_event(self, event: CalendarEvent) -> CalendarEvent | None:
         if not event.is_recurring:
             return None
 
         now_aware = datetime.now(UTC)
-        if event.recurrence_end_date and event.recurrence_end_date.tzinfo:
-            if now_aware >= event.recurrence_end_date:
+        if event.recurrence_end_date:
+            if now_aware >= _to_aware_utc(event.recurrence_end_date):
                 return None
-        elif event.recurrence_end_date and now_aware.replace(tzinfo=None) >= event.recurrence_end_date.replace(tzinfo=None):
-            return None
 
         next_start_time = self.calculate_next_start_time(event)
         if next_start_time is None:
@@ -57,24 +56,22 @@ class EventRecurrenceService:
             return None
 
         if event.recurrence_end_date:
-            end = event.recurrence_end_date.replace(tzinfo=None) if event.recurrence_end_date.tzinfo else event.recurrence_end_date
-            if next_start_time.replace(tzinfo=None) > end:
+            if _to_naive_utc(next_start_time) > _to_naive_utc(event.recurrence_end_date):
                 return None
 
-        new_start = next_start_time
+        next_aware = _to_aware_utc(next_start_time)
+
         new_end = None
         if event.end_time:
-            original_duration = event.end_time - event.start_time
-            new_end = new_start + original_duration
-            if new_end.tzinfo is None and event.start_time.tzinfo is not None:
-                new_end = new_end.replace(tzinfo=UTC)
+            original_duration = _to_aware_utc(event.end_time) - _to_aware_utc(event.start_time)
+            new_end = next_aware + original_duration
 
         new_event = CalendarEvent(
             id=str(uuid4()),
             user_id=event.user_id,
             title=event.title,
             description=event.description,
-            start_time=new_start,
+            start_time=next_aware,
             end_time=new_end,
             all_day=event.all_day,
             color=event.color,
@@ -88,19 +85,20 @@ class EventRecurrenceService:
         self.db.add(new_event)
         await self.db.flush()
 
-        await self.create_event_recurrence(event, new_event, next_start_time)
+        await self.create_event_recurrence(event, new_event, next_aware)
 
         return new_event
 
     async def _find_existing_generated_event(self, event_id: str, start_time: datetime) -> EventRecurrence | None:
+        naive_start = _to_naive_utc(start_time)
         stmt = select(EventRecurrence).where(
             EventRecurrence.event_id == event_id,
-            func.date(EventRecurrence.start_time_of_generated_event) == start_time.date(),
+            func.date(EventRecurrence.start_time_of_generated_event) == naive_start.date(),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    def calculate_next_start_time(self, event: CalendarEvent) -> datetime | None:
+    def calculate_next_start_time(self, event: CalendarEvent, base_time: datetime | None = None) -> datetime | None:
         if not event.start_time:
             return None
 
@@ -113,9 +111,8 @@ class EventRecurrenceService:
         if not isinstance(config, dict):
             return None
 
-        base_date = event.start_time
-        if base_date.tzinfo is not None:
-            base_date = base_date.replace(tzinfo=None)
+        source = base_time if base_time is not None else event.start_time
+        base_date = _to_naive_utc(source)
 
         interval = config.get('interval', 1)
 
@@ -216,11 +213,9 @@ class EventRecurrenceService:
             return False
 
         now_aware = datetime.now(UTC)
-        if event.recurrence_end_date and event.recurrence_end_date.tzinfo:
-            if now_aware >= event.recurrence_end_date:
+        if event.recurrence_end_date:
+            if now_aware >= _to_aware_utc(event.recurrence_end_date):
                 return False
-        elif event.recurrence_end_date and now_aware.replace(tzinfo=None) >= event.recurrence_end_date.replace(tzinfo=None):
-            return False
 
         if not self.is_event_passed(event):
             return False
@@ -267,6 +262,78 @@ class EventRecurrenceService:
         if self.should_generate_event(event):
             return await self.generate_next_event(event)
         return None
+
+    async def catch_up_missed_events(
+        self, event: CalendarEvent, max_days: int = 7
+    ) -> list[CalendarEvent]:
+        if not event.recurrence_type:
+            return []
+
+        if not event.start_time:
+            return []
+
+        now_aware = datetime.now(UTC)
+        if event.recurrence_end_date:
+            if now_aware >= _to_aware_utc(event.recurrence_end_date):
+                return []
+
+        generated_events: list[CalendarEvent] = []
+        now = datetime.now()
+        max_date = now + timedelta(days=max_days)
+
+        working_start = _to_aware_utc(event.start_time)
+        original_duration = None
+        if event.end_time:
+            original_duration = _to_aware_utc(event.end_time) - _to_aware_utc(event.start_time)
+
+        while _to_naive_utc(working_start) < max_date:
+            next_start_naive = self.calculate_next_start_time(event, base_time=working_start)
+            if next_start_naive is None:
+                break
+
+            if next_start_naive > max_date:
+                break
+
+            if event.recurrence_end_date:
+                if next_start_naive > _to_naive_utc(event.recurrence_end_date):
+                    break
+
+            existing = await self._find_existing_generated_event(event.id, next_start_naive)
+            if existing:
+                working_start = next_start_naive.replace(tzinfo=UTC)
+                continue
+
+            next_aware = next_start_naive.replace(tzinfo=UTC)
+
+            new_end = None
+            if original_duration is not None:
+                new_end = next_aware + original_duration
+
+            new_event = CalendarEvent(
+                id=str(uuid4()),
+                user_id=event.user_id,
+                title=event.title,
+                description=event.description,
+                start_time=next_aware,
+                end_time=new_end,
+                all_day=event.all_day,
+                color=event.color,
+                location=event.location,
+                attendees=event.attendees,
+                recurrence_type=event.recurrence_type,
+                recurrence_config=event.recurrence_config,
+                recurrence_end_date=event.recurrence_end_date,
+            )
+
+            self.db.add(new_event)
+            await self.db.flush()
+
+            await self.create_event_recurrence(event, new_event, next_aware)
+            generated_events.append(new_event)
+
+            working_start = next_aware
+
+        return generated_events
 
     @staticmethod
     def validate_recurrence_config(recurrence_type: str, config: dict) -> bool:

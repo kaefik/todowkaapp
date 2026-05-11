@@ -410,6 +410,7 @@
   - MonthView: события показываются во все дни, которые они покрывают (не только start_time)
   - Утилита `frontend/src/utils/calendarEvents.ts`: категоризация событий, расчёт длительности, обработка пересечений
   - Файлы: `frontend/src/utils/calendarEvents.ts`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `frontend/src/components/calendar/DayView.tsx`, `frontend/src/components/calendar/WeekView.tsx`, `frontend/src/components/calendar/MonthView.tsx`
+  - Клик по пустой ячейке времени в DayView и WeekView: открытие создания события с предзаполненным началом и концом (+1 час), локальное время (не UTC)
 
 #### Отображение и выбор задач в Обзоре проектов ✅ (Реализовано 30.04.2026)
 - Под каждым проектом отображается разворачиваемый блок с текущими active/next задачами проекта

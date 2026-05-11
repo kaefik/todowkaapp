@@ -86,6 +86,15 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
+                self._job_startup_recovery_events,
+                'date',
+                run_date=datetime.now(),
+                id='startup_recovery_events',
+                replace_existing=True,
+                max_instances=1
+            )
+
+            self.scheduler.add_job(
                 self._job_cleanup_old_trash,
                 'interval',
                 days=1,
@@ -532,6 +541,37 @@ class TaskScheduler:
 
         except Exception as e:
             logger.error(f"Error in job_startup_recovery: {e}")
+
+    @staticmethod
+    async def _job_startup_recovery_events():
+        logger.info("Running job: startup_recovery_events")
+
+        try:
+            from app.models.calendar_event import CalendarEvent
+            from app.services.event_recurrence_service import EventRecurrenceService
+
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    select(CalendarEvent).where(
+                        CalendarEvent.recurrence_type.isnot(None),
+                        CalendarEvent.start_time.isnot(None),
+                    )
+                )
+                recurring_events = list(result.scalars().all())
+
+                recurrence_service = EventRecurrenceService(session)
+
+                total_generated = 0
+                for event in recurring_events:
+                    if recurrence_service.is_event_passed(event):
+                        generated = await recurrence_service.catch_up_missed_events(event, max_days=7)
+                        total_generated += len(generated)
+
+                await session.commit()
+                logger.info(f"Startup recovery events: generated {total_generated} missed events from {len(recurring_events)} recurring events")
+
+        except Exception as e:
+            logger.error(f"Error in job_startup_recovery_events: {e}")
 
     @staticmethod
     async def _job_cleanup_old_trash():
