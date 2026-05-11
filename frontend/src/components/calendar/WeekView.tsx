@@ -76,6 +76,7 @@ export function WeekView() {
   const { tasks } = useCalendarTasks()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
+  const [editorDefaultEnd, setEditorDefaultEnd] = useState<string | undefined>(undefined)
   const [detailEvent, setDetailEvent] = useState<CalendarEvent | null>(null)
   const allDayRef = useRef<HTMLDivElement>(null)
 
@@ -87,6 +88,18 @@ export function WeekView() {
   const handleEventEdit = (event: CalendarEvent) => {
     setDetailEvent(null)
     setEditorEvent(event)
+  }
+
+  const pad2 = (n: number) => String(n).padStart(2, '0')
+
+  const handleSlotClick = (day: Date, hour: number) => {
+    const d = new Date(day)
+    d.setHours(hour, 0, 0, 0)
+    setEditorDefaultStart(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`)
+    const end = new Date(d)
+    end.setHours(end.getHours() + 1)
+    setEditorDefaultEnd(`${end.getFullYear()}-${pad2(end.getMonth() + 1)}-${pad2(end.getDate())}T${pad2(end.getHours())}:${pad2(end.getMinutes())}`)
+    setEditorEvent(null)
   }
 
   const today = new Date()
@@ -328,8 +341,9 @@ export function WeekView() {
                   {Array.from({ length: 24 }, (_, hour) => (
                     <div
                       key={hour}
-                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800"
+                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10"
                       style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                      onClick={() => handleSlotClick(day, hour)}
                     />
                   ))}
 
@@ -368,9 +382,11 @@ export function WeekView() {
         <EventEditorModal
           event={editorEvent}
           defaultStart={editorDefaultStart}
+          defaultEnd={editorDefaultEnd}
           onClose={() => {
             setEditorEvent(null)
             setEditorDefaultStart(undefined)
+            setEditorDefaultEnd(undefined)
           }}
         />
       ) : null}
