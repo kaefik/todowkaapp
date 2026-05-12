@@ -4,9 +4,11 @@ interface CalendarTaskCardProps {
   task: CalendarTaskItem
   onClick?: () => void
   compact?: boolean
+  timedStyle?: React.CSSProperties
+  showTimeRange?: boolean
 }
 
-export function CalendarTaskCard({ task, onClick, compact }: CalendarTaskCardProps) {
+export function CalendarTaskCard({ task, onClick, compact, timedStyle, showTimeRange }: CalendarTaskCardProps) {
   const now = new Date()
   const isOverdue = !task.is_completed && new Date(task.start_time) < now
   const isCompleted = task.is_completed
@@ -27,14 +29,24 @@ export function CalendarTaskCard({ task, onClick, compact }: CalendarTaskCardPro
     }
   }
 
+  const isTimed = !!timedStyle
+
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-2 py-1 rounded text-xs truncate ${cardClass}`}
-      style={cardStyle}
+      className={`w-full text-left px-2 py-1 rounded text-xs truncate ${isTimed ? 'absolute' : ''} ${cardClass}`}
+      style={{ ...cardStyle, ...timedStyle }}
     >
-      <span className="truncate block">{task.title}</span>
-      {!compact && !task.all_day && task.start_time && (
+      <span className="truncate block">
+        {isCompleted && <span className="mr-1">&#10003;</span>}
+        {task.title}
+      </span>
+      {showTimeRange && !task.all_day && task.start_time && (
+        <span className="text-[10px] opacity-70 block truncate">
+          {new Date(task.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      )}
+      {!compact && !showTimeRange && !task.all_day && task.start_time && (
         <span className="text-[10px] opacity-70 block">
           {new Date(task.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>

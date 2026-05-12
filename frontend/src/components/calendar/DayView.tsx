@@ -85,13 +85,39 @@ export function DayView() {
     return tasks.filter((t) => !t.is_completed && new Date(t.start_time) < now)
   }, [tasks, isCurrentToday])
 
-  const positionedEvents = useMemo(() => {
-    const items = timedEvents.map((e) => {
+  const positionedItems = useMemo(() => {
+    const items: {
+      type: 'event' | 'task'
+      id: string
+      data: CalendarEvent | CalendarTaskItem
+      startMinute: number
+      endMinute: number
+    }[] = []
+
+    for (const e of timedEvents) {
       const start = new Date(e.start_time)
       const startMinute = start.getHours() * 60 + start.getMinutes()
       const durationMin = getDurationMinutes(e)
-      return { event: e, startMinute, endMinute: startMinute + durationMin }
-    })
+      items.push({
+        type: 'event',
+        id: `event-${e.id}`,
+        data: e,
+        startMinute,
+        endMinute: startMinute + durationMin,
+      })
+    }
+
+    for (const t of timedTasks) {
+      const start = new Date(t.start_time)
+      const startMinute = start.getHours() * 60 + start.getMinutes()
+      items.push({
+        type: 'task',
+        id: `task-${t.id}`,
+        data: t,
+        startMinute,
+        endMinute: startMinute + 60,
+      })
+    }
 
     const grouped = getOverlappingGroups(items)
 
@@ -102,7 +128,8 @@ export function DayView() {
       const leftPercent = column * widthPercent
 
       return {
-        event: item.event,
+        type: item.type,
+        data: item.data,
         style: {
           top,
           height,
@@ -112,16 +139,7 @@ export function DayView() {
         } as React.CSSProperties,
       }
     })
-  }, [timedEvents])
-
-  const positionedTasks = useMemo(() => {
-    return timedTasks.map((t) => {
-      const start = new Date(t.start_time)
-      const startMinute = start.getHours() * 60 + start.getMinutes()
-      const top = (startMinute / 60) * HOUR_HEIGHT
-      return { task: t, top }
-    })
-  }, [timedTasks])
+  }, [timedEvents, timedTasks])
 
   const taskHours = useMemo(() => {
     const map = new Map<number, CalendarTaskItem[]>()
@@ -214,25 +232,26 @@ export function DayView() {
             </div>
           )}
 
-          {positionedEvents.map(({ event, style }) => (
-            <CalendarEventCard
-              key={event.id}
-              event={event}
-              showTimeRange
-              timedStyle={style}
-              onClick={() => setDetailEvent(event)}
-            />
-          ))}
-
-          {positionedTasks.map(({ task, top }) => (
-            <div
-              key={task.id}
-              className="absolute left-0 right-0 z-1 px-0.5"
-              style={{ top }}
-            >
-              <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
-            </div>
-          ))}
+          {positionedItems.map(({ type, data, style }) =>
+            type === 'event' ? (
+              <CalendarEventCard
+                key={`event-${(data as CalendarEvent).id}`}
+                event={data as CalendarEvent}
+                showTimeRange
+                timedStyle={style}
+                onClick={() => setDetailEvent(data as CalendarEvent)}
+              />
+            ) : (
+              <CalendarTaskCard
+                key={`task-${(data as CalendarTaskItem).id}`}
+                task={data as CalendarTaskItem}
+                compact
+                showTimeRange
+                timedStyle={style}
+                onClick={() => openTaskDetail((data as CalendarTaskItem).id)}
+              />
+            ),
+          )}
         </div>
       </div>
 
