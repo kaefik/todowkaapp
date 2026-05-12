@@ -46,7 +46,8 @@ function multiDaySpanInWeek(event: CalendarEvent, weekDays: Date[]): { startIdx:
   let startIdx = weekDays.findIndex((d) => isSameDay(d, start))
   if (startIdx === -1) {
     const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate())
-    const weekStart = new Date(weekDays[0].getFullYear(), weekDays[0].getMonth(), weekDays[0].getDate())
+    const firstDay = weekDays[0]!
+    const weekStart = new Date(firstDay.getFullYear(), firstDay.getMonth(), firstDay.getDate())
     if (startDay < weekStart) {
       startIdx = 0
     } else {
@@ -54,8 +55,10 @@ function multiDaySpanInWeek(event: CalendarEvent, weekDays: Date[]): { startIdx:
     }
   }
 
-  const startBound = new Date(weekDays[startIdx].getFullYear(), weekDays[startIdx].getMonth(), weekDays[startIdx].getDate())
-  const endBound = new Date(weekDays[6].getFullYear(), weekDays[6].getMonth(), weekDays[6].getDate(), 23, 59, 59)
+  const startDay = weekDays[startIdx]!
+  const lastDay = weekDays[6]!
+  const startBound = new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate())
+  const endBound = new Date(lastDay.getFullYear(), lastDay.getMonth(), lastDay.getDate(), 23, 59, 59)
 
   const eventEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate())
   if (event.all_day && event.end_time) {
@@ -358,7 +361,7 @@ export function WeekView() {
                   ))}
 
                   {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
-                    hourTasks.map((task) => {
+                    hourTasks.map((task: { id: string; [key: string]: unknown }) => {
                       const top = hour * HOUR_HEIGHT
                       return (
                         <div
