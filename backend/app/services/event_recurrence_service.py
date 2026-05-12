@@ -278,7 +278,7 @@ class EventRecurrenceService:
                 return []
 
         generated_events: list[CalendarEvent] = []
-        now = datetime.now()
+        now = datetime.now(UTC)
         max_date = now + timedelta(days=max_days)
 
         working_start = _to_aware_utc(event.start_time)
@@ -286,12 +286,12 @@ class EventRecurrenceService:
         if event.end_time:
             original_duration = _to_aware_utc(event.end_time) - _to_aware_utc(event.start_time)
 
-        while _to_naive_utc(working_start) < max_date:
+        while _to_naive_utc(working_start) < _to_naive_utc(max_date):
             next_start_naive = self.calculate_next_start_time(event, base_time=working_start)
             if next_start_naive is None:
                 break
 
-            if next_start_naive > max_date:
+            if next_start_naive > _to_naive_utc(max_date):
                 break
 
             if event.recurrence_end_date:

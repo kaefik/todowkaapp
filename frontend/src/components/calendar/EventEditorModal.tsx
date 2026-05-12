@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
 import type { RecurrenceConfig } from '../../hooks/useTasks'
 import { RecurrenceEditor } from '../RecurrenceEditor'
+import { toIsoDateTime } from '../../utils/timezone'
 
 const COLORS = [
   '#10b981', '#3b82f6', '#6366f1', '#f59e0b', '#ef4444',
@@ -140,17 +141,6 @@ export function EventEditorModal({ event, defaultStart, defaultEnd, onClose, isO
       return value.slice(0, 16)
     }
     return value
-  }
-
-  function toIsoDateTime(value: string | null, isAllDay: boolean): string | null {
-    if (!value) return null
-    if (isAllDay) {
-      return value + 'T00:00:00'
-    }
-    if (value.includes('T')) {
-      return value + ':00'
-    }
-    return value + 'T00:00'
   }
 
   const onSubmit = async (data: FormData) => {

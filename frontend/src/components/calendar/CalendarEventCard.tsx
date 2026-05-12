@@ -32,7 +32,7 @@ export function CalendarEventCard({ event, onClick, compact, timedStyle, showTim
 
   const isTimed = !!timedStyle
   const roundedClass = multiDay === 'start' ? 'rounded-l' : multiDay === 'end' ? 'rounded-r' : multiDay === 'middle' ? '' : 'rounded'
-  const opacityClass = past ? 'opacity-50' : ''
+  const opacityClass = past ? 'opacity-60 line-through' : ''
 
   return (
     <button
@@ -46,6 +46,7 @@ export function CalendarEventCard({ event, onClick, compact, timedStyle, showTim
       }}
     >
       <span className="truncate block">
+        {past && <span className="mr-1">&#10003;</span>}
         📅 {event.title}
         {event.recurrence_type && <span className="ml-1">🔄</span>}
       </span>

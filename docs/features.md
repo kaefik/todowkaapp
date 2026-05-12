@@ -400,6 +400,18 @@
   - Frontend: RecurrenceEditor в EventEditorModal, поля recurrence в useCalendarEvents
   - Миграция: `alembic/versions/20260507_1500_add_recurrence_to_calendar_events.py`
   - Файлы: `backend/app/models/calendar_event.py`, `backend/app/models/event_recurrence.py`, `backend/app/services/event_recurrence_service.py`, `backend/app/services/calendar_event_service.py`, `backend/app/schemas/calendar_event.py`, `backend/app/api/calendar_events.py`, `backend/app/scheduler.py`, `frontend/src/components/calendar/EventEditorModal.tsx`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `frontend/src/hooks/useCalendarEvents.ts`, `frontend/src/db/database.ts`
+- **Исправление багов повторяющихся событий** ✅ (Реализовано 12.05.2026)
+  - Баг 1 (сдвиг времени +3ч): фронтенд отправлял naive datetime без timezone-offset, сервер интерпретировал как UTC
+    - Создана утилита `frontend/src/utils/timezone.ts` с `toIsoDateTime()`, добавляющей offset на дату события (DST-корректно)
+    - `EventEditorModal.tsx` использует утилиту вместо локальной функции
+    - All-day события НЕ получают offset
+  - Баг 2 (sync engine терял поля): transform для calendarEvents в syncEngine не содержал `recurrenceType`, `recurrenceConfig`, `recurrenceEndDate`, `location`, `attendees`
+    - Добавлены недостающие поля в transform
+  - Баг 3 (naive/aware смешивание): `catch_up_missed_events` использовал `datetime.now()` (naive) вместо `datetime.now(UTC)` для `max_date`
+    - Заменено на `datetime.now(UTC)`, сравнения через `_to_naive_utc(max_date)`
+  - Визуальное улучшение: прошедшие события с `line-through` и иконкой ✓
+  - Файлы: `frontend/src/utils/timezone.ts`, `frontend/src/components/calendar/EventEditorModal.tsx`, `frontend/src/db/syncEngine.ts`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `backend/app/services/event_recurrence_service.py`
+  - Тесты: `backend/tests/test_event_recurrence.py` (9 тестов), `frontend/src/utils/timezone.test.ts` (8 тестов)
 - **Пропорциональное отображение событий по длительности** ✅ (Реализовано 11.05.2026)
   - DayView и WeekView: события с часами отображаются с высотой, пропорциональной длительности (1 час = 48px в DayView, 40px в WeekView)
   - Абсолютное позиционирование в сетке времени (как Google Calendar): top по времени начала, height по длительности

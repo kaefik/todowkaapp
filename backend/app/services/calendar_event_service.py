@@ -1,13 +1,21 @@
 import uuid as uuid_mod
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID
 
-from sqlalchemy import func, select, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.calendar_event import CalendarEvent
 from app.schemas.calendar_event import CalendarEventCreate, CalendarEventUpdate
+
+
+def _to_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(UTC).replace(tzinfo=None)
+    return dt
 
 
 class CalendarEventService:
@@ -61,15 +69,15 @@ class CalendarEventService:
             user_id=str(user_id),
             title=data.title,
             description=data.description,
-            start_time=data.start_time,
-            end_time=data.end_time,
+            start_time=_to_utc(data.start_time),
+            end_time=_to_utc(data.end_time),
             all_day=data.all_day,
             color=data.color,
             location=data.location,
             attendees=data.attendees,
             recurrence_type=data.recurrence_type,
             recurrence_config=data.recurrence_config,
-            recurrence_end_date=data.recurrence_end_date,
+            recurrence_end_date=_to_utc(data.recurrence_end_date),
         )
         self.db.add(event)
         await self.db.flush()
@@ -85,6 +93,8 @@ class CalendarEventService:
 
         update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
+            if isinstance(value, datetime):
+                value = _to_utc(value)
             setattr(event, field, value)
 
         await self.db.flush()
