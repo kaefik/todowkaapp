@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useCalendarStore } from '../../stores/calendarStore'
 import { useCalendarEvents, type CalendarEvent } from '../../hooks/useCalendarEvents'
-import { useCalendarTasks } from '../../hooks/useCalendarTasks'
+import { useCalendarTasks, type CalendarTaskItem } from '../../hooks/useCalendarTasks'
 import { CalendarTaskCard } from './CalendarTaskCard'
 import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
@@ -361,7 +361,7 @@ export function WeekView() {
                   ))}
 
                   {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
-                    hourTasks.map((task: { id: string; [key: string]: unknown }) => {
+                    hourTasks.map((task: CalendarTaskItem) => {
                       const top = hour * HOUR_HEIGHT
                       return (
                         <div
