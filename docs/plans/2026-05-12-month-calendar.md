@@ -11,9 +11,9 @@
 ### Конкретные баги
 
 1. **Конфликт grid-размещения (строки 280-313)**
-   - Однодневные all-day события: 7 `<div>` без явного `gridRow` — CSS Grid auto-placement
-   - Многодневные бары: явно установлены в `gridRow: '1'`
-   - Результат: бары блокируют ячейки в строке 1, однодневные события для тех же колонок выталкиваются в строку 2, создавая вертикальную разровку между колонками
+   - Однодневные all-day события: 7 вложенных `<div>` внутри `weekDays.map()` — не являются прямыми детьми grid-контейнера, CSS Grid auto-placement к ним не применяется корректно
+   - Многодневные бары: явно установлены в `gridRow: '1'` как прямые дети grid
+   - Результат: бары блокируют ячейки в строке 1, вложенные div-ы дней с однодневными событиями попадают в auto-placement и вытесняются
 
 2. **`position: relative` + `top` у баров (строка 305)**
    - Все бары в `gridRow: '1'`, но визуально сдвинуты через `top: barIdx * 26`
@@ -23,36 +23,68 @@
    - `allDayRowCount = maxRows + barRows` не соответствует реальному grid-лейауту
    - Контейнер может быть слишком маленьким или слишком большим
 
-4. **Нет `overflow: hidden` на контейнерах дней (строка 284)**
-   - `className="p-0.5 space-y-0.5"` без ограничения переполнения
+4. **Нет `overflow: hidden` на секции (строка 274)**
+   - Контейнер all-day не ограничивает переполнение
+
+### Корневая причина
+
+Однодневные события рендерятся как **вложенные** `<div>` внутри `weekDays.map()`, а не как прямые дети grid-контейнера. CSS Grid размещает только **прямых детей**. Поэтому `gridRow`/`gridColumn` нельзя назначить однодневным событиям в текущей структуре — они не участвуют в grid-layout.
 
 ## Решение
 
-### Шаг 1: Реструктурировать секцию all-day
+### Принцип
 
-Заменить смешанный auto-placement + explicit placement на двухуровневую схему:
+Все видимые элементы (бары, однодневные события, задачи) должны быть **прямыми детьми** grid-контейнера с явными `gridRow` и `gridColumn`. Вложенные контейнеры дней убираются.
 
+### Шаг 1: Подготовить данные для плоского рендера
+
+Добавить мемоизированную структуру, объединяющую однодневные события и задачи с их позициями:
+
+```ts
+const flatAllDayItems = useMemo(() => {
+  const items: {
+    type: 'event' | 'task'
+    data: CalendarEvent | CalendarTask
+    dayIndex: number
+    positionInDay: number
+  }[] = []
+
+  for (let i = 0; i < 7; i++) {
+    const events = singleAllDayByDay.get(i) || []
+    const tasks = allDayTasksByDay.get(i) || []
+    let pos = 0
+    for (const e of events) {
+      items.push({ type: 'event', data: e, dayIndex: i, positionInDay: pos++ })
+    }
+    for (const t of tasks) {
+      items.push({ type: 'task', data: t, dayIndex: i, positionInDay: pos++ })
+    }
+  }
+
+  return items
+}, [singleAllDayByDay, allDayTasksByDay])
 ```
-Строки 1..N:        Многодневные бары (каждый бар = своя строка)
-Строки N+1..N+M:    Однодневные all-day события (по колонкам)
-```
-
-Каждому элементу явно назначать `gridRow` и `gridColumn`.
 
 ### Шаг 2: Явное назначение grid-строк
 
-**Многодневные бары:**
-- Бар с индексом `barIdx` → `gridRow: barIdx + 1` (без position: relative)
-- `gridColumn: startIdx + 2 / startIdx + 2 + span`
+Grid layout: 8 колонок (1 — лейбл «Весь день», 2–8 — дни).
 
-**Однодневные all-day события и задачи:**
-- `gridRow: barCount + 1` (начиная после последнего бара)
-- `gridColumn: dayIndex + 2` (каждый день в своей колонке)
-- Несколько событий в одном дне: `space-y-0.5` внутри одной ячейки
+**Многодневные бары (прямые дети grid):**
+- `gridRow: barIdx + 1`
+- `gridColumn: startIdx + 2 / startIdx + 2 + span`
+- Убрать `position: relative`, `top`, `zIndex: 3`
+
+**Однодневные all-day события и задачи (прямые дети grid):**
+- `gridRow: multiDayBars.length + 1 + item.positionInDay`
+- `gridColumn: item.dayIndex + 2`
+- Каждое событие/задача — отдельный grid-child, своя строка
+
+**Лейбл «Весь день» (первая колонка):**
+- `gridColumn: 1`, `gridRow: 1 / span allDayRowCount`
 
 ### Шаг 3: Исправить расчёт высоты
 
-```js
+```ts
 const allDayRowCount = useMemo(() => {
   let maxSingleRows = 0
   for (let i = 0; i < 7; i++) {
@@ -65,34 +97,106 @@ const allDayRowCount = useMemo(() => {
 
 Высота контейнера: `allDayRowCount * 26 + 8`.
 
-### Шаг 4: Добавить overflow: hidden
+Если `allDayRowCount === 0`, но есть `multiDayBars.length > 0` — корректно (barRows входят в `allDayRowCount`).
 
-На контейнеры колонок дней добавить `overflow: hidden`:
+### Шаг 4: Реструктурировать JSX (строки 271-315)
+
+Заменить текущий рендер на:
 
 ```jsx
-<div key={i} className="p-0.5 space-y-0.5 overflow-hidden">
+{(categorized.topEvents.length > 0 || allDayTasks.length > 0) && (
+  <div
+    className="grid grid-cols-[3.5rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 overflow-hidden"
+    style={{ minHeight: allDayRowCount * 26 + 8 }}
+  >
+    {/* Лейбл */}
+    <div
+      className="text-xs text-gray-400 dark:text-gray-500 py-1 pr-2 text-right"
+      style={{ gridColumn: 1, gridRow: `1 / span ${allDayRowCount}` }}
+    >
+      {t('allDay', { defaultValue: 'Весь день' })}
+    </div>
+
+    {/* Многодневные бары */}
+    {multiDayBars.map(({ event, startIdx, span }, barIdx) => (
+      <div
+        key={`bar-${event.id}-${barIdx}`}
+        className="px-0.5"
+        style={{
+          gridColumn: `${startIdx + 2} / ${startIdx + 2 + span}`,
+          gridRow: barIdx + 1,
+          height: 22,
+        }}
+      >
+        <CalendarEventCard event={event} compact onClick={() => setDetailEvent(event)} />
+      </div>
+    ))}
+
+    {/* Однодневные события и задачи */}
+    {flatAllDayItems.map((item) => {
+      const row = multiDayBars.length + 1 + item.positionInDay
+      if (item.type === 'event') {
+        const e = item.data as CalendarEvent
+        return (
+          <div
+            key={`evt-${e.id}`}
+            className="px-0.5"
+            style={{ gridColumn: item.dayIndex + 2, gridRow: row }}
+          >
+            <CalendarEventCard event={e} compact onClick={() => setDetailEvent(e)} />
+          </div>
+        )
+      }
+      const t = item.data as CalendarTask
+      return (
+        <div
+          key={`task-${t.id}`}
+          className="px-0.5"
+          style={{ gridColumn: item.dayIndex + 2, gridRow: row }}
+        >
+          <CalendarTaskCard task={t} compact onClick={() => openTaskDetail(t.id)} />
+        </div>
+      )
+    })}
+  </div>
+)}
 ```
+
+**Что убрано:**
+- Вложенный `weekDays.map()` с `<div key={i}>` — больше не нужен
+- `position: relative` и `top: barIdx * 26` у баров
+- `zIndex: 3` у баров
+- Добавлен `overflow-hidden` на grid-контейнер
 
 ## Изменяемые файлы
 
 | Файл | Изменение |
 |------|-----------|
-| `frontend/src/components/calendar/WeekView.tsx` | Реструктуризация секции all-day (строки 271-315) |
+| `frontend/src/components/calendar/WeekView.tsx` | Новый мемо `flatAllDayItems`, реструктуризация секции all-day (строки 271-315) |
 
 ## Схема нового лейаута
 
 ```
-┌─────────┬──────┬──────┬──────┬──────┬──────┬──────┬──────┐
-│ Весь    │  Пн  │  Вт  │  Ср  │  Чт  │  Пт  │  Сб  │  Вс  │
-│ день    │      │      │      │      │      │      │      │
-├─────────┼──────┴──────┴──────┼──────┴──────┴──────┴──────┤
-│         │ █████ Многодневный бар 1 ██████████████████████ │  ← row 1
-│         │ ████████████ Бар 2 ██████ │                     │  ← row 2
-├─────────┼──────┬──────┬──────┼──────┼──────┼──────┼──────┤
-│         │ evt1 │      │ evt2 │      │      │      │      │  ← row 3
-│         │      │ ts1  │      │      │ ts2  │      │      │  ← row 4
-└─────────┴──────┴──────┴──────┴──────┴──────┴──────┴──────┘
+         col 1      col 2   col 3   col 4   col 5   col 6   col 7   col 8
+                   ┃  Пн   ┃  Вт   ┃  Ср   ┃  Чт   ┃  Пт   ┃  Сб   ┃  Вс
+row 1:  ┃ Весь   ┃ ██████████████ Бар 1 █████████████████████████████████
+row 2:  ┃ день   ┃ ████████ Бар 2 ████████ ┃        ┃        ┃        ┃
+row 3:  ┃        ┃ evt1   ┃        ┃ evt2   ┃        ┃        ┃        ┃
+row 4:  ┃        ┃ evt3   ┃ ts1    ┃        ┃        ┃ ts2    ┃        ┃
 ```
+
+- Каждое однодневное событие/задача занимает свою grid-строку
+- Бары занимают свои строки выше
+- Никаких вложенных div-ов — все элементы прямые дети grid
+
+## Граничные случаи
+
+| Сценарий | Поведение |
+|----------|-----------|
+| 0 баров, только однодневные события | `barCount = 0`, события начинаются с row 1 |
+| 0 однодневных, только бары | Событий нет, `flatAllDayItems = []`, рендерятся только бары |
+| День без событий | Пустые ячейки в этом дне |
+| 5+ событий в одном дне | Секция растёт, `maxSingleRows` увеличивает высоту |
 
 ## Проверка
 
@@ -100,8 +204,10 @@ const allDayRowCount = useMemo(() => {
 1. Создать 2-3 многодневных all-day события, пересекающихся по дням
 2. Создать несколько однодневных all-day событий на те же дни
 3. Создать all-day задачи на разные дни
-4. Убедиться что:
+4. Создать 3+ однодневных события на один день
+5. Убедиться что:
    - Бары не накладываются на однодневные события
    - Однодневные события выровнены по вертикали во всех колонках
    - Карточки не выходят за границы своих колонок
    - Высота секции all-day корректно подстраивается под содержимое
+   - Каждое событие/задача в дне занимает свою строку, без наложений

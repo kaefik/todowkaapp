@@ -186,14 +186,36 @@ export function WeekView() {
     return map
   }, [allDayTasks, weekDays])
 
+  const flatAllDayItems = useMemo(() => {
+    const items: {
+      type: 'event' | 'task'
+      data: CalendarEvent | CalendarTaskItem
+      dayIndex: number
+      positionInDay: number
+    }[] = []
+
+    for (let i = 0; i < 7; i++) {
+      const events = singleAllDayByDay.get(i) || []
+      const tasks = allDayTasksByDay.get(i) || []
+      let pos = 0
+      for (const e of events) {
+        items.push({ type: 'event', data: e, dayIndex: i, positionInDay: pos++ })
+      }
+      for (const t of tasks) {
+        items.push({ type: 'task', data: t, dayIndex: i, positionInDay: pos++ })
+      }
+    }
+
+    return items
+  }, [singleAllDayByDay, allDayTasksByDay])
+
   const allDayRowCount = useMemo(() => {
-    let maxRows = 1
+    let maxSingleRows = 0
     for (let i = 0; i < 7; i++) {
       const count = (singleAllDayByDay.get(i)?.length || 0) + (allDayTasksByDay.get(i)?.length || 0)
-      maxRows = Math.max(maxRows, count)
+      maxSingleRows = Math.max(maxSingleRows, count)
     }
-    const barRows = multiDayBars.length
-    return maxRows + barRows
+    return multiDayBars.length + maxSingleRows
   }, [singleAllDayByDay, allDayTasksByDay, multiDayBars])
 
   const positionedDayEvents = useMemo(() => {
@@ -271,43 +293,52 @@ export function WeekView() {
       {(categorized.topEvents.length > 0 || allDayTasks.length > 0) && (
         <div
           ref={allDayRef}
-          className="grid grid-cols-[3.5rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 relative"
+          className="grid grid-cols-[3.5rem_repeat(7,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 overflow-hidden"
           style={{ minHeight: allDayRowCount * 26 + 8 }}
         >
-          <div className="text-xs text-gray-400 dark:text-gray-500 py-1 pr-2 text-right">
+          <div
+            className="text-xs text-gray-400 dark:text-gray-500 py-1 pr-2 text-right"
+            style={{ gridColumn: 1, gridRow: `1 / span ${allDayRowCount}` }}
+          >
             {t('allDay', { defaultValue: 'Весь день' })}
           </div>
-          {weekDays.map((_, i) => {
-            const dayEvents = singleAllDayByDay.get(i) || []
-            const dayTasks = allDayTasksByDay.get(i) || []
-            return (
-              <div key={i} className="p-0.5 space-y-0.5">
-                {dayEvents.map((e) => (
-                  <CalendarEventCard key={e.id} event={e} compact onClick={() => setDetailEvent(e)} />
-                ))}
-                {dayTasks.map((t) => (
-                  <CalendarTaskCard key={t.id} task={t} compact onClick={() => openTaskDetail(t.id)} />
-                ))}
-              </div>
-            )
-          })}
-          {multiDayBars.map(({ event, startIdx, span }, barIdx) => {
-            const colStart = startIdx + 2
-            const colEnd = colStart + span
+
+          {multiDayBars.map(({ event, startIdx, span }, barIdx) => (
+            <div
+              key={`bar-${event.id}-${barIdx}`}
+              className="px-0.5"
+              style={{
+                gridColumn: `${startIdx + 2} / ${startIdx + 2 + span}`,
+                gridRow: barIdx + 1,
+                height: 22,
+              }}
+            >
+              <CalendarEventCard event={event} compact onClick={() => setDetailEvent(event)} />
+            </div>
+          ))}
+
+          {flatAllDayItems.map((item) => {
+            const row = multiDayBars.length + 1 + item.positionInDay
+            if (item.type === 'event') {
+              const e = item.data as CalendarEvent
+              return (
+                <div
+                  key={`evt-${e.id}`}
+                  className="px-0.5"
+                  style={{ gridColumn: item.dayIndex + 2, gridRow: row }}
+                >
+                  <CalendarEventCard event={e} compact onClick={() => setDetailEvent(e)} />
+                </div>
+              )
+            }
+            const tk = item.data as CalendarTaskItem
             return (
               <div
-                key={`bar-${event.id}-${barIdx}`}
+                key={`task-${tk.id}`}
                 className="px-0.5"
-                style={{
-                  gridColumn: `${colStart} / ${colEnd}`,
-                  gridRow: '1',
-                  position: 'relative',
-                  top: barIdx * 26,
-                  height: 22,
-                  zIndex: 3,
-                }}
+                style={{ gridColumn: item.dayIndex + 2, gridRow: row }}
               >
-                <CalendarEventCard event={event} compact onClick={() => setDetailEvent(event)} />
+                <CalendarTaskCard task={tk} compact onClick={() => openTaskDetail(tk.id)} />
               </div>
             )
           })}
@@ -315,8 +346,8 @@ export function WeekView() {
       )}
 
       <div className="max-h-[500px] overflow-y-auto">
-        <div className="flex">
-          <div className="w-14 flex-shrink-0">
+        <div className="grid grid-cols-[3.5rem_repeat(7,1fr)]">
+          <div>
             {Array.from({ length: 24 }, (_, hour) => (
               <div
                 key={hour}
@@ -328,56 +359,55 @@ export function WeekView() {
             ))}
           </div>
 
-          <div className="flex-1 grid grid-cols-7 relative" style={{ height: totalGridHeight }}>
-            {weekDays.map((day, dayIdx) => {
-              const isCurrentDay = isSameDay(day, today)
-              const dayPositioned = positionedDayEvents.get(dayIdx) || []
-              const dayTaskMap = timedTasksByDay.get(dayIdx) || new Map()
+          {weekDays.map((day, dayIdx) => {
+            const isCurrentDay = isSameDay(day, today)
+            const dayPositioned = positionedDayEvents.get(dayIdx) || []
+            const dayTaskMap = timedTasksByDay.get(dayIdx) || new Map()
 
-              return (
-                <div
-                  key={dayIdx}
-                  className={`relative border-r border-gray-100 dark:border-gray-800 ${
-                    isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
-                  }`}
-                >
-                  {Array.from({ length: 24 }, (_, hour) => (
-                    <div
-                      key={hour}
-                      className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10"
-                      style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
-                      onClick={() => handleSlotClick(day, hour)}
-                    />
-                  ))}
+            return (
+              <div
+                key={dayIdx}
+                className={`relative border-r border-gray-100 dark:border-gray-800 ${
+                  isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
+                }`}
+                style={{ height: totalGridHeight }}
+              >
+                {Array.from({ length: 24 }, (_, hour) => (
+                  <div
+                    key={hour}
+                    className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10"
+                    style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
+                    onClick={() => handleSlotClick(day, hour)}
+                  />
+                ))}
 
-                  {dayPositioned.map(({ event, style }) => (
-                    <CalendarEventCard
-                      key={event.id}
-                      event={event}
-                      showTimeRange
-                      timedStyle={style}
-                      onClick={() => setDetailEvent(event)}
-                    />
-                  ))}
+                {dayPositioned.map(({ event, style }) => (
+                  <CalendarEventCard
+                    key={event.id}
+                    event={event}
+                    showTimeRange
+                    timedStyle={style}
+                    onClick={() => setDetailEvent(event)}
+                  />
+                ))}
 
-                  {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
-                    hourTasks.map((task: CalendarTaskItem) => {
-                      const top = hour * HOUR_HEIGHT
-                      return (
-                        <div
-                          key={task.id}
-                          className="absolute left-0 right-0 z-1 px-0.5"
-                          style={{ top }}
-                        >
-                          <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
-                        </div>
-                      )
-                    }),
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
+                  hourTasks.map((task: CalendarTaskItem) => {
+                    const top = hour * HOUR_HEIGHT
+                    return (
+                      <div
+                        key={task.id}
+                        className="absolute left-0 right-0 z-1 px-0.5"
+                        style={{ top }}
+                      >
+                        <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
+                      </div>
+                    )
+                  }),
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
