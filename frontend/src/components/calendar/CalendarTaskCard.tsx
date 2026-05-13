@@ -30,14 +30,19 @@ export function CalendarTaskCard({ task, onClick, compact, timedStyle, showTimeR
   }
 
   const isTimed = !!timedStyle
+  const isAllDay = task.all_day
+
+  const titleClass = isAllDay
+    ? 'break-words line-clamp-2 block'
+    : 'truncate block'
 
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left px-2 py-1 rounded text-xs truncate ${isTimed ? 'absolute' : ''} ${cardClass}`}
+      className={`w-full text-left px-2 py-1 rounded text-xs ${isAllDay ? '' : 'truncate'} ${isTimed ? 'absolute' : ''} ${cardClass}`}
       style={{ ...cardStyle, ...timedStyle }}
     >
-      <span className="truncate block">
+      <span className={titleClass}>
         {isCompleted && <span className="mr-1">&#10003;</span>}
         {task.title}
       </span>

@@ -367,7 +367,7 @@ export function WeekView() {
             return (
               <div
                 key={dayIdx}
-                className={`relative border-r border-gray-100 dark:border-gray-800 ${
+                className={`relative overflow-hidden border-r border-gray-100 dark:border-gray-800 ${
                   isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
                 }`}
                 style={{ height: totalGridHeight }}
@@ -397,8 +397,8 @@ export function WeekView() {
                     return (
                       <div
                         key={task.id}
-                        className="absolute left-0 right-0 z-1 px-0.5"
-                        style={{ top }}
+                        className="absolute left-0 right-0 z-1 px-0.5 overflow-hidden"
+                        style={{ top, maxHeight: HOUR_HEIGHT - 2 }}
                       >
                         <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
                       </div>
