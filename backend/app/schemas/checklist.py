@@ -7,6 +7,7 @@ from app.schemas.base import BaseResponseSchema
 
 
 class ChecklistItemCreate(BaseModel):
+    id: UUID | None = None
     title: str = Field(min_length=1, max_length=255)
     position: int = 0
 

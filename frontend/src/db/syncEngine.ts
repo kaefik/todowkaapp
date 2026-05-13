@@ -4,6 +4,7 @@ import { apiTaskToDb } from './mappers'
 import { httpClient, ApiError } from '../api/httpClient'
 import { useToastStore } from '../stores/toastStore'
 import { useAuthStore } from '../stores/authStore'
+import { markPushEcho } from './pushEcho'
 import i18n from '../i18n'
 
 export type EntityType = 'task' | 'project' | 'area' | 'context' | 'tag' | 'verbTemplate' | 'checklistItem' | 'calendarEvent'
@@ -324,7 +325,51 @@ async function initialSyncInternal(userId: string): Promise<void> {
     const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
     await removeServerDeleted(resource.table, resource.entityType, serverIds, userId)
   }))
+  await cleanupChecklistDuplicates()
   await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
+}
+
+async function cleanupChecklistDuplicates(): Promise<void> {
+  const all = await db.checklistItems
+    .filter(i => i._syncStatus !== 'deleted')
+    .toArray()
+
+  const byTask = new Map<string, typeof all>()
+  for (const item of all) {
+    if (!byTask.has(item.taskId)) byTask.set(item.taskId, [])
+    byTask.get(item.taskId)!.push(item)
+  }
+
+  const toDelete: string[] = []
+
+  for (const [, items] of byTask) {
+    const byTitlePos = new Map<string, typeof items>()
+    for (const item of items) {
+      const key = `${item.title}\0${item.position}`
+      if (!byTitlePos.has(key)) byTitlePos.set(key, [])
+      byTitlePos.get(key)!.push(item)
+    }
+
+    for (const [, group] of byTitlePos) {
+      if (group.length <= 1) continue
+
+      let keepId = group[0]!.id
+      for (const item of group) {
+        if (item._syncStatus === 'synced') {
+          keepId = item.id
+          break
+        }
+      }
+
+      for (const item of group) {
+        if (item.id !== keepId) toDelete.push(item.id)
+      }
+    }
+  }
+
+  if (toDelete.length > 0) {
+    await db.checklistItems.bulkDelete(toDelete)
+  }
 }
 
 export async function pull(userId: string): Promise<void> {
@@ -642,6 +687,7 @@ async function executeMutationGroup(
     }
 
     if (success) {
+      markPushEcho(mutation.entityType, mutation.entityId)
       await db.mutations.delete(mutation.id)
       const table = getTableForType(mutation.entityType)
       if (mutation.action === 'delete') {
@@ -672,7 +718,7 @@ async function executeMutation(
     const base = `/tasks/${task_id}/checklist`
     switch (mutation.action) {
       case 'create': {
-        await httpClient.post(base, { title: payload.title, position: payload.position })
+        await httpClient.post(base, { id: payload.id, title: payload.title, position: payload.position })
         break
       }
       case 'update': {

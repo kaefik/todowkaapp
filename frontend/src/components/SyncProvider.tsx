@@ -3,6 +3,7 @@ import { pull, push, selectivePull, deleteLocalEntity, getResourceTypeFromSSE, t
 import { useAuthStore } from '../stores/authStore'
 import { db } from '../db/database'
 import { useOnlineStatus } from '../db/hooks'
+import { isPushEcho } from '../db/pushEcho'
 import { SyncContext } from './SyncContext'
 
 const PULL_INTERVAL = 15 * 60 * 1000
@@ -16,29 +17,6 @@ let pullingRefGlobal = false
 let setIsSyncingFn: ((v: boolean) => void) | null = null
 let setLastSyncAtFn: ((d: Date) => void) | null = null
 
-const pushEchoEntities = new Map<string, number>()
-const PUSH_ECHO_WINDOW_MS = 5000
-
-function markPushEcho(entityType: string, entityId: string) {
-  pushEchoEntities.set(`${entityType}:${entityId}`, Date.now())
-}
-
-function isPushEcho(entityType: string, entityId?: string): boolean {
-  const now = Date.now()
-  for (const [key, ts] of pushEchoEntities) {
-    if (now - ts > PUSH_ECHO_WINDOW_MS) {
-      pushEchoEntities.delete(key)
-    }
-  }
-  if (entityId) {
-    return pushEchoEntities.has(`${entityType}:${entityId}`)
-  }
-  for (const key of pushEchoEntities.keys()) {
-    if (key.startsWith(`${entityType}:`)) return true
-  }
-  return false
-}
-
 function updateSyncing() {
   setIsSyncingFn?.(pushingRefGlobal || pullingRefGlobal)
 }
@@ -50,13 +28,8 @@ function schedulePush() {
     pushingRefGlobal = true
     updateSyncing()
     try {
-      const sent = await push()
+      await push()
       setLastSyncAtFn?.(new Date())
-      if (sent) {
-        for (const { entityType, entityId } of sent) {
-          markPushEcho(entityType, entityId)
-        }
-      }
     } catch (err) {
       console.warn('[SyncProvider] Debounced push failed:', err)
     } finally {
@@ -208,13 +181,8 @@ export function SyncProvider({ children }: SyncProviderProps) {
     pushingRefGlobal = true
     updateSyncing()
     try {
-      const sent = await push()
+      await push()
       if (isMountedRef.current) setLastSyncAt(new Date())
-      if (sent) {
-        for (const { entityType, entityId } of sent) {
-          markPushEcho(entityType, entityId)
-        }
-      }
     } catch (err) {
       console.warn('[SyncProvider] Push failed:', err)
     } finally {

@@ -726,6 +726,49 @@ async def test_cascade_delete_checklist(client, db_session, auth_user1, task1):
 
 
 @pytest.mark.asyncio
+async def test_create_checklist_with_client_id(client, auth_user1, task1):
+    client_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    response = await client.post(
+        f"/api/tasks/{task1['id']}/checklist",
+        json={"id": client_id, "title": "Client ID item", "position": 0},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["id"] == client_id
+    assert data["title"] == "Client ID item"
+
+
+@pytest.mark.asyncio
+async def test_create_checklist_without_id(client, auth_user1, task1):
+    response = await client.post(
+        f"/api/tasks/{task1['id']}/checklist",
+        json={"title": "No ID item", "position": 0},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert "id" in data
+    assert len(data["id"]) == 36
+
+
+@pytest.mark.asyncio
+async def test_create_checklist_duplicate_id(client, auth_user1, task1):
+    client_id = "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+    await client.post(
+        f"/api/tasks/{task1['id']}/checklist",
+        json={"id": client_id, "title": "First", "position": 0},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    response = await client.post(
+        f"/api/tasks/{task1['id']}/checklist",
+        json={"id": client_id, "title": "Duplicate", "position": 1},
+        headers={"Authorization": f"Bearer {auth_user1['token']}"},
+    )
+    assert response.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_filter_by_context(client, auth_user1):
     ctx = await client.post(
         "/api/contexts",

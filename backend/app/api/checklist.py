@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -90,7 +91,13 @@ async def create_checklist_item(
             detail="Task not found",
         )
     service = ChecklistService(db)
-    item = await service.create_item(task_id, data)
+    try:
+        item = await service.create_item(task_id, data)
+    except IntegrityError as err:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Checklist item already exists",
+        ) from err
     await _publish_checklist_event(current_user.id, task_id, "item_created")
     return ChecklistItemResponse.model_validate(item)
 

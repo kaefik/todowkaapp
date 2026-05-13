@@ -35,11 +35,14 @@ class ChecklistService:
         return list(result.scalars().all())
 
     async def create_item(self, task_id: UUID | str, data: ChecklistItemCreate) -> ChecklistItem:
-        item = ChecklistItem(
-            task_id=str(task_id),
-            title=data.title,
-            position=data.position,
-        )
+        item_kwargs: dict = {
+            "task_id": str(task_id),
+            "title": data.title,
+            "position": data.position,
+        }
+        if data.id:
+            item_kwargs['id'] = str(data.id)
+        item = ChecklistItem(**item_kwargs)
         self.db.add(item)
         await self.db.flush()
         return item

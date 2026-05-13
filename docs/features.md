@@ -412,6 +412,21 @@
   - Визуальное улучшение: прошедшие события с `line-through` и иконкой ✓
   - Файлы: `frontend/src/utils/timezone.ts`, `frontend/src/components/calendar/EventEditorModal.tsx`, `frontend/src/db/syncEngine.ts`, `frontend/src/components/calendar/CalendarEventCard.tsx`, `backend/app/services/event_recurrence_service.py`
   - Тесты: `backend/tests/test_event_recurrence.py` (9 тестов), `frontend/src/utils/timezone.test.ts` (8 тестов)
+- **Мобильный вид «Неделя» (2 дня + свайп)** ✅ (Реализовано 13.05.2026)
+  - На экранах < 640px вместо 7-колоночной сетки показываются 2 дня рядом
+  - Навигация свайпом: [Пн,Вт] → [Вт,Ср] → [Ср,Чт] → [Чт,Пт] → [Пт,Сб] → [Сб,Вс] (6 позиций, перекрытие)
+  - 7 бейджей дней сверху — тап переключает на пару, содержащую выбранный день
+  - All-day задачи и multi-day бары фильтруются по видимым 2 дням
+  - HOUR_HEIGHT увеличен до 44px для удобства тача
+  - Высота сетки 60vh на мобильном
+  - Десктопный вид (7 колонок) без изменений
+  - Хуки: `useIsMobile` (matchMedia), `useSwipe` (touch-жесты)
+  - Файлы: `frontend/src/hooks/useIsMobile.ts`, `frontend/src/hooks/useSwipe.ts`, `frontend/src/components/calendar/WeekView.tsx`
+- **Исправление текста задач в календаре** ✅ (Реализовано 13.05.2026)
+  - Timed-задачи: обрезка с многоточием (truncate), не выходят за границы часового слота (maxHeight + overflow-hidden)
+  - All-day задачи: перенос текста на новую строку (break-words + line-clamp-2)
+  - overflow-hidden на контейнере дня в WeekView
+  - Файлы: `frontend/src/components/calendar/CalendarTaskCard.tsx`, `frontend/src/components/calendar/WeekView.tsx`
 - **Пропорциональное отображение событий по длительности** ✅ (Реализовано 11.05.2026)
   - DayView и WeekView: события с часами отображаются с высотой, пропорциональной длительности (1 час = 48px в DayView, 40px в WeekView)
   - Абсолютное позиционирование в сетке времени (как Google Calendar): top по времени начала, height по длительности
@@ -1225,6 +1240,7 @@
 - Прогресс-бар в TaskDetailModal
 - DexieDB v6: таблица checklistItems, миграция данных из подзадач
 - Синхронизация: SSE-событие checklist_updated, entityType checklistItem в SyncEngine
+- Фикс дублирования (13.05.2026): клиентский UUID передаётся на сервер при создании → UUID клиента и сервера совпадают → mergeAndPut обновляет существующую запись вместо создания дубликата. Push-echo вынесен в `frontend/src/db/pushEcho.ts` и вызывается внутри `executeMutationGroup`. Очистка существующих дубликатов при `initialSync`.
 - Миграция: создание таблицы checklist_items, миграция данных из tasks с parent_task_id, удаление колонки parent_task_id
 - Файлы: `backend/app/models/checklist.py`, `backend/app/schemas/checklist.py`, `backend/app/services/checklist_service.py`, `backend/app/api/checklist.py`, `frontend/src/hooks/useChecklist.ts`, `frontend/src/db/database.ts`, `frontend/src/db/mappers.ts`
 - Тесты: `backend/tests/test_tasks.py` (7 тестов чеклиста), `frontend/src/Checklist.test.tsx`
