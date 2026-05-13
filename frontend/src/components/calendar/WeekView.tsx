@@ -9,6 +9,8 @@ import { CalendarEventCard } from './CalendarEventCard'
 import { EventEditorModal } from './EventEditorModal'
 import { EventDetailModal } from '../EventDetailModal'
 import { TaskDetailModal } from '../TaskDetailModal'
+import { useIsMobile } from '../../hooks/useIsMobile'
+import { useSwipe } from '../../hooks/useSwipe'
 import type { Task } from '../../hooks/useTasks'
 import {
   isSameDay,
@@ -20,6 +22,7 @@ import {
 } from '../../utils/calendarEvents'
 
 const HOUR_HEIGHT = 40
+const MOBILE_HOUR_HEIGHT = 44
 const WEEK_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
 function getWeekDays(date: Date): Date[] {
@@ -71,12 +74,19 @@ function multiDaySpanInWeek(event: CalendarEvent, weekDays: Date[]): { startIdx:
   return { startIdx, span: Math.min(span, 7 - startIdx) }
 }
 
+function getInitialMobilePair(weekDays: Date[], referenceDate: Date): number {
+  const todayIdx = weekDays.findIndex((d) => isSameDay(d, referenceDate))
+  if (todayIdx === -1) return 0
+  return Math.min(todayIdx, 5)
+}
+
 export function WeekView() {
   const navigate = useNavigate()
   const { t } = useTranslation('calendar')
   const { currentDate, openTaskDetail, selectedTaskId, closeTaskDetail } = useCalendarStore()
   const { events } = useCalendarEvents()
   const { tasks } = useCalendarTasks()
+  const isMobile = useIsMobile()
   const [editorEvent, setEditorEvent] = useState<CalendarEvent | null>(null)
   const [editorDefaultStart, setEditorDefaultStart] = useState<string | undefined>(undefined)
   const [editorDefaultEnd, setEditorDefaultEnd] = useState<string | undefined>(undefined)
@@ -229,9 +239,10 @@ export function WeekView() {
       })
 
       const grouped = getOverlappingGroups(items)
+      const hourHeight = isMobile ? MOBILE_HOUR_HEIGHT : HOUR_HEIGHT
       const positioned = grouped.map(({ item, column, totalColumns }) => {
-        const top = (item.startMinute / 60) * HOUR_HEIGHT
-        const height = Math.max(((item.endMinute - item.startMinute) / 60) * HOUR_HEIGHT, 18)
+        const top = (item.startMinute / 60) * hourHeight
+        const height = Math.max(((item.endMinute - item.startMinute) / 60) * hourHeight, 18)
         const widthPercent = 100 / totalColumns
         const leftPercent = column * widthPercent
         return {
@@ -248,7 +259,7 @@ export function WeekView() {
       result.set(dayIdx, positioned)
     }
     return result
-  }, [categorized.timedByDay])
+  }, [categorized.timedByDay, isMobile])
 
   const timedTasksByDay = useMemo(() => {
     const map = new Map<number, Map<number, typeof timedTasks>>()
@@ -265,6 +276,41 @@ export function WeekView() {
     }
     return map
   }, [timedTasks, weekDays])
+
+  const modals = (
+    <>
+      {editorEvent !== null || editorDefaultStart !== undefined ? (
+        <EventEditorModal
+          event={editorEvent}
+          defaultStart={editorDefaultStart}
+          defaultEnd={editorDefaultEnd}
+          onClose={() => {
+            setEditorEvent(null)
+            setEditorDefaultStart(undefined)
+            setEditorDefaultEnd(undefined)
+          }}
+        />
+      ) : null}
+
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={!!selectedTaskId}
+        onClose={closeTaskDetail}
+        onEdit={handleTaskEdit}
+      />
+
+      <EventDetailModal
+        event={detailEvent}
+        isOpen={!!detailEvent}
+        onClose={() => setDetailEvent(null)}
+        onEdit={handleEventEdit}
+      />
+    </>
+  )
+
+  if (isMobile) {
+    return <WeekViewMobile weekDays={weekDays} today={today} multiDayBars={multiDayBars} flatAllDayItems={flatAllDayItems} positionedDayEvents={positionedDayEvents} timedTasksByDay={timedTasksByDay} allDayRef={allDayRef} handleSlotClick={handleSlotClick} openTaskDetail={openTaskDetail} setDetailEvent={setDetailEvent} modals={modals} t={t} />
+  }
 
   const totalGridHeight = 24 * HOUR_HEIGHT
 
@@ -411,32 +457,270 @@ export function WeekView() {
         </div>
       </div>
 
-      {editorEvent !== null || editorDefaultStart !== undefined ? (
-        <EventEditorModal
-          event={editorEvent}
-          defaultStart={editorDefaultStart}
-          defaultEnd={editorDefaultEnd}
-          onClose={() => {
-            setEditorEvent(null)
-            setEditorDefaultStart(undefined)
-            setEditorDefaultEnd(undefined)
-          }}
+      {modals}
+    </div>
+  )
+}
+
+interface MobileDayColProps {
+  day: Date
+  dayIdx: number
+  isCurrentDay: boolean
+  today: Date
+  hourHeight: number
+  handleSlotClick: (day: Date, hour: number) => void
+  positionedDayEvents: Map<number, { event: CalendarEvent; style: React.CSSProperties }[]>
+  timedTasksByDay: Map<number, Map<number, CalendarTaskItem[]>>
+  openTaskDetail: (id: string) => void
+  setDetailEvent: (e: CalendarEvent | null) => void
+}
+
+function MobileDayCol({
+  day,
+  dayIdx,
+  isCurrentDay,
+  hourHeight,
+  handleSlotClick,
+  positionedDayEvents,
+  timedTasksByDay,
+  openTaskDetail,
+  setDetailEvent,
+}: MobileDayColProps) {
+  const dayPositioned = positionedDayEvents.get(dayIdx) || []
+  const dayTaskMap = timedTasksByDay.get(dayIdx) || new Map()
+  const totalHeight = 24 * hourHeight
+
+  return (
+    <div
+      className={`relative overflow-hidden border-r border-gray-100 dark:border-gray-800 last:border-r-0 ${
+        isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
+      }`}
+      style={{ height: totalHeight }}
+    >
+      {Array.from({ length: 24 }, (_, hour) => (
+        <div
+          key={hour}
+          className="absolute left-0 right-0 border-b border-gray-100 dark:border-gray-800 cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10"
+          style={{ top: hour * hourHeight, height: hourHeight }}
+          onClick={() => handleSlotClick(day, hour)}
         />
-      ) : null}
+      ))}
 
-      <TaskDetailModal
-        taskId={selectedTaskId}
-        isOpen={!!selectedTaskId}
-        onClose={closeTaskDetail}
-        onEdit={handleTaskEdit}
-      />
+      {dayPositioned.map(({ event, style }) => (
+        <CalendarEventCard
+          key={event.id}
+          event={event}
+          showTimeRange
+          timedStyle={style}
+          onClick={() => setDetailEvent(event)}
+        />
+      ))}
 
-      <EventDetailModal
-        event={detailEvent}
-        isOpen={!!detailEvent}
-        onClose={() => setDetailEvent(null)}
-        onEdit={handleEventEdit}
-      />
+      {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
+        hourTasks.map((task: CalendarTaskItem) => (
+          <div
+            key={task.id}
+            className="absolute left-0 right-0 z-1 px-0.5 overflow-hidden"
+            style={{ top: hour * hourHeight, maxHeight: hourHeight - 2 }}
+          >
+            <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
+          </div>
+        )),
+      )}
+    </div>
+  )
+}
+
+interface WeekViewMobileProps {
+  weekDays: Date[]
+  today: Date
+  multiDayBars: { event: CalendarEvent; startIdx: number; span: number }[]
+  flatAllDayItems: {
+    type: 'event' | 'task'
+    data: CalendarEvent | CalendarTaskItem
+    dayIndex: number
+    positionInDay: number
+  }[]
+  positionedDayEvents: Map<number, { event: CalendarEvent; style: React.CSSProperties }[]>
+  timedTasksByDay: Map<number, Map<number, CalendarTaskItem[]>>
+  allDayRef: React.RefObject<HTMLDivElement | null>
+  handleSlotClick: (day: Date, hour: number) => void
+  openTaskDetail: (id: string) => void
+  setDetailEvent: (e: CalendarEvent | null) => void
+  modals: React.ReactNode
+  t: (key: string, opts?: { defaultValue?: string }) => string
+}
+
+function WeekViewMobile({
+  weekDays,
+  today,
+  multiDayBars,
+  flatAllDayItems,
+  positionedDayEvents,
+  timedTasksByDay,
+  allDayRef,
+  handleSlotClick,
+  openTaskDetail,
+  setDetailEvent,
+  modals,
+  t,
+}: WeekViewMobileProps) {
+  const [pairIndex, setPairIndex] = useState(() => getInitialMobilePair(weekDays, today))
+  const hourHeight = MOBILE_HOUR_HEIGHT
+
+  const prevWeekDays = weekDays
+  if (prevWeekDays !== weekDays) {
+    setPairIndex(getInitialMobilePair(weekDays, today))
+  }
+
+  const swipeLeft = () => setPairIndex((p) => Math.min(5, p + 1))
+  const swipeRight = () => setPairIndex((p) => Math.max(0, p - 1))
+
+  const swipeHandlers = useSwipe({ onSwipeLeft: swipeLeft, onSwipeRight: swipeRight })
+
+  const visibleDayIndices = [pairIndex, pairIndex + 1]
+  const visibleDays = visibleDayIndices.map((i) => weekDays[i]!)
+
+  const visibleAllDayItems = flatAllDayItems.filter((item) =>
+    visibleDayIndices.includes(item.dayIndex),
+  )
+  const visibleAllDayCount = visibleAllDayItems.length
+
+  const visibleMultiDayBars = multiDayBars.filter(({ startIdx, span }) => {
+    const endIdx = startIdx + span - 1
+    return startIdx <= pairIndex + 1 && endIdx >= pairIndex
+  })
+
+  const mobileAllDayRowCount = visibleAllDayCount + visibleMultiDayBars.length
+
+  const handleDayBadgeTap = (dayIdx: number) => {
+    setPairIndex(Math.min(dayIdx, 5))
+  }
+
+  return (
+    <div {...swipeHandlers}>
+      <div className="flex gap-1 px-1 py-2 overflow-x-auto border-b border-gray-200 dark:border-gray-700">
+        {weekDays.map((day, i) => {
+          const isCurrent = isSameDay(day, today)
+          const isActive = visibleDayIndices.includes(i)
+          return (
+            <button
+              key={i}
+              onClick={() => handleDayBadgeTap(i)}
+              className={`flex-1 min-w-0 flex flex-col items-center py-1.5 px-1 rounded-lg text-xs transition-colors ${
+                isActive
+                  ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold'
+                  : isCurrent
+                    ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                    : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              <span className="text-[10px] leading-tight">{t(`weekDays.${WEEK_DAY_KEYS[i]}`)}</span>
+              <span className={`text-sm leading-tight mt-0.5 ${isActive ? 'font-bold' : ''}`}>{day.getDate()}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {(mobileAllDayRowCount > 0) && (
+        <div
+          ref={allDayRef}
+          className="grid grid-cols-[2.5rem_repeat(2,1fr)] border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 overflow-hidden"
+          style={{ minHeight: mobileAllDayRowCount * 28 + 8 }}
+        >
+          <div
+            className="text-[10px] text-gray-400 dark:text-gray-500 py-1 pr-1 text-right"
+            style={{ gridColumn: 1, gridRow: `1 / span ${mobileAllDayRowCount}` }}
+          >
+            {t('allDay', { defaultValue: 'Весь день' })}
+          </div>
+
+          {visibleMultiDayBars.map(({ event, startIdx, span }, barIdx) => {
+            const relStart = startIdx - pairIndex
+            const clampedStart = Math.max(0, relStart)
+            const clampedEnd = Math.min(relStart + span, 2)
+            if (clampedEnd <= clampedStart) return null
+            return (
+              <div
+                key={`mbar-${event.id}-${barIdx}`}
+                className="px-0.5"
+                style={{
+                  gridColumn: `${clampedStart + 2} / ${clampedEnd + 2}`,
+                  gridRow: barIdx + 1,
+                  height: 24,
+                }}
+              >
+                <CalendarEventCard event={event} compact onClick={() => setDetailEvent(event)} />
+              </div>
+            )
+          })}
+
+          {visibleAllDayItems.map((item) => {
+            const relDayIdx = item.dayIndex - pairIndex
+            const row = visibleMultiDayBars.length + 1 + item.positionInDay
+            if (item.type === 'event') {
+              const e = item.data as CalendarEvent
+              return (
+                <div
+                  key={`mevt-${e.id}`}
+                  className="px-0.5"
+                  style={{ gridColumn: relDayIdx + 2, gridRow: row }}
+                >
+                  <CalendarEventCard event={e} compact onClick={() => setDetailEvent(e)} />
+                </div>
+              )
+            }
+            const tk = item.data as CalendarTaskItem
+            return (
+              <div
+                key={`mtask-${tk.id}`}
+                className="px-0.5"
+                style={{ gridColumn: relDayIdx + 2, gridRow: row }}
+              >
+                <CalendarTaskCard task={tk} compact onClick={() => openTaskDetail(tk.id)} />
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="max-h-[60vh] overflow-y-auto">
+        <div className="grid grid-cols-[2.5rem_repeat(2,1fr)]">
+          <div>
+            {Array.from({ length: 24 }, (_, hour) => (
+              <div
+                key={hour}
+                className="text-[10px] text-gray-400 dark:text-gray-500 pr-1 text-right"
+                style={{ height: hourHeight }}
+              >
+                <span className="relative -top-2 inline-block">{pad(hour)}:00</span>
+              </div>
+            ))}
+          </div>
+
+          {visibleDays.map((day, colIdx) => {
+            const dayIdx = pairIndex + colIdx
+            const isCurrentDay = isSameDay(day, today)
+            return (
+              <MobileDayCol
+                key={dayIdx}
+                day={day}
+                dayIdx={dayIdx}
+                isCurrentDay={isCurrentDay}
+                today={today}
+                hourHeight={hourHeight}
+                handleSlotClick={handleSlotClick}
+                positionedDayEvents={positionedDayEvents}
+                timedTasksByDay={timedTasksByDay}
+                openTaskDetail={openTaskDetail}
+                setDetailEvent={setDetailEvent}
+              />
+            )
+          })}
+        </div>
+      </div>
+
+      {modals}
     </div>
   )
 }
