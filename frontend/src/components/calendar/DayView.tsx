@@ -191,21 +191,21 @@ export function DayView() {
           {positionedItems.map(({ type, data, style }) =>
             type === 'event' ? (
               <CalendarEventCard
-                key={`event-${(data as CalendarEvent).id}`}
-                event={data as CalendarEvent}
+                key={`event-${(data as unknown as CalendarEvent).id}`}
+                event={data as unknown as CalendarEvent}
                 showTimeRange
                 timedStyle={style}
-                onClick={() => setDetailEvent(data as CalendarEvent)}
+                onClick={() => setDetailEvent(data as unknown as CalendarEvent)}
               />
             ) : (
               <CalendarTaskCard
-                key={`task-${(data as CalendarTaskItem).id}`}
-                task={data as CalendarTaskItem}
+                key={`task-${(data as unknown as CalendarTaskItem).id}`}
+                task={data as unknown as CalendarTaskItem}
                 compact
                 showTimeRange
                 timedStyle={style}
                 showMarker
-                onClick={() => openTaskDetail((data as CalendarTaskItem).id)}
+                onClick={() => openTaskDetail((data as unknown as CalendarTaskItem).id)}
               />
             ),
           )}

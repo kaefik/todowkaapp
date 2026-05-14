@@ -428,21 +428,21 @@ export function WeekView() {
                   item.type === 'event' ? (
                     <CalendarEventCard
                       key={item.id}
-                      event={item.data as CalendarEvent}
+                      event={item.data as unknown as CalendarEvent}
                       showTimeRange
                       timedStyle={style}
                       showMarker
-                      onClick={() => setDetailEvent(item.data as CalendarEvent)}
+                      onClick={() => setDetailEvent(item.data as unknown as CalendarEvent)}
                     />
                   ) : (
                     <CalendarTaskCard
                       key={item.id}
-                      task={item.data as CalendarTaskItem}
+                      task={item.data as unknown as CalendarTaskItem}
                       compact
                       showTimeRange
                       timedStyle={style}
                       showMarker
-                      onClick={() => openTaskDetail((item.data as CalendarTaskItem).id)}
+                      onClick={() => openTaskDetail((item.data as unknown as CalendarTaskItem).id)}
                     />
                   )
                 )}
@@ -502,21 +502,21 @@ function MobileDayCol({
         item.type === 'event' ? (
           <CalendarEventCard
             key={item.id}
-            event={item.data as CalendarEvent}
+            event={item.data as unknown as CalendarEvent}
             showTimeRange
             timedStyle={style}
             showMarker
-            onClick={() => setDetailEvent(item.data as CalendarEvent)}
+            onClick={() => setDetailEvent(item.data as unknown as CalendarEvent)}
           />
         ) : (
           <CalendarTaskCard
             key={item.id}
-            task={item.data as CalendarTaskItem}
+            task={item.data as unknown as CalendarTaskItem}
             compact
             showTimeRange
             timedStyle={style}
             showMarker
-            onClick={() => openTaskDetail((item.data as CalendarTaskItem).id)}
+            onClick={() => openTaskDetail((item.data as unknown as CalendarTaskItem).id)}
           />
         )
       )}
