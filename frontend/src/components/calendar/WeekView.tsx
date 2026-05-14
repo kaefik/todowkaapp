@@ -328,7 +328,15 @@ export function WeekView() {
               }`}
             >
               <div>{t(`weekDays.${WEEK_DAY_KEYS[i]}`)}</div>
-              <div className="text-lg">{day.getDate()}</div>
+              <div className={`text-lg flex items-center justify-center ${isCurrent ? '' : ''}`}>
+                {isCurrent ? (
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-bold">
+                    {day.getDate()}
+                  </span>
+                ) : (
+                  day.getDate()
+                )}
+              </div>
             </div>
           )
         })}
@@ -411,7 +419,7 @@ export function WeekView() {
               <div
                 key={dayIdx}
                 className={`relative overflow-hidden border-r border-gray-100 dark:border-gray-800 ${
-                  isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
+                  isCurrentDay ? 'bg-indigo-50/50 dark:bg-indigo-900/15' : ''
                 }`}
                 style={{ height: totalGridHeight }}
               >
@@ -485,7 +493,7 @@ function MobileDayCol({
   return (
     <div
       className={`relative overflow-hidden border-r border-gray-100 dark:border-gray-800 last:border-r-0 ${
-        isCurrentDay ? 'bg-indigo-50/20 dark:bg-indigo-900/5' : ''
+        isCurrentDay ? 'bg-indigo-50/40 dark:bg-indigo-900/10' : ''
       }`}
       style={{ height: totalHeight }}
     >
@@ -602,12 +610,17 @@ function WeekViewMobile({
                 isActive
                   ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-semibold'
                   : isCurrent
-                    ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                    ? 'text-indigo-600 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-900/20'
                     : 'text-gray-500 dark:text-gray-400'
               }`}
             >
               <span className="text-[10px] leading-tight">{t(`weekDays.${WEEK_DAY_KEYS[i]}`)}</span>
-              <span className={`text-sm leading-tight mt-0.5 ${isActive ? 'font-bold' : ''}`}>{day.getDate()}</span>
+              <span className={`text-sm leading-tight mt-0.5 ${isActive ? 'font-bold' : ''}`}>
+                {day.getDate()}
+              </span>
+              {isCurrent && !isActive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 mt-0.5" />
+              )}
             </button>
           )
         })}
