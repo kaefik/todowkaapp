@@ -5,6 +5,7 @@ from uuid import uuid4
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
+from app.models.checklist import ChecklistItem
 from app.models.task import Task
 from app.models.task_recurrence import TaskRecurrence
 
@@ -45,28 +46,7 @@ class RecurrenceService:
 
         new_status = previous_gtd_status if previous_gtd_status and previous_gtd_status not in ('completed', 'trash') else 'next'
 
-        new_task = Task(
-            user_id=task.user_id,
-            title=task.title,
-            description=task.description,
-            gtd_status=new_status,
-            context_id=task.context_id,
-            area_id=task.area_id,
-            project_id=task.project_id,
-            due_date=next_due_date,
-            notes=task.notes,
-            recurrence_type=task.recurrence_type,
-            recurrence_config=task.recurrence_config,
-            recurrence_end_date=task.recurrence_end_date,
-            reminder_time=task.reminder_time,
-            reminder_offsets=task.reminder_offsets,
-        )
-
-        if task.tags:
-            new_task.tags = list(task.tags)
-
-        self.db.add(new_task)
-        await self.db.flush()
+        new_task = await self._create_task_from_template(task, next_due_date, new_status)
 
         await self.create_task_recurrence(task, new_task, next_due_date)
 
@@ -225,6 +205,52 @@ class RecurrenceService:
         await self.db.flush()
         return recurrence
 
+    async def _copy_checklist_items(self, source_task: Task, target_task: Task) -> None:
+        stmt = select(ChecklistItem).where(ChecklistItem.task_id == source_task.id).order_by(ChecklistItem.position)
+        result = await self.db.execute(stmt)
+        items = result.scalars().all()
+
+        for item in items:
+            new_item = ChecklistItem(
+                task_id=target_task.id,
+                title=item.title,
+                position=item.position,
+                is_completed=False,
+                completed_at=None,
+            )
+            self.db.add(new_item)
+
+        if items:
+            await self.db.flush()
+
+    async def _create_task_from_template(self, task: Task, due_date: datetime, gtd_status: str) -> Task:
+        new_task = Task(
+            user_id=task.user_id,
+            title=task.title,
+            description=task.description,
+            gtd_status=gtd_status,
+            context_id=task.context_id,
+            area_id=task.area_id,
+            project_id=task.project_id,
+            due_date=due_date,
+            notes=task.notes,
+            recurrence_type=task.recurrence_type,
+            recurrence_config=task.recurrence_config,
+            recurrence_end_date=task.recurrence_end_date,
+            reminder_time=task.reminder_time,
+            reminder_offsets=task.reminder_offsets,
+        )
+
+        if task.tags:
+            new_task.tags = list(task.tags)
+
+        self.db.add(new_task)
+        await self.db.flush()
+
+        await self._copy_checklist_items(task, new_task)
+
+        return new_task
+
     async def get_recurrence_history(
         self, task_id: str, limit: int = 50, offset: int = 0
     ) -> tuple[list[TaskRecurrence], int]:
@@ -289,29 +315,7 @@ class RecurrenceService:
 
                 fallback_status = task.gtd_status if task.gtd_status not in ('completed', 'trash') else 'next'
 
-                new_task = Task(
-                    id=str(uuid4()),
-                    user_id=task.user_id,
-                    title=task.title,
-                    description=task.description,
-                    gtd_status=fallback_status,
-                    context_id=task.context_id,
-                    area_id=task.area_id,
-                    project_id=task.project_id,
-                    due_date=next_date,
-                    notes=task.notes,
-                    recurrence_type=task.recurrence_type,
-                    recurrence_config=task.recurrence_config,
-                    recurrence_end_date=task.recurrence_end_date,
-                    reminder_time=task.reminder_time,
-                    reminder_offsets=task.reminder_offsets,
-                )
-
-                if task.tags:
-                    new_task.tags = list(task.tags)
-
-                self.db.add(new_task)
-                await self.db.flush()
+                new_task = await self._create_task_from_template(task, next_date, fallback_status)
 
                 await self.create_task_recurrence(task, new_task, next_date)
                 generated_tasks.append(new_task)

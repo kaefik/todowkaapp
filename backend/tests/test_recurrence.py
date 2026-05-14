@@ -789,3 +789,124 @@ async def test_yearly_validate_rejects_invalid_month(client, auth_user):
         headers=h,
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_new_task_copies_checklist_items(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Recurring with checklist",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "daily",
+            "recurrence_config": {"type": "daily", "interval": 1},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert create_resp.status_code == 201
+    task_id = create_resp.json()["id"]
+
+    for pos, title in enumerate(["Step 1", "Step 2", "Step 3"]):
+        item_resp = await client.post(
+            f"/api/tasks/{task_id}/checklist",
+            json={"title": title, "position": pos},
+            headers=h,
+        )
+        assert item_resp.status_code == 201
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+
+    checklist_resp = await client.get(f"/api/tasks/{new_task['id']}/checklist", headers=h)
+    assert checklist_resp.status_code == 200
+    items = checklist_resp.json()
+    assert len(items) == 3
+    titles = [i["title"] for i in sorted(items, key=lambda x: x["position"])]
+    assert titles == ["Step 1", "Step 2", "Step 3"]
+
+
+@pytest.mark.asyncio
+async def test_new_task_resets_checklist_items_completion(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Recurring with completed checklist",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "daily",
+            "recurrence_config": {"type": "daily", "interval": 1},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert create_resp.status_code == 201
+    task_id = create_resp.json()["id"]
+
+    item_ids = []
+    for pos, title in enumerate(["A", "B", "C"]):
+        item_resp = await client.post(
+            f"/api/tasks/{task_id}/checklist",
+            json={"title": title, "position": pos},
+            headers=h,
+        )
+        assert item_resp.status_code == 201
+        item_ids.append(item_resp.json()["id"])
+
+    for iid in item_ids[:2]:
+        patch_resp = await client.patch(
+            f"/api/tasks/{task_id}/checklist/{iid}",
+            json={"is_completed": True},
+            headers=h,
+        )
+        assert patch_resp.status_code == 200
+
+    await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    new_task = next(t for t in tasks_resp.json()["items"] if t["id"] != task_id)
+
+    checklist_resp = await client.get(f"/api/tasks/{new_task['id']}/checklist", headers=h)
+    assert checklist_resp.status_code == 200
+    items = checklist_resp.json()
+    assert len(items) == 3
+    for item in items:
+        assert item["is_completed"] is False
+        assert item["completed_at"] is None
+
+
+@pytest.mark.asyncio
+async def test_task_without_checklist_generates_without_error(client, auth_user):
+    token = auth_user["token"]
+    h = auth_headers(token)
+
+    create_resp = await client.post(
+        "/api/tasks",
+        json={
+            "title": "Recurring no checklist",
+            "due_date": "2026-04-27T23:59:59Z",
+            "recurrence_type": "daily",
+            "recurrence_config": {"type": "daily", "interval": 1},
+            "gtd_status": "next",
+        },
+        headers=h,
+    )
+    assert create_resp.status_code == 201
+    task_id = create_resp.json()["id"]
+
+    toggle_resp = await client.patch(f"/api/tasks/{task_id}/toggle", headers=h)
+    assert toggle_resp.status_code == 200
+
+    tasks_resp = await client.get("/api/tasks", headers=h)
+    tasks = tasks_resp.json()["items"]
+    assert len(tasks) == 2
+    new_task = next(t for t in tasks if t["id"] != task_id)
+    assert new_task["is_completed"] is False
+    assert new_task["title"] == "Recurring no checklist"

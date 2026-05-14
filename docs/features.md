@@ -151,12 +151,12 @@
    - Для monthly: по числу месяца или по неделе+день недели (например, «первый понедельник»)
    - Для yearly: выбор месяца и дня (например, день рождения, годовщина), с учётом високосных годов
   - Дата окончания повторений (опционально)
-  - Копирование в новую задачу: заголовок, описание, заметки, контекст, область, проект, напоминания, настройки повторения
+   - Копирование в новую задачу: заголовок, описание, заметки, контекст, область, проект, напоминания, настройки повторения, чеклист (со сбросом выполнения)
   - Новая задача создаётся со статусом `next`
   - API: PATCH /tasks/{id}/toggle (автогенерация), PATCH /tasks/{id}/move (при move в completed), POST /tasks/{id}/stop-recurrence, GET /tasks/{id}/recurrences
   - Компонент: `frontend/src/components/RecurrenceEditor.tsx`
   - Сервис: `backend/app/services/recurrence_service.py`
-   - Тесты: `backend/tests/test_recurrence.py` (22 теста)
+   - Тесты: `backend/tests/test_recurrence.py` (25 тестов)
    - Файлы: `backend/app/models/task.py`, `backend/app/models/task_recurrence.py`, `backend/app/services/recurrence_service.py`, `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `backend/app/schemas/task.py`, `backend/app/schemas/recurrence.py`, `frontend/src/components/RecurrenceEditor.tsx`, `frontend/src/components/TaskEditModal.tsx`, `frontend/src/hooks/useTasks.ts`, `frontend/src/hooks/useRecurrences.ts`, `frontend/src/db/database.ts`
    - Исправления багов рекуррентности ✅ (28.04.2026):
      - Нормализация дней недели: единый стандарт 1-7 (Пн=1, Вс=7) во всём сервисе
