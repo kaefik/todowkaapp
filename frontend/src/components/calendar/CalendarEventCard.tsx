@@ -24,9 +24,10 @@ interface CalendarEventCardProps {
   timedStyle?: React.CSSProperties
   showTimeRange?: boolean
   multiDay?: 'start' | 'middle' | 'end' | 'single'
+  showMarker?: boolean
 }
 
-export function CalendarEventCard({ event, onClick, compact, timedStyle, showTimeRange, multiDay }: CalendarEventCardProps) {
+export function CalendarEventCard({ event, onClick, compact, timedStyle, showTimeRange, multiDay, showMarker }: CalendarEventCardProps) {
   const color = event.color || DEFAULT_COLOR
   const past = isEventPast(event)
 
@@ -47,7 +48,8 @@ export function CalendarEventCard({ event, onClick, compact, timedStyle, showTim
     >
       <span className="truncate block">
         {past && <span className="mr-1">&#10003;</span>}
-        📅 {event.title}
+        {showMarker && <span className="mr-1">📅</span>}
+        {event.title}
         {event.recurrence_type && <span className="ml-1">🔄</span>}
       </span>
       {showTimeRange && !event.all_day && (

@@ -15,10 +15,11 @@ import type { Task } from '../../hooks/useTasks'
 import {
   isSameDay,
   getEventCategory,
-  getDurationMinutes,
   getOverlappingGroups,
   isMultiDay,
   pad,
+  toTimedItems,
+  type CalendarTimedItem,
 } from '../../utils/calendarEvents'
 
 const HOUR_HEIGHT = 40
@@ -228,25 +229,38 @@ export function WeekView() {
     return multiDayBars.length + maxSingleRows
   }, [singleAllDayByDay, allDayTasksByDay, multiDayBars])
 
-  const positionedDayEvents = useMemo(() => {
-    const result = new Map<number, { event: CalendarEvent; style: React.CSSProperties }[]>()
-    for (const [dayIdx, dayEvents] of categorized.timedByDay) {
-      const items = dayEvents.map((e) => {
-        const start = new Date(e.start_time)
-        const startMinute = start.getHours() * 60 + start.getMinutes()
-        const durationMin = getDurationMinutes(e)
-        return { event: e, startMinute, endMinute: startMinute + durationMin }
-      })
+  const timedTasksByDayRaw = useMemo(() => {
+    const map = new Map<number, CalendarTaskItem[]>()
+    for (const t of timedTasks) {
+      const dayIdx = weekDays.findIndex((d) => isSameDay(d, new Date(t.start_time)))
+      if (dayIdx !== -1) {
+        const arr = map.get(dayIdx) || []
+        arr.push(t)
+        map.set(dayIdx, arr)
+      }
+    }
+    return map
+  }, [timedTasks, weekDays])
+
+  const positionedItems = useMemo(() => {
+    const result = new Map<number, { item: CalendarTimedItem; style: React.CSSProperties }[]>()
+    const hourHeight = isMobile ? MOBILE_HOUR_HEIGHT : HOUR_HEIGHT
+
+    for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+      const dayEvents = categorized.timedByDay.get(dayIdx) || []
+      const dayTasks = timedTasksByDayRaw.get(dayIdx) || []
+      const items = toTimedItems(dayEvents, dayTasks)
+
+      if (items.length === 0) continue
 
       const grouped = getOverlappingGroups(items)
-      const hourHeight = isMobile ? MOBILE_HOUR_HEIGHT : HOUR_HEIGHT
       const positioned = grouped.map(({ item, column, totalColumns }) => {
         const top = (item.startMinute / 60) * hourHeight
         const height = Math.max(((item.endMinute - item.startMinute) / 60) * hourHeight, 18)
         const widthPercent = 100 / totalColumns
         const leftPercent = column * widthPercent
         return {
-          event: item.event,
+          item,
           style: {
             top,
             height,
@@ -259,23 +273,7 @@ export function WeekView() {
       result.set(dayIdx, positioned)
     }
     return result
-  }, [categorized.timedByDay, isMobile])
-
-  const timedTasksByDay = useMemo(() => {
-    const map = new Map<number, Map<number, typeof timedTasks>>()
-    for (const t of timedTasks) {
-      const dayIdx = weekDays.findIndex((d) => isSameDay(d, new Date(t.start_time)))
-      if (dayIdx !== -1) {
-        const hourMap = map.get(dayIdx) || new Map()
-        const h = new Date(t.start_time).getHours()
-        const arr = hourMap.get(h) || []
-        arr.push(t)
-        hourMap.set(h, arr)
-        map.set(dayIdx, hourMap)
-      }
-    }
-    return map
-  }, [timedTasks, weekDays])
+  }, [categorized.timedByDay, timedTasksByDayRaw, isMobile])
 
   const modals = (
     <>
@@ -309,7 +307,7 @@ export function WeekView() {
   )
 
   if (isMobile) {
-    return <WeekViewMobile weekDays={weekDays} today={today} multiDayBars={multiDayBars} flatAllDayItems={flatAllDayItems} positionedDayEvents={positionedDayEvents} timedTasksByDay={timedTasksByDay} allDayRef={allDayRef} handleSlotClick={handleSlotClick} openTaskDetail={openTaskDetail} setDetailEvent={setDetailEvent} modals={modals} t={t} />
+    return <WeekViewMobile weekDays={weekDays} today={today} multiDayBars={multiDayBars} flatAllDayItems={flatAllDayItems} positionedItems={positionedItems} allDayRef={allDayRef} handleSlotClick={handleSlotClick} openTaskDetail={openTaskDetail} setDetailEvent={setDetailEvent} modals={modals} t={t} />
   }
 
   const totalGridHeight = 24 * HOUR_HEIGHT
@@ -407,8 +405,7 @@ export function WeekView() {
 
           {weekDays.map((day, dayIdx) => {
             const isCurrentDay = isSameDay(day, today)
-            const dayPositioned = positionedDayEvents.get(dayIdx) || []
-            const dayTaskMap = timedTasksByDay.get(dayIdx) || new Map()
+            const dayPositioned = positionedItems.get(dayIdx) || []
 
             return (
               <div
@@ -427,29 +424,27 @@ export function WeekView() {
                   />
                 ))}
 
-                {dayPositioned.map(({ event, style }) => (
-                  <CalendarEventCard
-                    key={event.id}
-                    event={event}
-                    showTimeRange
-                    timedStyle={style}
-                    onClick={() => setDetailEvent(event)}
-                  />
-                ))}
-
-                {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
-                  hourTasks.map((task: CalendarTaskItem) => {
-                    const top = hour * HOUR_HEIGHT
-                    return (
-                      <div
-                        key={task.id}
-                        className="absolute left-0 right-0 z-1 px-0.5 overflow-hidden"
-                        style={{ top, maxHeight: HOUR_HEIGHT - 2 }}
-                      >
-                        <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
-                      </div>
-                    )
-                  }),
+                {dayPositioned.map(({ item, style }) =>
+                  item.type === 'event' ? (
+                    <CalendarEventCard
+                      key={item.id}
+                      event={item.data as CalendarEvent}
+                      showTimeRange
+                      timedStyle={style}
+                      showMarker
+                      onClick={() => setDetailEvent(item.data as CalendarEvent)}
+                    />
+                  ) : (
+                    <CalendarTaskCard
+                      key={item.id}
+                      task={item.data as CalendarTaskItem}
+                      compact
+                      showTimeRange
+                      timedStyle={style}
+                      showMarker
+                      onClick={() => openTaskDetail((item.data as CalendarTaskItem).id)}
+                    />
+                  )
                 )}
               </div>
             )
@@ -469,8 +464,7 @@ interface MobileDayColProps {
   today: Date
   hourHeight: number
   handleSlotClick: (day: Date, hour: number) => void
-  positionedDayEvents: Map<number, { event: CalendarEvent; style: React.CSSProperties }[]>
-  timedTasksByDay: Map<number, Map<number, CalendarTaskItem[]>>
+  positionedItems: Map<number, { item: CalendarTimedItem; style: React.CSSProperties }[]>
   openTaskDetail: (id: string) => void
   setDetailEvent: (e: CalendarEvent | null) => void
 }
@@ -481,13 +475,11 @@ function MobileDayCol({
   isCurrentDay,
   hourHeight,
   handleSlotClick,
-  positionedDayEvents,
-  timedTasksByDay,
+  positionedItems,
   openTaskDetail,
   setDetailEvent,
 }: MobileDayColProps) {
-  const dayPositioned = positionedDayEvents.get(dayIdx) || []
-  const dayTaskMap = timedTasksByDay.get(dayIdx) || new Map()
+  const dayPositioned = positionedItems.get(dayIdx) || []
   const totalHeight = 24 * hourHeight
 
   return (
@@ -506,26 +498,27 @@ function MobileDayCol({
         />
       ))}
 
-      {dayPositioned.map(({ event, style }) => (
-        <CalendarEventCard
-          key={event.id}
-          event={event}
-          showTimeRange
-          timedStyle={style}
-          onClick={() => setDetailEvent(event)}
-        />
-      ))}
-
-      {Array.from(dayTaskMap.entries()).map(([hour, hourTasks]) =>
-        hourTasks.map((task: CalendarTaskItem) => (
-          <div
-            key={task.id}
-            className="absolute left-0 right-0 z-1 px-0.5 overflow-hidden"
-            style={{ top: hour * hourHeight, maxHeight: hourHeight - 2 }}
-          >
-            <CalendarTaskCard task={task} compact onClick={() => openTaskDetail(task.id)} />
-          </div>
-        )),
+      {dayPositioned.map(({ item, style }) =>
+        item.type === 'event' ? (
+          <CalendarEventCard
+            key={item.id}
+            event={item.data as CalendarEvent}
+            showTimeRange
+            timedStyle={style}
+            showMarker
+            onClick={() => setDetailEvent(item.data as CalendarEvent)}
+          />
+        ) : (
+          <CalendarTaskCard
+            key={item.id}
+            task={item.data as CalendarTaskItem}
+            compact
+            showTimeRange
+            timedStyle={style}
+            showMarker
+            onClick={() => openTaskDetail((item.data as CalendarTaskItem).id)}
+          />
+        )
       )}
     </div>
   )
@@ -541,8 +534,7 @@ interface WeekViewMobileProps {
     dayIndex: number
     positionInDay: number
   }[]
-  positionedDayEvents: Map<number, { event: CalendarEvent; style: React.CSSProperties }[]>
-  timedTasksByDay: Map<number, Map<number, CalendarTaskItem[]>>
+  positionedItems: Map<number, { item: CalendarTimedItem; style: React.CSSProperties }[]>
   allDayRef: React.RefObject<HTMLDivElement | null>
   handleSlotClick: (day: Date, hour: number) => void
   openTaskDetail: (id: string) => void
@@ -556,8 +548,7 @@ function WeekViewMobile({
   today,
   multiDayBars,
   flatAllDayItems,
-  positionedDayEvents,
-  timedTasksByDay,
+  positionedItems,
   allDayRef,
   handleSlotClick,
   openTaskDetail,
@@ -710,8 +701,7 @@ function WeekViewMobile({
                 today={today}
                 hourHeight={hourHeight}
                 handleSlotClick={handleSlotClick}
-                positionedDayEvents={positionedDayEvents}
-                timedTasksByDay={timedTasksByDay}
+                positionedItems={positionedItems}
                 openTaskDetail={openTaskDetail}
                 setDetailEvent={setDetailEvent}
               />

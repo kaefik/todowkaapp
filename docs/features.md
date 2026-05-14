@@ -426,7 +426,14 @@
   - Timed-задачи: обрезка с многоточием (truncate), не выходят за границы часового слота (maxHeight + overflow-hidden)
   - All-day задачи: перенос текста на новую строку (break-words + line-clamp-2)
   - overflow-hidden на контейнере дня в WeekView
-  - Файлы: `frontend/src/components/calendar/CalendarTaskCard.tsx`, `frontend/src/components/calendar/WeekView.tsx`
+   - Файлы: `frontend/src/components/calendar/CalendarTaskCard.tsx`, `frontend/src/components/calendar/WeekView.tsx`
+- **Пересекающиеся задачи и события в видах Неделя и День** ✅ (Реализовано 14.05.2026)
+  - Задачи с точным временем участвуют в общем алгоритме раскладки наравне с событиями (единый CalendarTimedItem)
+  - Пересекающиеся элементы отображаются рядом (side-by-side), колонки распределяются по времени старта
+  - Задачи получают фиксированную длительность 30 минут, события — пропорциональную
+  - Визуальное отличие: задачи с маркером ⚑, события с 📅 (только в timed-сетке)
+  - Утилита `toTimedItems()` в calendarEvents.ts объединяет события и задачи
+  - Файлы: `frontend/src/utils/calendarEvents.ts`, `frontend/src/components/calendar/WeekView.tsx`, `frontend/src/components/calendar/DayView.tsx`, `frontend/src/components/calendar/CalendarTaskCard.tsx`, `frontend/src/components/calendar/CalendarEventCard.tsx`
 - **Пропорциональное отображение событий по длительности** ✅ (Реализовано 11.05.2026)
   - DayView и WeekView: события с часами отображаются с высотой, пропорциональной длительности (1 час = 48px в DayView, 40px в WeekView)
   - Абсолютное позиционирование в сетке времени (как Google Calendar): top по времени начала, height по длительности

@@ -1,5 +1,52 @@
 export type EventCategory = 'all-day-single' | 'all-day-multi' | 'timed-single' | 'timed-multi'
 
+export interface CalendarTimedItem {
+  id: string
+  type: 'event' | 'task'
+  startMinute: number
+  endMinute: number
+  data: Record<string, unknown>
+}
+
+const TASK_DEFAULT_DURATION = 30
+
+export function toTimedItems(
+  events: { id: string; start_time: string; end_time: string | null; all_day: boolean }[],
+  tasks: { id: string; start_time: string; all_day: boolean }[],
+): CalendarTimedItem[] {
+  const items: CalendarTimedItem[] = []
+
+  for (const e of events) {
+    if (e.all_day) continue
+    const start = new Date(e.start_time)
+    const startMinute = start.getHours() * 60 + start.getMinutes()
+    const end = e.end_time ? new Date(e.end_time) : null
+    const durationMin = end ? Math.max(15, (end.getTime() - start.getTime()) / (1000 * 60)) : 60
+    items.push({
+      id: `event-${e.id}`,
+      type: 'event',
+      startMinute,
+      endMinute: startMinute + durationMin,
+      data: e as unknown as Record<string, unknown>,
+    })
+  }
+
+  for (const t of tasks) {
+    if (t.all_day) continue
+    const start = new Date(t.start_time)
+    const startMinute = start.getHours() * 60 + start.getMinutes()
+    items.push({
+      id: `task-${t.id}`,
+      type: 'task',
+      startMinute,
+      endMinute: startMinute + TASK_DEFAULT_DURATION,
+      data: t as unknown as Record<string, unknown>,
+    })
+  }
+
+  return items
+}
+
 export interface CalendarEventLike {
   start_time: string
   end_time: string | null

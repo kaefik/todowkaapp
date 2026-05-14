@@ -13,9 +13,9 @@ import type { Task } from '../../hooks/useTasks'
 import {
   isSameDay,
   getEventCategory,
-  getDurationMinutes,
   getOverlappingGroups,
   pad,
+  toTimedItems,
 } from '../../utils/calendarEvents'
 
 const HOUR_HEIGHT = 48
@@ -86,39 +86,7 @@ export function DayView() {
   }, [tasks, isCurrentToday])
 
   const positionedItems = useMemo(() => {
-    const items: {
-      type: 'event' | 'task'
-      id: string
-      data: CalendarEvent | CalendarTaskItem
-      startMinute: number
-      endMinute: number
-    }[] = []
-
-    for (const e of timedEvents) {
-      const start = new Date(e.start_time)
-      const startMinute = start.getHours() * 60 + start.getMinutes()
-      const durationMin = getDurationMinutes(e)
-      items.push({
-        type: 'event',
-        id: `event-${e.id}`,
-        data: e,
-        startMinute,
-        endMinute: startMinute + durationMin,
-      })
-    }
-
-    for (const t of timedTasks) {
-      const start = new Date(t.start_time)
-      const startMinute = start.getHours() * 60 + start.getMinutes()
-      items.push({
-        type: 'task',
-        id: `task-${t.id}`,
-        data: t,
-        startMinute,
-        endMinute: startMinute + 60,
-      })
-    }
-
+    const items = toTimedItems(timedEvents, timedTasks)
     const grouped = getOverlappingGroups(items)
 
     return grouped.map(({ item, column, totalColumns }) => {
@@ -128,7 +96,7 @@ export function DayView() {
       const leftPercent = column * widthPercent
 
       return {
-        type: item.type,
+        type: item.type as 'event' | 'task',
         data: item.data,
         style: {
           top,
@@ -140,17 +108,6 @@ export function DayView() {
       }
     })
   }, [timedEvents, timedTasks])
-
-  const taskHours = useMemo(() => {
-    const map = new Map<number, CalendarTaskItem[]>()
-    for (const t of timedTasks) {
-      const h = new Date(t.start_time).getHours()
-      const arr = map.get(h) || []
-      arr.push(t)
-      map.set(h, arr)
-    }
-    return map
-  }, [timedTasks])
 
   const pad2 = (n: number) => String(n).padStart(2, '0')
 
@@ -210,7 +167,6 @@ export function DayView() {
         <div className="flex-1 relative" style={{ height: totalGridHeight }}>
           {Array.from({ length: 24 }, (_, hour) => {
             const isCurrentHour = isCurrentToday && hour === currentHour
-            const hourTasks = taskHours.get(hour) || []
             return (
               <div
                 key={hour}
@@ -218,7 +174,7 @@ export function DayView() {
                   isCurrentHour ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
                 }`}
                 style={{ top: hour * HOUR_HEIGHT, height: HOUR_HEIGHT }}
-                onClick={() => hourTasks.length === 0 && handleSlotClick(hour)}
+                onClick={() => handleSlotClick(hour)}
               />
             )
           })}
@@ -248,6 +204,7 @@ export function DayView() {
                 compact
                 showTimeRange
                 timedStyle={style}
+                showMarker
                 onClick={() => openTaskDetail((data as CalendarTaskItem).id)}
               />
             ),

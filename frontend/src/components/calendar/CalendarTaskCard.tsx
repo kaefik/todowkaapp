@@ -6,9 +6,10 @@ interface CalendarTaskCardProps {
   compact?: boolean
   timedStyle?: React.CSSProperties
   showTimeRange?: boolean
+  showMarker?: boolean
 }
 
-export function CalendarTaskCard({ task, onClick, compact, timedStyle, showTimeRange }: CalendarTaskCardProps) {
+export function CalendarTaskCard({ task, onClick, compact, timedStyle, showTimeRange, showMarker }: CalendarTaskCardProps) {
   const now = new Date()
   const isOverdue = !task.is_completed && new Date(task.start_time) < now
   const isCompleted = task.is_completed
@@ -44,6 +45,7 @@ export function CalendarTaskCard({ task, onClick, compact, timedStyle, showTimeR
     >
       <span className={titleClass}>
         {isCompleted && <span className="mr-1">&#10003;</span>}
+        {showMarker && <span className="mr-1">⚑</span>}
         {task.title}
       </span>
       {showTimeRange && !task.all_day && task.start_time && (
