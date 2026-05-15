@@ -249,6 +249,13 @@ class TaskService:
                 new_task = await self.recurrence_service.generate_next_task(task, previous_gtd_status)
                 await self.db.flush()
 
+                if new_task:
+                    from app.event_bus import event_bus
+                    await event_bus.publish(f"{user.id}:sync", "checklist_updated", {
+                        "task_id": str(new_task.id),
+                        "action": "item_created",
+                    })
+
                 if self.reminder_service and new_task and user:
                     notification = await self.reminder_service.create_notification(
                         user=user,
@@ -318,6 +325,13 @@ class TaskService:
             if self.recurrence_service.should_generate_task(task):
                 new_task = await self.recurrence_service.generate_next_task(task, previous_gtd_status)
                 await self.db.flush()
+
+                if new_task:
+                    from app.event_bus import event_bus
+                    await event_bus.publish(f"{user.id}:sync", "checklist_updated", {
+                        "task_id": str(new_task.id),
+                        "action": "item_created",
+                    })
 
                 if self.reminder_service and new_task and user:
                     notification = await self.reminder_service.create_notification(
@@ -392,6 +406,13 @@ class TaskService:
             if self.recurrence_service.should_generate_task(task):
                 new_task = await self.recurrence_service.generate_next_task(task, previous_gtd_status)
                 await self.db.flush()
+
+                if new_task:
+                    from app.event_bus import event_bus
+                    await event_bus.publish(f"{user.id}:sync", "checklist_updated", {
+                        "task_id": str(new_task.id),
+                        "action": "item_created",
+                    })
 
                 if self.reminder_service and new_task and user:
                     notification = await self.reminder_service.create_notification(

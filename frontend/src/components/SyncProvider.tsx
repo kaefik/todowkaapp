@@ -49,7 +49,11 @@ function schedulePull(userId: string, eventType?: string) {
       if (eventType) {
         const resourceType = getResourceTypeFromSSE(eventType)
         if (resourceType) {
-          await selectivePull(userId, [resourceType])
+          if (eventType === 'task_updated') {
+            await pull(userId)
+          } else {
+            await selectivePull(userId, [resourceType])
+          }
         } else {
           await pull(userId)
         }
