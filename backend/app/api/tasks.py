@@ -28,6 +28,8 @@ from app.services.task_service import TaskService
 
 tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
+_toggle_body = Body(default=TaskToggleRequest())
+
 
 async def _publish_task_event(user_id, task_id: str, action: str):
     from app.event_bus import event_bus
@@ -260,7 +262,7 @@ async def toggle_task(
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    data: Annotated[TaskToggleRequest, Body(default=TaskToggleRequest())],
+    data: TaskToggleRequest = _toggle_body,
 ) -> TaskResponse:
     recurrence_service = RecurrenceService(db)
     reminder_service = ReminderService(db)
