@@ -1,185 +1,152 @@
-# Критика плана: 2026-05-18-sync
+# Критика плана: 2026-05-18-sync.md
 
 **Дата**: 2026-05-18
-**План**: `docs/plans/2026-05-18-sync.md`
+**Документ**: `docs/plans/2026-05-18-sync.md`
 
 ---
 
-## Сводная таблица
+## Сводка
 
-| # | Lens | Проблема | Серьёзность | Исправление |
-|---|------|----------|-------------|-------------|
-| 1 | Feasibility | `removeServerDeleted` в инкрементальном pull УНИЧТОЖИТ данные | 🔴 BLOCKER | Tombstone на сервере ИЛИ отдельный endpoint удалений |
-| 2 | Feasibility | Mutex через `while + sleep(100)` — race condition | 🔴 BLOCKER | Promise-based mutex |
-| 3 | Completeness | `tasks_cleared` не передаёт список удалённых ID | 🟡 WARNING | Полный pull ИЛИ передавать список ID |
-| 4 | Consistency | Version только для задач, но та же проблема у всех сущностей | 🟡 WARNING | Либо убрать, либо добавить ко всем |
-| 5 | Completeness | Нет плана тестирования | 🟡 WARNING | Добавить тесты |
-| 6 | Assumptions | Предполагается, что BUG #1 — единственная причина «возвращения» задач | 🟡 WARNING | Добавить логирование для диагностики |
-| 7 | Completeness | Нет стратегии отката | 🟢 SUGGESTION | Поэтапный rollout |
-| 8 | YAGNI | Шаг 2.2 (version) — оверкил для текущих симптомов | 🟢 SUGGESTION | Отложить на Phase 2 |
+| # | Линза | Проблема | Серьёзность | Исправление |
+|---|-------|----------|-------------|-------------|
+| 1 | Полнота | План не учитывает `calendarEvent` и `checklistItem` в tombstone | 🔴 BLOCKER | Добавить в таблицу вызовов tombstone |
+| 2 | Точность кода | `clear_completed`/`clear_trash` уже публикует `tasks_cleared` в `:notifications` + `task_updated` в `:sync` | 🟡 WARNING | Учтена текущая двойная публикация |
+| 3 | Архитектура | Mutex не покрывает `selectivePull` | 🔴 BLOCKER | Обернуть selectivePull в mutex |
+| 4 | Архитектура | Mutex не покрывает `doPush`/`doPull` из `useEffect` (начальный push/pull) | 🟡 WARNING | Обернуть doPush/doPull в mutex |
+| 5 | Полнота | Нет tombstone для `calendarEvent` — но delete endpoint существует | 🔴 BLOCKER | Добавить в таблицу |
+| 6 | Согласованность | `router.py` — в плане «зарегистрировать deleted_router», но роутеры подключаются в `main.py`, а не в `router.py` | 🟡 WARNING | Изменить файл на `main.py` |
+| 7 | Риск | Mutex timeout 30s может быть слишком мал для `pull()` при большом объёме данных | 🟡 WARNING | Увеличить timeout или сделать настраиваемым |
+| 8 | Риск | `processTombstones` не обновляет `lastPullAt` — tombstone может обработаться повторно | 🟢 SUGGESTION | OK — tombstone endpoint использует `since`, повторная обработка безопасна |
+| 9 | Точность кода | `extractEntityId` в плане не учитывает `calendar_event_id` | 🟡 WARNING | Добавить `data.calendar_event_id` |
+| 10 | Полнота | `_publish_task_event` для `clear_completed`/`clear_trash` отправляет `task_id="all"` — tombstone обработает нормально, но SSE `tasks_cleared` содержит `task_id: "all"` | 🟢 SUGGESTION | OK — `tasks_cleared` триггерит полный pull |
+| 11 | Риск | `processTombstones` вызывает `httpClient.get('/deleted')` — но фронтенд httpClient использует `/api` prefix | 🟡 WARNING | Проверить базовый URL httpClient |
 
 ---
 
 ## Детальный разбор
 
-### 🔴 BLOCKER #1: `removeServerDeleted` в инкрементальном pull УНИЧТОЖИТ данные
+### 🔴 BLOCKER #1: Отсутствие calendarEvent и checklistItem в tombstone
 
-**Шаг 1.2** предлагает добавить `removeServerDeleted()` в `pull()`. Это **сломает всё**.
+**План (Шаг 1.2)** описывает tombstone для: task, project, area, context, tag.
 
-`removeServerDeleted` (`syncEngine.ts:261-299`) работает так:
-1. Берёт `serverIds` (ID из ответа сервера)
-2. Сравнивает со ВСЕМИ локальными записями со `_syncStatus === 'synced'`
-3. Удаляет те, которых нет в `serverIds`
+**В коде**:
+- `backend/app/api/calendar_events.py:119-132` — `delete_event` делает hard delete
+- `backend/app/api/checklist.py:129-148` — `delete` для checklist items делает hard delete
 
-При инкрементальном pull с `updated_since` сервер возвращает **только изменённые** записи. Если у пользователя 100 задач, а изменены 5 — `serverIds` будет содержать 5 ID. Функция пометит 95 задач на удаление.
+Оба типа сущностей подвержены той же проблеме: удаление на одном устройстве не синхронизируется на другом при пропущенном SSE.
 
-**50% порог** (строка 288) спасёт от полного уничтожения: `95/100 = 95% > 50%` → операция пропускается. Но это значит, что `removeServerDeleted` в инкрементальном pull **никогда не сработает** — он либо удалит данные, либо будет заблокирован порогом.
+**Исправление**: Добавить `calendarEvent` и `checklistItem` в таблицу вызовов tombstone, либо явно указать почему они исключены.
 
-**Исправление — два варианта:**
+### 🔴 BLOCKER #2: Mutex не покрывает selectivePull
 
-**Вариант A (рекомендуемый): Tombstone на сервере**
-- Добавить таблицу `deleted_entities` с полями: `entity_type`, `entity_id`, `user_id`, `deleted_at`
-- При hard-delete записывать tombstone
-- Pull запрашивает `/api/deleted?since={lastPullAt}` и удаляет локальные записи
-- Scheduler чистит tombstone старше 30 дней
+**План (Шаг 1.1)** описывает mutex для `schedulePush` и `schedulePull`.
 
-**Вариант B: Убрать `removeServerDeleted` из инкрементального pull, положиться на SSE**
-- Шаг 1.3 (task_deleted SSE) уже решает проблему для подключённых клиентов
-- Для отключённых — только `initialSync` при повторном подключении
-- Проще, но менее надёжно при пропущенных SSE-событиях
+**В коде**: `SyncProvider.tsx:49-59` — `schedulePull` вызывает `selectivePull` (не полный `pull`) для non-task SSE событий. Этот `selectivePull` тоже подвержен гонке с push.
 
----
+`selectivePull` (`syncEngine.ts:384-392`) делает тот же `mergeAndPut` что и `pull`, но только для выбранных ресурсов. Гонка push + selectivePull возможна.
 
-### 🔴 BLOCKER #2: Mutex через polling — race condition
+**Исправление**: Обернуть selectivePull в тот же mutex.
 
-**Шаг 1.1** предлагает:
+### 🔴 BLOCKER #3: Нет tombstone для calendarEvent
+
+Calendar events имеют SSE `calendar_event_deleted` в маппинге (`syncEngine.ts:26`), но план не включает `calendarEvent` в таблицу tombstone. Calendar events подвержены той же проблеме что и задачи — hard delete на сервере, при пропущенном SSE запись «зависает».
+
+**Исправление**: Добавить `calendar_event` в таблицу tombstone (api/calendar_events.py).
+
+### 🟡 WARNING #4: Mutex не покрывает начальный doPush/doPull
+
+**Код**: `SyncProvider.tsx:224-225` — при монтировании вызываются `doPush()` и `doPull()` напрямую, минуя `schedulePush`/`schedulePull`.
+
+Если одновременно срабатывает SSE-событие → `schedulePull` → и начальный `doPull`, они могут выполниться параллельно. С mutex это было бы безопасно.
+
+**Исправление**: Обернуть `doPush` и `doPull` в `syncMutex.runExclusive()`.
+
+### 🟡 WARNING #5: router.py vs main.py для регистрации роутера
+
+**План (Шаг 1.2)** говорит: «Файл: `backend/app/api/router.py` — Зарегистрировать deleted_router».
+
+**В коде**: Роутеры подключаются в `main.py:94-112` через `api_router.include_router(...)`. Файл `router.py` содержит только `review_api`. Технически можно добавить в `router.py`, но все остальные роутеры добавляются в `main.py`.
+
+**Исправление**: Изменить файл на `main.py` для согласованности.
+
+### 🟡 WARNING #6: Mutex timeout при большом pull
+
+`pull()` делает `fetchAllPages` для 8 ресурсов (tasks, projects, areas, contexts, tags, verbTemplates, checklistItems, calendarEvents). При первом pull или большом `updated_since` окне это может занять больше 30 секунд, особенно на медленном соединении.
+
+**Исправление**: Увеличить timeout для pull (60-90s), либо использовать отдельные таймауты для push и pull.
+
+### 🟡 WARNING #7: httpClient и базовый URL для /deleted
+
+**План (Шаг 1.3)**: `httpClient.get('/deleted?since=...')`
+
+**В коде**: httpClient может добавлять `/api` prefix автоматически. Нужно убедиться что `/deleted` резолвится в `/api/deleted`, а не просто `/deleted`. Если endpoint зарегистрирован как `deleted_router = APIRouter(prefix="/deleted")` внутри `api_router` (prefix="/api"), то полный путь `/api/deleted`.
+
+В `syncEngine.ts` все endpoints указаны как `/tasks`, `/projects` и т.д. — без `/api`. Значит httpClient добавляет его. План корректен, но стоит явно указать это.
+
+### 🟡 WARNING #8: extractEntityId не учитывает calendar_event_id
+
+**План (Шаг 3.1)**:
 ```typescript
-while (pullingRefGlobal) {
-  await sleep(100)
+function extractEntityId(data) {
+  return data.task_id ?? data.project_id ?? data.area_id ??
+         data.context_id ?? data.tag_id ?? data.verb_template_id ??
+         data.calendar_event_id ?? data.checklist_item_id
 }
-pushingRefGlobal = true
 ```
 
-Между проверкой `pullingRefGlobal` и установкой `pushingRefGlobal = true` есть окно. В JavaScript это безопасно только если между ними нет `await`. Но `sleep(100)` — это `await`. Два вызова `doPushWithLock` могут одновременно выйти из `while` и оба установить флаг.
+Хотя `calendar_event_id` есть в функции, в коде `SyncProvider.tsx:98-106` events не включает `calendar_event_deleted` в массив подписок! План не исправляет это — `calendar_event_*` события не обрабатываются через SSE listener.
 
-Хотя в JS один поток, `while` с `await sleep` отдаёт управление event loop. Другой `schedulePush` может сработать между итерациями. Это не atomic test-and-set.
+**Исправление**: Добавить `calendar_event_created`, `calendar_event_updated`, `calendar_event_deleted` в массив events в `SyncProvider.tsx`.
 
-**Исправление — Promise-based mutex:**
-```typescript
-class Mutex {
-  private queue: Promise<void> = Promise.resolve()
-  
-  async runExclusive<T>(fn: () => Promise<T>): Promise<T> {
-    let release: () => void
-    const prev = this.queue
-    this.queue = new Promise<void>(resolve => { release = resolve })
-    await prev
-    try {
-      return await fn()
-    } finally {
-      release!()
-    }
-  }
-}
+### 🟢 SUGGESTION #9: DeletionService.cleanup_old не нужен как scheduler job сразу
 
-const syncMutex = new Mutex()
-```
+Tombstone таблица будет пустой при деплое. Scheduler job для очистки tombstone можно добавить позже, когда накопятся данные.
 
 ---
 
-### 🟡 WARNING #3: `tasks_cleared` не передаёт список удалённых ID
+## Инверсия предположений
 
-Шаг 1.3 предлагает событие `tasks_cleared` с `{"task_id": "all"}`. Но фронтенд не знает, **какие именно** задачи были удалены. `deleteLocalEntity` удаляет по одной. Для массового удаления нужен либо:
-- Передача списка ID в событии (но SSE-сообщения ограничены по размеру)
-- Полный pull после получения `tasks_cleared` (тяжёлый, но надёжный)
-- Или: фронтенд удаляет локально все completed/trashed задачи по статусу
+### 1. Mutex гарантирует отсутствие гонки
+- **Предположение**: Mutex полностью устраняет BUG #1
+- **Инверсия**: `doPush`/`doPull` из useEffect выполняются БЕЗ mutex
+- **Влияние**: Гонка при начальной загрузке
+- **Устранение**: Обернуть doPush/doPull в mutex (WARNING #4)
 
-**Рекомендация:** для `completed_cleared` — удалить локально все задачи с `gtdStatus === 'completed'`. Для `trash_cleared` — аналогично с `gtdStatus === 'trash'`.
+### 2. Tombstone endpoint покрывает все удаления
+- **Предположение**: Все delete-операции записывают tombstone
+- **Инверсия**: calendarEvent и checklistItem delete НЕ записывают tombstone
+- **Влияние**: Удаления календарей/чеклистов не синхронизируются при пропущенном SSE
+- **Устранение**: Добавить в таблицу вызовов (BLOCKER #1, #3)
 
----
-
-### 🟡 WARNING #4: Version только для задач
-
-BUG #5 затрагивает ВСЕ сущности (projects, areas, contexts, tags, etc.), но шаг 2.2 добавляет `version` только к `Task`. Это создаёт впечатление, что проблема решена, хотя она остаётся для остальных сущностей.
-
-**Рекомендация:** либо добавить version ко всем сущностям (что трудоёмко), либо убрать шаг 2.2 из этого плана и вынести в отдельный план «Optimistic concurrency для всех сущностей».
-
----
-
-### 🟡 WARNING #5: Нет плана тестирования
-
-План описывает баги и исправления, но не описывает, как **проверить** что исправления работают. Для синхронизации это особенно критично — многие баги воспроизводятся только при специфической последовательности действий.
-
-**Рекомендация:** добавить раздел с тестами:
-- Unit-тесты для `mergeRecord` с различными комбинациями `_syncStatus` и timestamps
-- Unit-тесты для mutex
-- Integration-тест: два «клиента» + сервер, параллельные toggle/pull/push
-- Ручной сценарий: две вкладки → toggle → проверить, что не возвращается
+### 3. SSE достаточно для доставки удалений
+- **Предположение**: SSE доставляет `*_deleted` события надёжно
+- **Инверсия**: SSE теряется при переподключении, закрытой вкладке, или queue overflow
+- **Влияние**: Без tombstone — запись «зависает» навсегда
+- **Устранение**: Именно это решает tombstone — OK, но нужно для ВСЕХ сущностей
 
 ---
 
-### 🟡 WARNING #6: Предполагается, что BUG #1 — единственная причина «возвращения» задач
+## Пропущенные сценарии
 
-План уверенно связывает симптомы с BUG #1 (push/pull гонка). Но есть и другие возможные причины:
-- BUG #4 (toggle дедупликация) — тот же симптом
-- Потерянные SSE-события (queue overflow в EventBus, `maxsize=50`)
-- Ошибки при записи в IndexedDB (`.catch(() => {})` в多处)
-
-**Рекомендация:** добавить diagnostic logging в критических точках:
-- Логировать toggle push/pull merge с timestamps
-- Логировать `_syncStatus` transitions
-- Это поможет подтвердить диагноз после фикса
-
----
-
-### 🟢 SUGGESTION #7: Нет стратегии отката
-
-Если фикс шага 1.1 (mutex) вызовет зависание (deadlock), нет способа откатиться. Каждый шаг должен быть независимым и обратимым.
-
----
-
-### 🟢 SUGGESTION #8: Шаг 2.2 — оверкил
-
-Version-based concurrency — это правильно, но:
-- Текущие симптомы (задачи возвращаются, задвоение) объясняются BUG #1, #2, #3
-- Шаг 2.2 требует миграцию БД, изменения во всех entity hooks, изменения API
-- Лучше вынести в отдельный план после стабилизации
-
----
-
-## Анализ предположений
-
-| Предположение | Инверсия | Что ломается | Митигация |
-|---------------|----------|--------------|-----------|
-| Push всегда быстрее pull | Pull завершается первым | BUG #1 всё ещё возможен при другом порядке | Mutex (шаг 1.1) защищает от любого порядка |
-| SSE-события доставляются надёжно | SSE queue overflow, обрыв соединения | Удалённые задачи не чистятся | Tombstone (вариант A из BLOCKER #1) |
-| `removeServerDeleted` безопасен в pull | Возвращает только подмножество ID | Массовое удаление данных | Tombstone или убрать из pull |
-| Два экземпляра фронтенда = две вкладки | Одна вкладка, несколько устройств | Симптомы те же, но задержки больше | Увеличить push echo window |
-
----
-
-## Недостающие сценарии
-
-| Сценарий | Риск | Обработка |
-|----------|------|-----------|
-| Push зависает (сервер не отвечает) + pull пытается стартовать | Mutex блокирует pull навсегда | Таймаут mutex (30s) |
-| IndexedDB quota exceeded во время pull | mergeAndPut падает, pull прерывается | Уже есть обработка (строка 246), но pull частично завершён |
-| SSE reconnect после длинного offline (>15 мин) | Пропущено много событий, pull с `updated_since` может не покрыть всё | Полный pull после reconnect вместо инкрементального |
-| Два rapid toggle на одном клиенте за <1.5s (push debounce) | Дедупликация в один toggle, BUG #4 | Шаг 2.1 решает, но только в Фазе 2 |
-| `clear_completed` удаляет 200 задач, SSE сообщение > лимит | Событие не доставлено | Не передавать список ID, а отправить сигнал «clear completed» |
+| Сценарий | Риск | Рекомендация |
+|----------|------|---------------|
+| Вкладка закрыта во время pull → SSE пропущено → tombstone не обработан | 🟡 | Tombstone обработается при следующем pull — OK |
+| Два устройства одновременно удаляют одну задачу | 🟢 | Оба tombstone записываются, при pull оба обработаются — OK |
+| Offline toggle → push с explicit state → сервер уже удалена задача → 404 | 🟢 | syncEngine.ts:612-618 уже обрабатывает 404 — OK |
+| `calendar_event_deleted` SSE не слушается SyncProvider | 🔴 | Добавить в массив подписок |
+| Пользователь очищает корзину на устройстве A → устройство B offline | 🟡 | При следующем pull tombstone удалит все записи — OK |
 
 ---
 
 ## Вердикт
 
 ```
-🔴 NEEDS REVISION
+VERDICT: 🔴 NEEDS REVISION
 ```
 
-**Два блокера** должны быть решены до начала реализации:
-1. Шаг 1.2 (`removeServerDeleted` в pull) — **удалит пользовательские данные**. Нужен другой подход (tombstone или полагаться на SSE + initialSync).
-2. Шаг 1.1 (mutex) — polling-based mutex некорректен. Нужен Promise-based mutex.
+**3 блокера**:
+1. Отсутствие `calendarEvent` и `checklistItem` в tombstone — нарушает полноту решения
+2. Mutex не покрывает `selectivePull` — гонка сохраняется для non-task сущностей
+3. `calendar_event_*` события не обрабатываются SSE listener
 
-**Два предупреждения** стоит адресовать:
-3. `tasks_cleared` — нужна стратегия обработки массовых удалений
-4. Version только для задач — либо расширить, либо вынести
+**Рекомендация**: Исправить блокеры, затем повторить критику.
