@@ -383,7 +383,7 @@ class TaskService:
             counts[status_val] = cnt
         return counts
 
-    async def toggle_task(self, user_id: UUID, task_id: UUID, user: User | None = None) -> Task | None:
+    async def toggle_task(self, user_id: UUID, task_id: UUID, is_completed: bool | None = None, user: User | None = None) -> Task | None:
         task = await self.get_task(user_id, task_id)
         if task is None:
             return None
@@ -392,7 +392,8 @@ class TaskService:
         was_recurring_and_completed = task.is_recurring and was_completed
         previous_gtd_status = task.gtd_status
 
-        task.is_completed = not task.is_completed
+        new_completed = not task.is_completed if is_completed is None else is_completed
+        task.is_completed = new_completed
         task.updated_at = datetime.now(UTC)
         if task.is_completed:
             task.completed_at = datetime.now(UTC)

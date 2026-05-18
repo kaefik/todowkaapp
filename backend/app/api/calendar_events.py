@@ -129,6 +129,11 @@ async def delete_event(
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Event not found')
     await _publish_calendar_event(current_user.id, event_id, 'deleted')
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    await deletion_service.record_tombstone(current_user.id, 'calendarEvent', event_id)
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -12,62 +12,81 @@ const PULL_DEBOUNCE_MS = 3000
 
 let pushTimer: ReturnType<typeof setTimeout> | null = null
 let pullTimer: ReturnType<typeof setTimeout> | null = null
-let pushingRefGlobal = false
-let pullingRefGlobal = false
 let setIsSyncingFn: ((v: boolean) => void) | null = null
 let setLastSyncAtFn: ((d: Date) => void) | null = null
 
-function updateSyncing() {
-  setIsSyncingFn?.(pushingRefGlobal || pullingRefGlobal)
+class Mutex {
+  private queue: Promise<void> = Promise.resolve()
+
+  async runExclusive<T>(fn: () => Promise<T>, timeoutMs = 60000): Promise<T> {
+    let release: () => void
+    const prev = this.queue
+    this.queue = new Promise<void>(resolve => { release = resolve })
+
+    await prev
+
+    try {
+      return await Promise.race([
+        fn(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Mutex execution timeout')), timeoutMs)
+        )
+      ])
+    } finally {
+      release!()
+    }
+  }
 }
+
+const syncMutex = new Mutex()
 
 function schedulePush() {
   if (pushTimer) clearTimeout(pushTimer)
-  pushTimer = setTimeout(async () => {
-    if (pushingRefGlobal) return
-    pushingRefGlobal = true
-    updateSyncing()
-    try {
-      await push()
-      setLastSyncAtFn?.(new Date())
-    } catch (err) {
-      console.warn('[SyncProvider] Debounced push failed:', err)
-    } finally {
-      pushingRefGlobal = false
-      updateSyncing()
-    }
+  pushTimer = setTimeout(() => {
+    syncMutex.runExclusive(async () => {
+      setIsSyncingFn?.(true)
+      try {
+        await push()
+        setLastSyncAtFn?.(new Date())
+      } finally {
+        setIsSyncingFn?.(false)
+      }
+    })
   }, PUSH_DEBOUNCE_MS)
 }
 
 function schedulePull(userId: string, eventType?: string) {
   if (pullTimer) clearTimeout(pullTimer)
-  pullTimer = setTimeout(async () => {
-    if (pullingRefGlobal) return
-    pullingRefGlobal = true
-    updateSyncing()
-    try {
-      if (eventType) {
-        const resourceType = getResourceTypeFromSSE(eventType)
-        if (resourceType) {
-          if (eventType === 'task_updated') {
-            await pull(userId)
+  pullTimer = setTimeout(() => {
+    syncMutex.runExclusive(async () => {
+      setIsSyncingFn?.(true)
+      try {
+        if (eventType) {
+          const resourceType = getResourceTypeFromSSE(eventType)
+          if (resourceType) {
+            if (eventType === 'task_updated' || eventType === 'task_deleted' || eventType === 'tasks_cleared') {
+              await pull(userId)
+            } else {
+              await selectivePull(userId, [resourceType])
+            }
           } else {
-            await selectivePull(userId, [resourceType])
+            await pull(userId)
           }
         } else {
           await pull(userId)
         }
-      } else {
-        await pull(userId)
+        setLastSyncAtFn?.(new Date())
+      } finally {
+        setIsSyncingFn?.(false)
       }
-      setLastSyncAtFn?.(new Date())
-    } catch (err) {
-      console.warn('[SyncProvider] Debounced pull failed:', err)
-    } finally {
-      pullingRefGlobal = false
-      updateSyncing()
-    }
+    })
   }, PULL_DEBOUNCE_MS)
+}
+
+function extractEntityId(data: Record<string, unknown>): string | undefined {
+  return (data.task_id ?? data.project_id ?? data.area_id ??
+          data.context_id ?? data.tag_id ?? data.verb_template_id ??
+          data.calendar_event_id ?? data.checklist_item_id) as string | undefined
 }
 
 class SyncSSEListener {
@@ -97,30 +116,37 @@ class SyncSSEListener {
 
     const events = [
       'task_updated',
+      'task_deleted',
+      'tasks_cleared',
       'checklist_updated',
       'project_created', 'project_updated', 'project_deleted',
       'area_created', 'area_updated', 'area_deleted',
       'context_created', 'context_updated', 'context_deleted',
       'tag_created', 'tag_updated', 'tag_deleted',
       'verb_template_created', 'verb_template_updated', 'verb_template_deleted',
+      'calendar_event_created', 'calendar_event_updated', 'calendar_event_deleted',
     ]
     for (const evt of events) {
       this.es!.addEventListener(evt, (event) => {
-        const isDelete = evt.endsWith('_deleted')
-        const parts = evt.split('_')
+        const data = JSON.parse((event as MessageEvent).data)
+        const entityId = extractEntityId(data)
         const resourceType = getResourceTypeFromSSE(evt)
-        let entityId: string | undefined
-        try {
-          const data = JSON.parse((event as MessageEvent).data)
-          entityId = data[`${parts[0]}_id`] ?? data[`${resourceType}_id`]
-        } catch {}
-        if (!isPushEcho(resourceType ?? 'task', entityId)) {
-          if (isDelete && entityId && resourceType) {
-            this.onDelete?.(resourceType, entityId)
-          } else {
-            this.onPull?.(evt)
-          }
+
+        if (isPushEcho(resourceType ?? 'task', entityId)) return
+
+        if (evt === 'tasks_cleared') {
+          this.onPull?.(evt)
+          return
         }
+
+        if (evt === 'task_deleted' || evt.endsWith('_deleted')) {
+          if (entityId && resourceType) {
+            this.onDelete?.(resourceType, entityId)
+          }
+          return
+        }
+
+        this.onPull?.(evt)
       })
     }
 
@@ -181,33 +207,29 @@ export function SyncProvider({ children }: SyncProviderProps) {
   userRef.current = user
 
   const doPush = useCallback(async () => {
-    if (!userRef.current || pushingRefGlobal) return
-    pushingRefGlobal = true
-    updateSyncing()
-    try {
-      await push()
-      if (isMountedRef.current) setLastSyncAt(new Date())
-    } catch (err) {
-      console.warn('[SyncProvider] Push failed:', err)
-    } finally {
-      pushingRefGlobal = false
-      updateSyncing()
-    }
+    if (!userRef.current) return
+    await syncMutex.runExclusive(async () => {
+      setIsSyncingFn?.(true)
+      try {
+        await push()
+        if (isMountedRef.current) setLastSyncAt(new Date())
+      } finally {
+        setIsSyncingFn?.(false)
+      }
+    })
   }, [])
 
   const doPull = useCallback(async () => {
-    if (!userRef.current || pullingRefGlobal) return
-    pullingRefGlobal = true
-    updateSyncing()
-    try {
-      await pull(userRef.current.id)
-      if (isMountedRef.current) setLastSyncAt(new Date())
-    } catch (err) {
-      console.warn('[SyncProvider] Pull failed:', err)
-    } finally {
-      pullingRefGlobal = false
-      updateSyncing()
-    }
+    if (!userRef.current) return
+    await syncMutex.runExclusive(async () => {
+      setIsSyncingFn?.(true)
+      try {
+        await pull(userRef.current!.id)
+        if (isMountedRef.current) setLastSyncAt(new Date())
+      } finally {
+        setIsSyncingFn?.(false)
+      }
+    })
   }, [])
 
   useEffect(() => {

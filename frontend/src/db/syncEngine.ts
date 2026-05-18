@@ -18,6 +18,8 @@ export interface PushedEntity {
 
 const SSE_TO_RESOURCE: Record<string, ResourceType> = {
   task_updated: 'task',
+  task_deleted: 'task',
+  tasks_cleared: 'task',
   checklist_updated: 'checklistItem',
   project_created: 'project', project_updated: 'project', project_deleted: 'project',
   area_created: 'area', area_updated: 'area', area_deleted: 'area',
@@ -372,13 +374,47 @@ async function cleanupChecklistDuplicates(): Promise<void> {
   }
 }
 
+async function processTombstones(): Promise<void> {
+  const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
+  if (!since) return
+
+  const url = `/deleted?since=${encodeURIComponent(since)}`
+  const response = await httpClient.get<{
+    items: Array<{ entity_type: string; entity_id: string }>
+  }>(url)
+
+  if (!response.data.items.length) return
+
+  const byTable = new Map<ReturnType<typeof getTableForType>, string[]>()
+  for (const item of response.data.items) {
+    const table = getTableForType(item.entity_type as EntityType)
+    if (!table) continue
+    const existing = byTable.get(table) ?? []
+    existing.push(item.entity_id)
+    byTable.set(table, existing)
+  }
+
+  for (const [table, ids] of byTable) {
+    await table.bulkDelete(ids).catch(() => {})
+  }
+}
+
 export async function pull(userId: string): Promise<void> {
   const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
+  console.debug('[SyncEngine] pull started', { since })
+  try {
+    await processTombstones()
+  } catch (err) {
+    console.warn('[SyncEngine] Tombstone processing failed, continuing pull:', err)
+  }
+  let totalProcessed = 0
   await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint, since)
+    totalProcessed += items.length
     await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
   }))
   await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
+  console.debug('[SyncEngine] pull completed', { totalProcessed })
 }
 
 export async function selectivePull(userId: string, resourceTypes: ResourceType[]): Promise<void> {
@@ -748,7 +784,9 @@ async function executeMutation(
       break
     }
     case 'toggle': {
-      await httpClient.patch(`${endpoint}/${mutation.entityId}/toggle`)
+      const body = payload ? { is_completed: payload.is_completed } : {}
+      console.debug('[SyncEngine] executeMutation toggle', mutation.entityId, body)
+      await httpClient.patch(`${endpoint}/${mutation.entityId}/toggle`, body)
       break
     }
     case 'move': {

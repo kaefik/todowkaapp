@@ -324,7 +324,7 @@ export function useTasks(filters?: TaskFilters): UseTasksReturn {
       entityType: 'task',
       entityId: id,
       action: 'toggle',
-      payload: null,
+      payload: JSON.stringify({ is_completed: !existing.isCompleted }),
       timestamp: Date.now(),
       retryCount: 0,
       lastError: null,

@@ -177,6 +177,11 @@ async def delete_project(
         )
 
     await _publish_project_event(current_user.id, project_id, "deleted")
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    await deletion_service.record_tombstone(current_user.id, 'project', project_id)
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

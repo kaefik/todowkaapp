@@ -104,6 +104,15 @@ class TaskScheduler:
             )
 
             self.scheduler.add_job(
+                self._job_cleanup_old_tombstones,
+                'interval',
+                days=1,
+                id='cleanup_old_tombstones',
+                replace_existing=True,
+                max_instances=1
+            )
+
+            self.scheduler.add_job(
                 self._job_reminder_recovery,
                 'date',
                 run_date=datetime.now(),
@@ -588,6 +597,22 @@ class TaskScheduler:
 
         except Exception as e:
             logger.error(f"Error in cleanup_old_trash: {e}")
+
+    @staticmethod
+    async def _job_cleanup_old_tombstones():
+        logger.info("Running job: cleanup_old_tombstones")
+
+        try:
+            from app.models.deleted_entity import DeletionService
+
+            async with AsyncSessionLocal() as session:
+                deletion_service = DeletionService(session)
+                await deletion_service.cleanup_old(days=30)
+                await session.commit()
+                logger.info("Cleaned up tombstones older than 30 days")
+
+        except Exception as e:
+            logger.error(f"Error in cleanup_old_tombstones: {e}")
 
 
 task_scheduler = TaskScheduler()

@@ -15,19 +15,20 @@ from app.api.calendar_events import calendar_events_router
 from app.api.checklist import checklist_router
 from app.api.config import config_router
 from app.api.contexts import contexts_router
+from app.api.deleted import deleted_router
 from app.api.export_import import export_import_router
 from app.api.notifications import notifications_router
 from app.api.projects import projects_router
 from app.api.router import api_router
 from app.api.sessions import sessions_router
+from app.api.settings import settings_router
 from app.api.sse import sse_router
 from app.api.stats import stats_router
 from app.api.tags import tags_router
 from app.api.tasks import tasks_router
+from app.api.telegram_auth import router as telegram_router
 from app.api.users import users_router
 from app.api.verb_templates import verb_templates_router
-from app.api.settings import settings_router
-from app.api.telegram_auth import router as telegram_router
 from app.config import settings
 from app.rate_limit import get_client_ip, limiter
 
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     api_router.include_router(checklist_router)
     api_router.include_router(config_router)
     api_router.include_router(contexts_router)
+    api_router.include_router(deleted_router)
     api_router.include_router(export_import_router)
     api_router.include_router(notifications_router)
     api_router.include_router(projects_router)

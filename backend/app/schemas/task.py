@@ -75,6 +75,10 @@ class TaskReorderRequest(BaseModel):
     position: int = Field(ge=0)
 
 
+class TaskToggleRequest(BaseModel):
+    is_completed: bool | None = None
+
+
 class TaskResponse(BaseResponseSchema):
     id: UUID
     user_id: UUID

@@ -146,5 +146,10 @@ async def delete_checklist_item(
             detail="Checklist item not found",
         )
     await _publish_checklist_event(current_user.id, task_id, "item_deleted")
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    await deletion_service.record_tombstone(current_user.id, 'checklistItem', item_id)
+
     from fastapi import Response
     return Response(status_code=status.HTTP_204_NO_CONTENT)

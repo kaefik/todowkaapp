@@ -347,6 +347,29 @@
 - **Файлы:** `frontend/src/components/review/ReviewDashboard.tsx`, `ReviewOverdue.tsx`, `ReviewInbox.tsx`, `ReviewSomeday.tsx`, `ReviewProjects.tsx`, `ReviewCompletion.tsx`, `frontend/src/routes/Review.tsx`, `frontend/src/stores/reviewStore.ts`, `frontend/src/api/review.ts`, `backend/app/services/review_service.py`, `backend/app/schemas/review.py`, `backend/app/api/review.py`, `backend/app/models/review_snapshot.py`
 - **Phase 2 (отложено):** Activity strip (done-per-day), `/review/history` для сравнения недель, resume progress
 
+- **Исправление критических багов синхронизации ✅ (Реализовано 18.05.2026)**
+  - BUG #1 (КРИТИЧЕСКИЙ): Гонка между push и pull — завершённые задачи «возвращались» как активные
+    - Замена флагов `pushingRefGlobal`/`pullingRefGlobal` на Promise-based mutex с таймаутом 60s
+    - Push, pull, selectivePull, doPush, doPull никогда не выполняются параллельно
+    - `SyncSSEListener` корректно обрабатывает `tasks_cleared` (полный pull) и `task_deleted` (локальное удаление)
+  - BUG #2 (КРИТИЧЕСКИЙ): Удалённые сущности не синхронизировались между клиентами
+    - Tombstone-модель `DeletedEntity` для ВСЕХ типов (task, project, area, context, tag, calendarEvent, checklistItem)
+    - `DeletionService` — централизованный сервис записи/чтения tombstone
+    - API endpoint `GET /api/deleted?since=...` — возвращает удалённые ID с timestamp
+    - Фронтенд: `processTombstones()` в syncEngine.ts — группирует по таблицам и вызывает `bulkDelete`
+    - SSE: `task_deleted` для единичных удалений, `tasks_cleared` для массовых
+    - Подписки на `calendar_event_*` SSE события (ранее отсутствовали)
+    - Scheduler job `_job_cleanup_old_tombstones` — чистит tombstone старше 30 дней
+  - BUG #3 (СРЕДНИЙ): Дедупликация toggle + state-flipping сервер
+    - `TaskToggleRequest` с опциональным `is_completed: bool | None` (None = старый flip)
+    - Фронтенд отправляет целевое состояние `{ is_completed: true/false }` в toggle-мутации
+    - Обратная совместимость: без тела — старый flip
+  - BUG #4 (НИЗКИЙ): Хрупкий парсинг entityId из SSE
+    - Функция `extractEntityId()` — централизованный парсинг вместо `parts[0]` подхода
+  - Diagnostic logging в `mergeRecord` и `pull()`
+  - Миграция: `alembic/versions/20260518_*_add_deleted_entities_table_*.py`
+  - Файлы: `backend/app/models/deleted_entity.py`, `backend/app/api/deleted.py`, `backend/app/models/__init__.py`, `backend/app/main.py`, `backend/app/api/tasks.py`, `backend/app/api/projects.py`, `backend/app/api/areas.py`, `backend/app/api/contexts.py`, `backend/app/api/tags.py`, `backend/app/api/calendar_events.py`, `backend/app/api/checklist.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `backend/app/scheduler.py`, `frontend/src/components/SyncProvider.tsx`, `frontend/src/db/syncEngine.ts`, `frontend/src/db/conflictResolution.ts`, `frontend/src/hooks/useTasks.ts`
+
 #### Календарь ✅ (Реализовано 05.05.2026)
 - Страница `/calendar` с 4 видами: День, Неделя, Месяц, Год
 - Виртуальные события из задач с `due_date` (маппинг GTD-статус → цвет)

@@ -144,4 +144,9 @@ async def delete_area(
         )
 
     await _publish_area_event(current_user.id, area_id, "deleted")
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    await deletion_service.record_tombstone(current_user.id, 'area', area_id)
+
     return Response(status_code=status.HTTP_204_NO_CONTENT)

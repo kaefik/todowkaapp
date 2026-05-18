@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from app.schemas.task import (
     TaskMoveRequest,
     TaskReorderRequest,
     TaskResponse,
+    TaskToggleRequest,
     TaskUpdate,
 )
 from app.services.checklist_service import ChecklistService
@@ -30,7 +31,13 @@ tasks_router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 async def _publish_task_event(user_id, task_id: str, action: str):
     from app.event_bus import event_bus
-    await event_bus.publish(f"{user_id}:sync", "task_updated", {
+    if action == "deleted":
+        event_type = "task_deleted"
+    elif action in ("completed_cleared", "trash_cleared"):
+        event_type = "tasks_cleared"
+    else:
+        event_type = "task_updated"
+    await event_bus.publish(f"{user_id}:sync", event_type, {
         "task_id": str(task_id),
         "action": action,
     })
@@ -253,11 +260,12 @@ async def toggle_task(
     task_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    data: Annotated[TaskToggleRequest, Body(default=TaskToggleRequest())],
 ) -> TaskResponse:
     recurrence_service = RecurrenceService(db)
     reminder_service = ReminderService(db)
     service = TaskService(db, recurrence_service=recurrence_service, reminder_service=reminder_service)
-    task = await service.toggle_task(user_id=current_user.id, task_id=task_id, user=current_user)
+    task = await service.toggle_task(user_id=current_user.id, task_id=task_id, is_completed=data.is_completed, user=current_user)
 
     if task is None:
         raise HTTPException(
@@ -277,7 +285,20 @@ async def clear_completed(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, int]:
     service = TaskService(db)
+
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(Task.id).where(Task.user_id == current_user.id, Task.gtd_status == 'completed')
+    )
+    completed_ids = [str(r) for r in result.scalars().all()]
+
     deleted_count = await service.clear_completed(user_id=current_user.id)
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    if completed_ids:
+        await deletion_service.record_tombstones_batch(current_user.id, 'task', completed_ids)
+
     await _publish_task_event(current_user.id, "all", "completed_cleared")
 
     from app.event_bus import event_bus
@@ -294,7 +315,20 @@ async def clear_trash(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> dict[str, int]:
     service = TaskService(db)
+
+    from sqlalchemy import select as sa_select
+    result = await db.execute(
+        sa_select(Task.id).where(Task.user_id == current_user.id, Task.gtd_status == 'trash')
+    )
+    trash_ids = [str(r) for r in result.scalars().all()]
+
     deleted_count = await service.clear_trash(user_id=current_user.id)
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    if trash_ids:
+        await deletion_service.record_tombstones_batch(current_user.id, 'task', trash_ids)
+
     await _publish_task_event(current_user.id, "all", "trash_cleared")
 
     from app.event_bus import event_bus
@@ -319,6 +353,10 @@ async def delete_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
+
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    await deletion_service.record_tombstone(current_user.id, 'task', task_id)
 
     await _publish_task_event(current_user.id, task_id, "deleted")
 
