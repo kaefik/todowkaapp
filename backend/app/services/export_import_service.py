@@ -101,6 +101,7 @@ def _serialize_task(t: Task) -> dict:
         "recurrence_end_date": _dt(t.recurrence_end_date),
         "reminder_time": t.reminder_time.isoformat() if t.reminder_time else None,
         "reminder_offsets": t.reminder_offsets,
+        "sent_reminder_offsets": t.sent_reminder_offsets,
         "reminder_fired": t.reminder_fired,
         "deadline_notified": t.deadline_notified,
         "event_id": t.event_id,
@@ -488,7 +489,7 @@ class ExportImportService:
         task_fields = [
             "title", "description", "is_completed", "gtd_status",
             "position", "notes", "recurrence_type", "recurrence_config",
-            "reminder_offsets", "reminder_fired", "deadline_notified",
+            "reminder_offsets", "sent_reminder_offsets", "reminder_fired", "deadline_notified",
         ]
         for item in data.get("tasks", []):
             entity_id = item.get("id")

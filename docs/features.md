@@ -1684,13 +1684,20 @@
   - Экспорт всех данных: задачи, проекты, области, контексты, теги, шаблоны глаголов, чеклисты, повторения, связи task_tags
   - Импорт с поддержкой upsert (обновление существующих записей, создание новых)
   - Валидация формата файла (версия, приложение, структура)
-  - Порядок импорта с учётом FK-зависимостей (areas → contexts → tags → verb_templates → projects → tasks → checklist_items → task_recurrences → task_tags)
+  - Порядок импорта с учётом FK-зависимостей (areas → contexts → tags → verb_templates → projects → calendar_events → tasks → checklist_items → task_recurrences → event_recurrences → task_tags)
   - Пропуск записей с несуществующими FK-ссылками
   - API эндпоинты: GET /api/export-import/export, POST /api/export-import/import
   - Кнопки «Экспорт данных» / «Импорт данных» в настройках (секция «Управление данными»)
   - Синхронизация с Dexie после импорта через performInitialSync
   - Локализация ru/en для UI экспорта/импорта
-   - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, backend/app/schemas/export_import.py, backend/tests/test_export_import.py, frontend/src/api/exportImport.ts, frontend/src/routes/Settings.tsx
+  - **24 мая 2026 — добавлены календарные события:**
+    - Экспорт/импорт CalendarEvent и EventRecurrence
+    - Поля Task.event_id и Task.last_reminder_sent_at в экспорте
+    - Ручной импорт CalendarEvent (NOT NULL start_time) и EventRecurrence (NOT NULL start_time_of_generated_event)
+    - Task.event_id обрабатывается как FK с resolve + validation
+    - Обратная совместимость: старые JSON-файлы без calendar_events импортируются без ошибок
+    - Тесты: 13 тестов в test_export_import.py (включая roundtrip с календарными событиями)
+  - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, backend/app/schemas/export_import.py, backend/tests/test_export_import.py, frontend/src/api/exportImport.ts, frontend/src/routes/Settings.tsx
 
 ### Android-приложение — подробности реализации
 
