@@ -7,8 +7,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area import Area
+from app.models.calendar_event import CalendarEvent
 from app.models.checklist import ChecklistItem
 from app.models.context import Context
+from app.models.event_recurrence import EventRecurrence
 from app.models.project import Project
 from app.models.tag import Tag, task_tags
 from app.models.task import Task
@@ -101,6 +103,8 @@ def _serialize_task(t: Task) -> dict:
         "reminder_offsets": t.reminder_offsets,
         "reminder_fired": t.reminder_fired,
         "deadline_notified": t.deadline_notified,
+        "event_id": t.event_id,
+        "last_reminder_sent_at": _dt(t.last_reminder_sent_at),
         "trashed_at": _dt(t.trashed_at),
         "created_at": _dt(t.created_at),
         "updated_at": _dt(t.updated_at),
@@ -127,6 +131,36 @@ def _serialize_task_recurrence(r: TaskRecurrence) -> dict:
         "task_id": r.task_id,
         "generated_task_id": r.generated_task_id,
         "due_date_of_generated_task": _dt(r.due_date_of_generated_task),
+        "generated_at": _dt(r.generated_at),
+        "status": r.status,
+    }
+
+
+def _serialize_calendar_event(e: CalendarEvent) -> dict:
+    return {
+        "id": e.id,
+        "title": e.title,
+        "description": e.description,
+        "start_time": _dt(e.start_time),
+        "end_time": _dt(e.end_time),
+        "all_day": e.all_day,
+        "color": e.color,
+        "location": e.location,
+        "attendees": e.attendees,
+        "recurrence_type": e.recurrence_type,
+        "recurrence_config": e.recurrence_config,
+        "recurrence_end_date": _dt(e.recurrence_end_date),
+        "created_at": _dt(e.created_at),
+        "updated_at": _dt(e.updated_at),
+    }
+
+
+def _serialize_event_recurrence(r: EventRecurrence) -> dict:
+    return {
+        "id": r.id,
+        "event_id": r.event_id,
+        "generated_event_id": r.generated_event_id,
+        "start_time_of_generated_event": _dt(r.start_time_of_generated_event),
         "generated_at": _dt(r.generated_at),
         "status": r.status,
     }
@@ -164,6 +198,11 @@ class ExportImportService:
         )
         projects = list(projects_result.scalars().all())
 
+        calendar_events_result = await self.db.execute(
+            select(CalendarEvent).where(CalendarEvent.user_id == uid)
+        )
+        calendar_events = list(calendar_events_result.scalars().all())
+
         tasks_result = await self.db.execute(
             select(Task).where(Task.user_id == uid)
         )
@@ -190,6 +229,15 @@ class ExportImportService:
             for tag in t.tags:
                 task_tags.append({"task_id": t.id, "tag_id": tag.id})
 
+        event_ids = [e.id for e in calendar_events]
+        if event_ids:
+            event_recurrences_result = await self.db.execute(
+                select(EventRecurrence).where(EventRecurrence.event_id.in_(event_ids))
+            )
+            event_recurrences = list(event_recurrences_result.scalars().all())
+        else:
+            event_recurrences = []
+
         return {
             "version": "1.0",
             "app": "todowka",
@@ -200,9 +248,11 @@ class ExportImportService:
                 "tags": [_serialize_tag(t) for t in tags],
                 "verb_templates": [_serialize_verb_template(v) for v in verb_templates],
                 "projects": [_serialize_project(p) for p in projects],
+                "calendar_events": [_serialize_calendar_event(e) for e in calendar_events],
                 "tasks": [_serialize_task(t) for t in tasks],
                 "checklist_items": [_serialize_checklist_item(c) for c in checklist_items],
                 "task_recurrences": [_serialize_task_recurrence(r) for r in task_recurrences],
+                "event_recurrences": [_serialize_event_recurrence(r) for r in event_recurrences],
                 "task_tags": task_tags,
             },
         }
@@ -375,6 +425,64 @@ class ExportImportService:
         imported["projects"] = project_count
         await self.db.flush()
 
+        calendar_event_count = 0
+        imported_event_ids: set[str] = set()
+        for item in data.get("calendar_events", []):
+            entity_id = item.get("id")
+            if not entity_id or not item.get("start_time"):
+                continue
+            existing = await self.db.get(CalendarEvent, entity_id)
+            if existing is not None and existing.user_id != uid:
+                new_id = self._new_id(entity_id, id_map)
+                obj = CalendarEvent(
+                    id=new_id, user_id=uid,
+                    title=item.get("title", ""),
+                    description=item.get("description"),
+                    start_time=self._parse_datetime(item["start_time"]),
+                    end_time=self._parse_datetime(item.get("end_time")),
+                    all_day=item.get("all_day", False),
+                    color=item.get("color"),
+                    location=item.get("location"),
+                    attendees=item.get("attendees"),
+                    recurrence_type=item.get("recurrence_type"),
+                    recurrence_config=item.get("recurrence_config"),
+                    recurrence_end_date=self._parse_datetime(item.get("recurrence_end_date")),
+                )
+                self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
+                self.db.add(obj)
+                imported_event_ids.add(new_id)
+            elif existing is not None:
+                for field in ["title", "description", "all_day", "color", "location",
+                              "attendees", "recurrence_type", "recurrence_config"]:
+                    if field in item:
+                        setattr(existing, field, item[field])
+                self._set_datetime_fields(existing, item, [
+                    "start_time", "end_time", "recurrence_end_date",
+                    "created_at", "updated_at",
+                ])
+                imported_event_ids.add(entity_id)
+            else:
+                obj = CalendarEvent(
+                    id=entity_id, user_id=uid,
+                    title=item.get("title", ""),
+                    description=item.get("description"),
+                    start_time=self._parse_datetime(item["start_time"]),
+                    end_time=self._parse_datetime(item.get("end_time")),
+                    all_day=item.get("all_day", False),
+                    color=item.get("color"),
+                    location=item.get("location"),
+                    attendees=item.get("attendees"),
+                    recurrence_type=item.get("recurrence_type"),
+                    recurrence_config=item.get("recurrence_config"),
+                    recurrence_end_date=self._parse_datetime(item.get("recurrence_end_date")),
+                )
+                self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
+                self.db.add(obj)
+                imported_event_ids.add(entity_id)
+            calendar_event_count += 1
+        imported["calendar_events"] = calendar_event_count
+        await self.db.flush()
+
         task_count = 0
         imported_task_ids: set[str] = set()
         task_fields = [
@@ -389,15 +497,19 @@ class ExportImportService:
             raw_ctx = item.get("context_id")
             raw_area = item.get("area_id")
             raw_proj = item.get("project_id")
+            raw_event = item.get("event_id")
             context_id = self._resolve_id(raw_ctx, id_map)
             area_id = self._resolve_id(raw_area, id_map)
             project_id = self._resolve_id(raw_proj, id_map)
+            event_id = self._resolve_id(raw_event, id_map)
             if raw_ctx and context_id not in context_ids:
                 context_id = None
             if raw_area and area_id not in area_ids:
                 area_id = None
             if raw_proj and project_id not in imported_project_ids:
                 project_id = None
+            if raw_event and event_id not in imported_event_ids:
+                event_id = None
             existing = await self.db.get(Task, entity_id)
             if existing is not None and existing.user_id != uid:
                 new_id = self._new_id(entity_id, id_map)
@@ -407,13 +519,15 @@ class ExportImportService:
                     context_id=context_id,
                     area_id=area_id,
                     project_id=project_id,
+                    event_id=event_id,
                 )
                 for field in task_fields:
                     if field in item:
                         setattr(obj, field, item[field])
                 self._set_datetime_fields(obj, item, [
                     "completed_at", "due_date", "recurrence_end_date",
-                    "trashed_at", "created_at", "updated_at",
+                    "trashed_at", "last_reminder_sent_at",
+                    "created_at", "updated_at",
                 ])
                 if item.get("reminder_time") is not None:
                     obj.reminder_time = self._parse_time(item["reminder_time"])
@@ -426,9 +540,11 @@ class ExportImportService:
                 existing.context_id = context_id
                 existing.area_id = area_id
                 existing.project_id = project_id
+                existing.event_id = event_id
                 self._set_datetime_fields(existing, item, [
                     "completed_at", "due_date", "recurrence_end_date",
-                    "trashed_at", "created_at", "updated_at",
+                    "trashed_at", "last_reminder_sent_at",
+                    "created_at", "updated_at",
                 ])
                 if "reminder_time" in item and item["reminder_time"] is not None:
                     existing.reminder_time = self._parse_time(item["reminder_time"])
@@ -442,13 +558,15 @@ class ExportImportService:
                     context_id=context_id,
                     area_id=area_id,
                     project_id=project_id,
+                    event_id=event_id,
                 )
                 for field in task_fields:
                     if field in item:
                         setattr(obj, field, item[field])
                 self._set_datetime_fields(obj, item, [
                     "completed_at", "due_date", "recurrence_end_date",
-                    "trashed_at", "created_at", "updated_at",
+                    "trashed_at", "last_reminder_sent_at",
+                    "created_at", "updated_at",
                 ])
                 if item.get("reminder_time") is not None:
                     obj.reminder_time = self._parse_time(item["reminder_time"])
@@ -527,6 +645,49 @@ class ExportImportService:
                 self.db.add(obj)
             recurrence_count += 1
         imported["task_recurrences"] = recurrence_count
+        await self.db.flush()
+
+        event_recurrence_count = 0
+        for item in data.get("event_recurrences", []):
+            entity_id = item.get("id")
+            if not entity_id:
+                continue
+            ev_id = self._resolve_id(item.get("event_id"), id_map)
+            gen_ev_id = self._resolve_id(item.get("generated_event_id"), id_map)
+            if not ev_id or ev_id not in imported_event_ids:
+                skipped += 1
+                continue
+            if not gen_ev_id or gen_ev_id not in imported_event_ids:
+                skipped += 1
+                continue
+            if not item.get("start_time_of_generated_event"):
+                skipped += 1
+                continue
+            existing = await self.db.get(EventRecurrence, entity_id)
+            if existing is not None:
+                existing_owner = await self.db.get(CalendarEvent, existing.event_id)
+                if existing_owner is not None and existing_owner.user_id != uid:
+                    skipped += 1
+                    continue
+                existing.event_id = ev_id
+                existing.generated_event_id = gen_ev_id
+                for field in ["status"]:
+                    if field in item:
+                        setattr(existing, field, item[field])
+                self._set_datetime_fields(existing, item, [
+                    "start_time_of_generated_event", "generated_at",
+                ])
+            else:
+                obj = EventRecurrence(
+                    id=entity_id, event_id=ev_id,
+                    generated_event_id=gen_ev_id,
+                    status=item.get("status", "completed"),
+                    start_time_of_generated_event=self._parse_datetime(item["start_time_of_generated_event"]),
+                )
+                self._set_datetime_fields(obj, item, ["generated_at"])
+                self.db.add(obj)
+            event_recurrence_count += 1
+        imported["event_recurrences"] = event_recurrence_count
         await self.db.flush()
 
         tt_count = 0

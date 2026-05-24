@@ -1,6 +1,6 @@
 import io
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 import pytest_asyncio
@@ -42,9 +42,11 @@ async def test_import_requires_auth(client):
             "tags": [],
             "verb_templates": [],
             "projects": [],
+            "calendar_events": [],
             "tasks": [],
             "checklist_items": [],
             "task_recurrences": [],
+            "event_recurrences": [],
             "task_tags": [],
         },
     }).encode()
@@ -68,7 +70,9 @@ async def test_export_empty_data(client, auth_user):
     assert "data" in data
     for key in [
         "areas", "contexts", "tags", "verb_templates",
-        "projects", "tasks", "checklist_items", "task_recurrences", "task_tags",
+        "projects", "calendar_events", "tasks",
+        "checklist_items", "task_recurrences", "event_recurrences",
+        "task_tags",
     ]:
         assert data["data"][key] == []
 
@@ -141,6 +145,38 @@ async def test_export_with_related_data(client, auth_user):
 
 
 @pytest.mark.asyncio
+async def test_export_with_calendar_events(client, auth_user):
+    start = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+    end = (datetime.now(UTC) + timedelta(days=1, hours=2)).isoformat()
+    event_resp = await client.post(
+        "/api/calendar-events",
+        json={
+            "title": "Meeting",
+            "start_time": start,
+            "end_time": end,
+            "all_day": False,
+            "color": "#FF0000",
+            "location": "Office",
+        },
+    )
+    assert event_resp.status_code == 201
+    event_id = event_resp.json()["id"]
+
+    response = await client.get("/api/export-import/export")
+    assert response.status_code == 200
+    data = json.loads(response.json()["content"])
+
+    assert len(data["data"]["calendar_events"]) == 1
+    exported_event = data["data"]["calendar_events"][0]
+    assert exported_event["id"] == event_id
+    assert exported_event["title"] == "Meeting"
+    assert exported_event["color"] == "#FF0000"
+    assert exported_event["location"] == "Office"
+    assert exported_event["all_day"] is False
+    assert data["data"]["event_recurrences"] == []
+
+
+@pytest.mark.asyncio
 async def test_import_creates_new_data(client, auth_user):
     tag_id = "aaaaaaaa-0000-0000-0000-000000000001"
     task_id = "aaaaaaaa-0000-0000-0000-000000000002"
@@ -156,11 +192,13 @@ async def test_import_creates_new_data(client, auth_user):
             ],
             "verb_templates": [],
             "projects": [],
+            "calendar_events": [],
             "tasks": [
                 {"id": task_id, "title": "Imported task", "tag_ids": [tag_id]},
             ],
             "checklist_items": [],
             "task_recurrences": [],
+            "event_recurrences": [],
             "task_tags": [
                 {"task_id": task_id, "tag_id": tag_id},
             ],
@@ -182,6 +220,57 @@ async def test_import_creates_new_data(client, auth_user):
     task_resp = await client.get(f"/api/tasks/{task_id}")
     assert task_resp.status_code == 200
     assert task_resp.json()["title"] == "Imported task"
+
+
+@pytest.mark.asyncio
+async def test_import_with_calendar_events(client, auth_user):
+    event_id = "bbbbbbbb-0000-0000-0000-000000000001"
+    start_time = (datetime.now(UTC) + timedelta(days=1)).isoformat()
+    end_time = (datetime.now(UTC) + timedelta(days=1, hours=2)).isoformat()
+    import_payload = {
+        "version": "1.0",
+        "app": "todowka",
+        "exported_at": datetime.now(UTC).isoformat(),
+        "data": {
+            "areas": [],
+            "contexts": [],
+            "tags": [],
+            "verb_templates": [],
+            "projects": [],
+            "calendar_events": [
+                {
+                    "id": event_id,
+                    "title": "Imported meeting",
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "all_day": False,
+                    "color": "#00FF00",
+                    "location": "Room 1",
+                },
+            ],
+            "tasks": [],
+            "checklist_items": [],
+            "task_recurrences": [],
+            "event_recurrences": [],
+            "task_tags": [],
+        },
+    }
+    json_bytes = json.dumps(import_payload).encode()
+
+    response = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
+    )
+    assert response.status_code == 200
+    report = response.json()
+    assert report["imported"]["calendar_events"] == 1
+    assert report["skipped"] == 0
+
+    event_resp = await client.get(f"/api/calendar-events/{event_id}")
+    assert event_resp.status_code == 200
+    event_data = event_resp.json()
+    assert event_data["title"] == "Imported meeting"
+    assert event_data["color"] == "#00FF00"
 
 
 @pytest.mark.asyncio
@@ -230,6 +319,7 @@ async def test_import_upsert_updates_existing(client, auth_user):
             "tags": [],
             "verb_templates": [],
             "projects": [],
+            "calendar_events": [],
             "tasks": [
                 {
                     "id": task_id,
@@ -240,6 +330,7 @@ async def test_import_upsert_updates_existing(client, auth_user):
             ],
             "checklist_items": [],
             "task_recurrences": [],
+            "event_recurrences": [],
             "task_tags": [],
         },
     }
@@ -295,3 +386,65 @@ async def test_cross_user_import_creates_with_new_ids(client, auth_user, db_sess
     tasks_resp = await client.get("/api/tasks")
     user_b_tasks = tasks_resp.json()["items"]
     assert any(t["title"] == "Task from user A" for t in user_b_tasks)
+
+
+@pytest.mark.asyncio
+async def test_roundtrip_with_calendar_events(client, auth_user):
+    start = (datetime.now(UTC) + timedelta(days=2)).isoformat()
+    end = (datetime.now(UTC) + timedelta(days=2, hours=1)).isoformat()
+    event_resp = await client.post(
+        "/api/calendar-events",
+        json={
+            "title": "Workshop",
+            "start_time": start,
+            "end_time": end,
+            "color": "#0000FF",
+        },
+    )
+    event_id = event_resp.json()["id"]
+
+    await client.post(
+        "/api/tasks",
+        json={"title": "Prepare for workshop", "event_id": event_id},
+    )
+
+    export_resp = await client.get("/api/export-import/export")
+    assert export_resp.status_code == 200
+    export_data = json.loads(export_resp.json()["content"])
+
+    assert len(export_data["data"]["calendar_events"]) == 1
+    assert export_data["data"]["calendar_events"][0]["title"] == "Workshop"
+    assert len(export_data["data"]["tasks"]) == 1
+    assert export_data["data"]["tasks"][0]["event_id"] == event_id
+    assert export_data["data"]["tasks"][0]["title"] == "Prepare for workshop"
+
+    user_b_data = {
+        "username": "roundtripper",
+        "email": "roundtripper@example.com",
+        "password": "Password123!",
+    }
+    await client.post("/api/auth/register", json=user_b_data)
+    await client.post(
+        "/api/auth/login",
+        json={"username": "roundtripper", "password": "Password123!"},
+    )
+
+    json_bytes = json.dumps(export_data).encode()
+    import_resp = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
+    )
+    assert import_resp.status_code == 200
+    report = import_resp.json()
+    assert report["imported"]["calendar_events"] == 1
+    assert report["imported"]["tasks"] == 1
+    assert report["skipped"] == 0
+
+    tasks_resp = await client.get("/api/tasks")
+    tasks = tasks_resp.json()["items"]
+    assert any(t["title"] == "Prepare for workshop" for t in tasks)
+
+    events_resp = await client.get("/api/calendar-events")
+    events_data = events_resp.json()
+    events = events_data.get("items", events_data) if isinstance(events_data, dict) else events_data
+    assert any(e["title"] == "Workshop" for e in events)
