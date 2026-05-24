@@ -401,20 +401,16 @@ async function processTombstones(): Promise<void> {
 
 export async function pull(userId: string): Promise<void> {
   const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
-  console.debug('[SyncEngine] pull started', { since })
   try {
     await processTombstones()
   } catch (err) {
     console.warn('[SyncEngine] Tombstone processing failed, continuing pull:', err)
   }
-  let totalProcessed = 0
   await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint, since)
-    totalProcessed += items.length
     await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
   }))
   await db.syncMeta.put({ key: 'lastPullAt', value: new Date().toISOString() })
-  console.debug('[SyncEngine] pull completed', { totalProcessed })
 }
 
 export async function selectivePull(userId: string, resourceTypes: ResourceType[]): Promise<void> {
@@ -785,7 +781,6 @@ async function executeMutation(
     }
     case 'toggle': {
       const body = payload ? { is_completed: payload.is_completed } : {}
-      console.debug('[SyncEngine] executeMutation toggle', mutation.entityId, body)
       await httpClient.patch(`${endpoint}/${mutation.entityId}/toggle`, body)
       break
     }

@@ -22,24 +22,11 @@ export function mergeRecord<T extends Mergeable>(
   serverRecord: T
 ): T {
   if (!localRecord) return serverRecord
-  if (localRecord._syncStatus === 'synced') {
-    console.debug('[mergeRecord] server wins (local synced)', {
-      id: (localRecord as unknown as { id?: string }).id,
-      serverUpdatedAt: serverRecord.updatedAt,
-    })
-    return serverRecord
-  }
+  if (localRecord._syncStatus === 'synced') return serverRecord
 
   const localTime = new Date(localRecord.updatedAt).getTime()
   const serverTime = new Date(serverRecord.updatedAt).getTime()
 
-  if (serverTime > localTime) {
-    console.debug('[mergeRecord] server wins (newer)', {
-      id: (localRecord as unknown as { id?: string }).id,
-      localUpdatedAt: localRecord.updatedAt,
-      serverUpdatedAt: serverRecord.updatedAt,
-    })
-    return serverRecord
-  }
+  if (serverTime > localTime) return serverRecord
   return localRecord
 }

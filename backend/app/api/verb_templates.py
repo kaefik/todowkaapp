@@ -99,6 +99,10 @@ async def delete_verb_template(
         raise HTTPException(status_code=404, detail='Verb template not found')
     await _publish_verb_event(current_user.id, verb_id, "deleted")
 
+    from app.models.deleted_entity import DeletionService
+    deletion_service = DeletionService(db)
+    await deletion_service.record_tombstone(current_user.id, 'verbTemplate', verb_id)
+
 
 @verb_templates_router.put('/reorder', response_model=list[VerbTemplateResponse])
 @limiter.limit(write_limit)
