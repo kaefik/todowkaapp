@@ -177,15 +177,31 @@ async def login(
         except Exception:
             logger.warning("Failed to create session", exc_info=True)
 
+    is_android = request.headers.get("x-client-type", "").lower() == "android"
+
+    if is_android:
+        return TokenResponse(
+            user=user,
+            session_id=session_id,
+            access_token=access_token,
+            refresh_token=refresh_token,
+        )
+
     return TokenResponse(user=user, session_id=session_id)
 
 
 @auth_router.post("/refresh", response_model=TokenResponse)
 async def refresh(
+    request: Request,
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> TokenResponse:
+
+    if not refresh_token:
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            refresh_token = auth_header[7:]
 
     if not refresh_token:
         raise HTTPException(
@@ -283,6 +299,15 @@ async def refresh(
             await db.commit()
     except Exception:
         logger.warning("Failed to update session activity", exc_info=True)
+
+    is_android = request.headers.get("x-client-type", "").lower() == "android"
+
+    if is_android:
+        return TokenResponse(
+            user=user,
+            access_token=access_token,
+            refresh_token=new_refresh_token,
+        )
 
     return TokenResponse(user=user)
 

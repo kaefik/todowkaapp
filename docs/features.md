@@ -1553,6 +1553,97 @@
 - Статистика (GET /api/stats) теперь использует completed_at вместо updated_at для подсчёта выполненных задач за период
 - Миграция: alembic/versions/20260410_1515_aa554e189f47_add_completed_at_to_tasks.py
 
+#### Android-приложение (Kotlin + Jetpack Compose) ✅ (Реализовано 22.05.2026)
+
+**Архитектура:** MVVM + Repository + Offline-first
+- Kotlin 2.1.21, Min SDK 26 (Android 8.0), Target SDK 35
+- Jetpack Compose (Material3), Navigation Compose, Koin DI, Room, Retrofit, WorkManager
+- Структура: `androidapp/` — отдельный Gradle модуль
+
+**Backend доработки:**
+- Bearer token auth: `get_current_user` читает `Authorization: Bearer` header как fallback к cookie
+- Login: возвращает `access_token`/`refresh_token` в JSON body при `X-Client-Type: android` header
+- Refresh: принимает refresh_token из Authorization header
+- FCM device tokens: модель DeviceToken, `POST /api/devices/register`, `DELETE /api/devices/{id}`
+- Alembic миграция: таблица `device_tokens`
+
+**Data Layer (Room):**
+- 11 Entity: TaskEntity, ProjectEntity, AreaEntity, ContextEntity, TagEntity, TaskTagCrossRef, ChecklistItemEntity, CalendarEventEntity, VerbTemplateEntity, MutationEntity, SyncMetaEntity
+- Мультипользовательская изоляция: `user_id` во всех entity + фильтрация в DAO queries
+- Sync поля: `_syncStatus` (synced/local/modified/deleted), `_lastSyncedAt`
+- 10 DAO с Flow (реактивные) и suspend (для SyncEngine) методами
+- Type converters для JSON-полей (StringList, SyncStatus)
+- TodowkaDatabase (Room, version 1, fallbackToDestructiveMigration)
+
+**Network Layer (Retrofit):**
+- 18 API интерфейсов: AuthApi, TasksApi, ProjectsApi, AreasApi, ContextsApi, TagsApi, ChecklistApi, CalendarEventsApi, NotificationsApi, ReviewApi, VerbTemplatesApi, SessionsApi, ExportImportApi, BackupScheduleApi, UsersApi, TelegramApi, DevicesApi, ConfigApi
+- 13 request DTO + 18 response DTO (kotlinx.serialization)
+- AuthInterceptor: добавляет `Authorization: Bearer` + `X-Requested-With`
+- TokenRefreshInterceptor: перехват 401 → refresh → retry
+
+**Repository Layer (offline-first):**
+- 10 репозиториев: Task, Project, Area, Context, Tag, CalendarEvent, VerbTemplate, Checklist, Notification (API-only), Review (API-only)
+- Каждый: интерфейс в `domain/repository/`, реализация в `data/repository/`
+- Чтение: Flow из Room DAO
+- Запись: Room update (_syncStatus=modified) + MutationEntity → SyncEngine пушит позже
+
+**Sync Engine:**
+- SyncEngine: performInitialSync (параллельная загрузка), pushPendingChanges (retry с backoff), pullRemoteChanges (incremental via updated_since)
+- EchoSuppressor: 5s TTL для push-echo
+- ConflictResolver: LWW, сервер приоритетнее при tie
+- SyncWorker: WorkManager periodic (15 мин)
+- SyncStatusTracker: StateFlow (isSyncing, lastSyncAt, syncError)
+
+**Preferences:**
+- AuthPreferences: EncryptedSharedPreferences для access/refresh tokens + userId
+- UserPreferences: DataStore для dark mode, language, defaultSection, isOnboarded
+- SyncPreferences: DataStore для sync interval, lastFullSyncAt
+
+**DI (Koin):**
+- 6 модулей: AppModule, NetworkModule (OkHttp+Retrofit+18 API), DatabaseModule (Room+10 DAO), RepositoryModule (10 репо+SyncEngine), ViewModelModule (24 VM), WorkerModule (SyncWorker)
+
+**Navigation:**
+- Routes: sealed class с 30+ маршрутами (auth, tasks GTD, projects, areas, contexts, tags, calendar, review, settings, profile, notifications)
+- NavGraph: проверка auth → AuthNavGraph/MainNavGraph
+- MainNavGraph: все экраны обёрнуты в AppLayout
+
+**Theme:**
+- Material3 с Indigo primary (#4f46e5)
+- Light/Dark theme (isSystemInDarkTheme)
+- Shapes, Typography, Colors
+
+**UI Components (25+):**
+- AppLayout (NavigationDrawer + TopAppBar), Sidebar (3 группы: GTD/Views/Manage)
+- TaskCard, TaskListView, TaskEditModal (BottomSheet), TaskDetailModal, TaskFilterPanel, TaskQuickActions, TaskGroupSection
+- GtdTaskList (шаблон GTD-экрана), VerbChips, VerbFab
+- Calendar: CalendarHeader, MonthView, WeekView, DayView, YearView, CalendarEventCard, CalendarTaskCard, EventEditorModal, DayDetailDrawer
+- RecurrenceEditor, ReminderEditor, SearchOverlay, ColorPickerField, ConfirmDialog, ToastContainer
+- SyncStatus, StatusLight, OfflineBanner, NotificationBell, OverdueTasksBlock, CompletedTodayBlock, SortGroupPopover, DeleteAccountModal
+- ProtectedRoute, AuthInitializer
+
+**Screens (28+):**
+- Auth: Login, Register
+- Tasks: Inbox, Active, Today, Tomorrow, NextActions, WaitingFor, Someday, Completed, Trash
+- Projects, ProjectDetail; Areas, AreaDetail; Contexts; Tags
+- Calendar, Events; Notifications; Profile; Settings (6 tabs); Review (6-step wizard); Onboarding; Sessions
+
+**Settings Tabs:** Profile, General, Appearance, Security (change password + sessions + delete account), Verbs (CRUD + reorder + reset), Admin (users + SMTP)
+
+**Review Wizard:** Dashboard → Overdue → Inbox → Projects → Someday → Completion с Minimap навигацией
+
+**Platform Services:**
+- FcmService: приём push-уведомлений, 3 notification channels
+- ReminderScheduler: AlarmManager для точных напоминаний + offset reminders
+- ReminderReceiver: BroadcastReceiver для показа локальных уведомлений
+- BootReceiver: перепланирование напоминаний после перезагрузки
+- NetworkMonitor: ConnectivityManager.NetworkCallback → StateFlow<Boolean>
+
+**Утилиты:** AppResult<T> (sealed), GtdStatus (enum), SyncStatus (enum), DateTimeUtils (kotlinx-datetime)
+
+**Ресурсы:** strings.xml на 3 языках (EN, RU, TT), network_security_config, run.sh
+
+**Файлы:** `androidapp/` — ~224 Kotlin файла + Gradle build files + ресурсы
+
 Все перечисленные выше возможности реализованы на текущую дату.
 
 **23 апреля 2026:**
@@ -1586,4 +1677,8 @@
   - Кнопки «Экспорт данных» / «Импорт данных» в настройках (секция «Управление данными»)
   - Синхронизация с Dexie после импорта через performInitialSync
   - Локализация ru/en для UI экспорта/импорта
-  - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, backend/app/schemas/export_import.py, backend/tests/test_export_import.py, frontend/src/api/exportImport.ts, frontend/src/routes/Settings.tsx
+   - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, backend/app/schemas/export_import.py, backend/tests/test_export_import.py, frontend/src/api/exportImport.ts, frontend/src/routes/Settings.tsx
+
+### Android-приложение — подробности реализации
+
+Полная документация Android-приложения находится в секции выше «Android-приложение (Kotlin + Jetpack Compose)».

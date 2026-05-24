@@ -62,6 +62,8 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     user: UserResponse
     session_id: str | None = None
+    access_token: str | None = None
+    refresh_token: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

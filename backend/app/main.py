@@ -8,6 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from app.api.devices import devices_router
 from app.api.areas import areas_router
 from app.api.auth import auth_router
 from app.api.backup_schedules import backup_schedules_router
@@ -92,6 +93,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    api_router.include_router(devices_router)
     api_router.include_router(areas_router)
     api_router.include_router(auth_router)
     api_router.include_router(sessions_router)

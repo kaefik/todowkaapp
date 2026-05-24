@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Todowka</string>
+    <string name="tasks">Бурынтырлар</string>
+    <string name="settings">Көйләүләр</string>
+    <string name="login">Керү</string>
+    <string name="register">Теркәлү</string>
+    <string name="email">Email</string>
+    <string name="password">Серсүз</string>
+    <string name="confirm_password">Серсүзне раслагыз</string>
+    <string name="logout">Чыгу</string>
+    <string name="save">Саклау</string>
+    <string name="cancel">Баш тарту</string>
+    <string name="delete">Бетерү</string>
+    <string name="add_task">Бурынтыр өстәү</string>
+    <string name="edit_task">Бурынтырны үзгәртү</string>
+    <string name="task_title">Исем</string>
+    <string name="task_description">Тасвирлама</string>
+    <string name="no_tasks">Бурынтырлар әлегә юк</string>
+    <string name="loading">Йөкләнә…</string>
+    <string name="error_generic">Нәрсәдер дөрес булмады</string>
+    <string name="error_network">Челтәр хатасы</string>
+</resources>

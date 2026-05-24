@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -71,10 +71,19 @@ async def _resolve_user_by_token(token: str | None, db: AsyncSession, auth_type:
 
 
 async def get_current_user(
+    request: Request,
     access_token: Annotated[str | None, Cookie()] = None,
     db: Annotated[AsyncSession, Depends(get_db)] = None,
 ) -> User:
-    return await _resolve_user_by_token(access_token, db, auth_type="cookie")
+    if access_token:
+        return await _resolve_user_by_token(access_token, db, auth_type="cookie")
+
+    auth_header = request.headers.get("authorization")
+    if auth_header and auth_header.lower().startswith("bearer "):
+        token = auth_header[7:]
+        return await _resolve_user_by_token(token, db, auth_type="bearer")
+
+    return await _resolve_user_by_token(None, db, auth_type="none")
 
 
 async def get_current_admin_user(
