@@ -18,13 +18,16 @@ interface ChecklistItemDao {
     fun getById(id: String, userId: String): Flow<ChecklistItemEntity?>
 
     @Upsert
-    fun upsert(entity: ChecklistItemEntity)
+    suspend fun upsert(entity: ChecklistItemEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<ChecklistItemEntity>)
+    suspend fun upsertAll(entities: List<ChecklistItemEntity>)
 
     @Query("DELETE FROM checklist_items WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
+
+    @Query("SELECT * FROM checklist_items WHERE id = :id")
+    suspend fun getByIdSync(id: String): ChecklistItemEntity?
 
     @Query("SELECT * FROM checklist_items WHERE taskId = :taskId AND userId = :userId AND _syncStatus != 'deleted' ORDER BY position ASC")
     fun getByTaskId(taskId: String, userId: String): Flow<List<ChecklistItemEntity>>

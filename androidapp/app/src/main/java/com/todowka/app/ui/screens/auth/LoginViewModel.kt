@@ -50,4 +50,13 @@ class LoginViewModel(
             }
         }
     }
+
+    fun enterGuestMode(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            authRepository.enterGuestMode()
+            _state.value = _state.value.copy(isLoading = false)
+            onSuccess()
+        }
+    }
 }

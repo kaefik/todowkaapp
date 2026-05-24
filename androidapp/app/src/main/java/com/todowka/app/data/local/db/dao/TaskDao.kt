@@ -18,13 +18,13 @@ interface TaskDao {
     fun getById(id: String, userId: String): Flow<TaskEntity?>
 
     @Upsert
-    fun upsert(entity: TaskEntity)
+    suspend fun upsert(entity: TaskEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<TaskEntity>)
+    suspend fun upsertAll(entities: List<TaskEntity>)
 
     @Query("DELETE FROM tasks WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
 
     @Query("SELECT * FROM tasks WHERE userId = :userId AND gtdStatus = :status AND _syncStatus != 'deleted' ORDER BY position ASC")
     fun getByStatus(userId: String, status: String): Flow<List<TaskEntity>>

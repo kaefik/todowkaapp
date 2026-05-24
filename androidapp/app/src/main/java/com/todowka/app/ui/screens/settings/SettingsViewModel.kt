@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.todowka.app.data.local.db.entity.VerbTemplateEntity
 import com.todowka.app.data.local.preferences.AuthPreferences
+import com.todowka.app.data.local.preferences.ServerPreferences
 import com.todowka.app.data.local.preferences.UserPreferences
 import com.todowka.app.data.remote.dto.response.SessionResponse
 import com.todowka.app.data.remote.dto.response.UserResponse
@@ -24,6 +25,8 @@ data class SettingsState(
     val defaultSection: String = "inbox",
     val verbTemplates: List<VerbTemplateEntity> = emptyList(),
     val sessions: List<SessionResponse> = emptyList(),
+    val serverUrl: String = ServerPreferences.DEFAULT_URL,
+    val isGuestMode: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -32,6 +35,7 @@ class SettingsViewModel(
     private val authRepository: AuthRepository,
     private val userPreferences: UserPreferences,
     private val authPreferences: AuthPreferences,
+    private val serverPreferences: ServerPreferences,
     private val verbTemplateRepository: VerbTemplateRepository,
     private val sessionsApi: SessionsApi,
     private val usersApi: UsersApi
@@ -45,15 +49,33 @@ class SettingsViewModel(
     }
 
     private fun loadSettings() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
-            val userResult = authRepository.getCurrentUser()
-            if (userResult.isSuccess) {
-                _state.value = _state.value.copy(user = userResult.getOrNull())
+        val isGuest = authPreferences.isGuestMode
+        _state.value = _state.value.copy(
+            serverUrl = serverPreferences.serverUrl,
+            isGuestMode = isGuest
+        )
+        if (!isGuest) {
+            viewModelScope.launch {
+                _state.value = _state.value.copy(isLoading = true)
+                val userResult = authRepository.getCurrentUser()
+                if (userResult.isSuccess) {
+                    _state.value = _state.value.copy(user = userResult.getOrNull())
+                }
+                userPreferences.isDarkMode.collect { dark ->
+                    _state.value = _state.value.copy(darkMode = dark)
+                }
             }
-            userPreferences.isDarkMode.collect { dark ->
-                _state.value = _state.value.copy(darkMode = dark)
+            viewModelScope.launch {
+                try {
+                    val response = sessionsApi.getSessions()
+                    if (response.isSuccessful) {
+                        _state.value = _state.value.copy(sessions = response.body()?.items ?: emptyList())
+                    }
+                } catch (_: Exception) {}
+                _state.value = _state.value.copy(isLoading = false)
             }
+        } else {
+            _state.value = _state.value.copy(isLoading = false)
         }
         viewModelScope.launch {
             userPreferences.language.collect { lang ->
@@ -70,15 +92,6 @@ class SettingsViewModel(
             verbTemplateRepository.getAll(userId).collect { templates ->
                 _state.value = _state.value.copy(verbTemplates = templates)
             }
-        }
-        viewModelScope.launch {
-            try {
-                val response = sessionsApi.getSessions()
-                if (response.isSuccessful) {
-                    _state.value = _state.value.copy(sessions = response.body()?.items ?: emptyList())
-                }
-            } catch (_: Exception) {}
-            _state.value = _state.value.copy(isLoading = false)
         }
     }
 
@@ -101,6 +114,11 @@ class SettingsViewModel(
             userPreferences.setDefaultSection(section)
             _state.value = _state.value.copy(defaultSection = section)
         }
+    }
+
+    fun updateServerUrl(url: String) {
+        serverPreferences.serverUrl = url
+        _state.value = _state.value.copy(serverUrl = url)
     }
 
     fun updateProfile(username: String?, email: String?, timezone: String?, language: String?) {

@@ -31,6 +31,13 @@ class AuthPreferences(context: Context) {
 
     val currentUserId: String?
         get() = safeGet { it.getString("current_user_id", null) }
+            ?: safeGet { it.getString("guest_user_id", null) }
+
+    val guestUserId: String?
+        get() = safeGet { it.getString("guest_user_id", null) }
+
+    val isGuestMode: Boolean
+        get() = guestUserId != null
 
     fun saveTokens(access: String, refresh: String, userId: String) {
         safeEdit { editor ->
@@ -45,6 +52,18 @@ class AuthPreferences(context: Context) {
             editor.remove("access_token")
             editor.remove("refresh_token")
             editor.remove("current_user_id")
+        }
+    }
+
+    fun saveGuestUserId(id: String) {
+        safeEdit { editor ->
+            editor.putString("guest_user_id", id)
+        }
+    }
+
+    fun clearGuestMode() {
+        safeEdit { editor ->
+            editor.remove("guest_user_id")
         }
     }
 

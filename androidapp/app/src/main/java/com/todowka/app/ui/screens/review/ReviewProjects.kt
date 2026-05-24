@@ -62,7 +62,7 @@ fun ReviewProjects(
 
                         if (project.availableTasks.isNotEmpty()) {
                             val total = project.availableTasks.size
-                            val done = project.availableTasks.count { it.id in emptyList() }
+                            val done = 0
                             LinearProgressIndicator(
                                 progress = { if (total > 0) done.toFloat() / total else 0f },
                                 modifier = Modifier.fillMaxWidth()

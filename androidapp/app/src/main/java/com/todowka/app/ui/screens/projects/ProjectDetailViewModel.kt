@@ -65,6 +65,11 @@ class ProjectDetailViewModel(
         }
     }
 
+    fun toggleTask(taskId: String) {
+        val userId = authPreferences.currentUserId ?: return
+        viewModelScope.launch { taskRepository.toggleTask(taskId, userId) }
+    }
+
     fun updateProject(project: ProjectEntity) {
         viewModelScope.launch {
             try {

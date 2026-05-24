@@ -18,14 +18,17 @@ interface ContextDao {
     fun getById(id: String, userId: String): Flow<ContextEntity?>
 
     @Upsert
-    fun upsert(entity: ContextEntity)
+    suspend fun upsert(entity: ContextEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<ContextEntity>)
+    suspend fun upsertAll(entities: List<ContextEntity>)
 
     @Query("DELETE FROM contexts WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
 
     @Query("SELECT * FROM contexts WHERE userId = :userId AND _syncStatus != 'deleted' ORDER BY name ASC")
     fun getAllForUser(userId: String): Flow<List<ContextEntity>>
+
+    @Query("SELECT * FROM contexts WHERE id = :id")
+    suspend fun getByIdSync(id: String): ContextEntity?
 }

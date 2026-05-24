@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsGeneralTab(
@@ -29,10 +28,13 @@ fun SettingsGeneralTab(
     capitalizeFirst: Boolean,
     reviewFrequencyDays: Int,
     reviewNotificationsEnabled: Boolean,
+    serverUrl: String,
+    isGuestMode: Boolean = false,
     onDefaultSectionChange: (String) -> Unit,
     onCapitalizeFirstChange: (Boolean) -> Unit,
     onReviewFrequencyChange: (Int) -> Unit,
-    onReviewNotificationsChange: (Boolean) -> Unit
+    onReviewNotificationsChange: (Boolean) -> Unit,
+    onServerUrlChange: (String) -> Unit
 ) {
     var sectionExpanded by remember { mutableStateOf(false) }
     val sections = listOf("inbox", "active", "today", "next", "someday")
@@ -101,6 +103,28 @@ fun SettingsGeneralTab(
             label = "Уведомления об обзоре",
             checked = reviewNotificationsEnabled,
             onCheckedChange = onReviewNotificationsChange
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        var urlValue by remember(serverUrl) { mutableStateOf(serverUrl) }
+
+        OutlinedTextField(
+            value = urlValue,
+            onValueChange = {
+                urlValue = it
+                onServerUrlChange(it)
+            },
+            label = { Text("URL сервера") },
+            supportingText = {
+                if (isGuestMode) {
+                    Text("Укажите URL сервера для входа в аккаунт")
+                } else {
+                    Text("Изменения применятся после перезапуска приложения")
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

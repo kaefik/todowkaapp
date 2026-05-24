@@ -18,13 +18,13 @@ interface ProjectDao {
     fun getById(id: String, userId: String): Flow<ProjectEntity?>
 
     @Upsert
-    fun upsert(entity: ProjectEntity)
+    suspend fun upsert(entity: ProjectEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<ProjectEntity>)
+    suspend fun upsertAll(entities: List<ProjectEntity>)
 
     @Query("DELETE FROM projects WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
 
     @Query("SELECT * FROM projects WHERE userId = :userId AND isActive = 1 AND _syncStatus != 'deleted' ORDER BY sortOrder ASC")
     fun getActive(userId: String): Flow<List<ProjectEntity>>

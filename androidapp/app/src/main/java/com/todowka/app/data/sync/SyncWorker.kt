@@ -16,6 +16,7 @@ class SyncWorker(
     private val authPreferences: AuthPreferences by inject()
 
     override suspend fun doWork(): Result {
+        if (authPreferences.isGuestMode) return Result.success()
         val userId = authPreferences.currentUserId ?: return Result.failure()
         return try {
             syncEngine.fullSync(userId)

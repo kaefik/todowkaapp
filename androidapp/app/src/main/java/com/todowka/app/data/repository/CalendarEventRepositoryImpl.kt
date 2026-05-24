@@ -84,7 +84,10 @@ class CalendarEventRepositoryImpl(
     }
 
     override suspend fun deleteEvent(eventId: String, userId: String) {
+        val event = calendarEventDao.getByIdSync(eventId) ?: return
         val now = DateTimeUtils.nowIso()
+        val updated = event.copy(_syncStatus = "deleted", updatedAt = now)
+        calendarEventDao.upsert(updated)
         mutationDao.insert(
             MutationEntity(
                 userId = userId,

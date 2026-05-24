@@ -56,4 +56,22 @@ abstract class TodowkaDatabase : RoomDatabase() {
     abstract fun verbTemplateDao(): VerbTemplateDao
     abstract fun mutationDao(): MutationDao
     abstract fun syncMetaDao(): SyncMetaDao
+
+    suspend fun migrateGuestData(guestId: String, realId: String) {
+        val db = openHelper.writableDatabase
+        db.beginTransaction()
+        try {
+            val tables = listOf(
+                "tasks", "projects", "areas", "contexts", "tags",
+                "checklist_items", "calendar_events", "verb_templates",
+                "mutations", "sync_meta", "task_tag_cross_ref"
+            )
+            for (table in tables) {
+                db.execSQL("UPDATE $table SET userId = ? WHERE userId = ?", arrayOf(realId, guestId))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.todowka.app.data.repository
 
+import android.util.Log
 import com.todowka.app.data.local.db.TodowkaDatabase
 import com.todowka.app.data.local.preferences.AuthPreferences
 import com.todowka.app.data.local.preferences.UserPreferences
@@ -10,23 +11,38 @@ import com.todowka.app.data.remote.dto.request.LoginRequest
 import com.todowka.app.data.remote.dto.request.RegisterRequest
 import com.todowka.app.data.remote.dto.response.TokenResponse
 import com.todowka.app.data.remote.dto.response.UserResponse
+import com.todowka.app.data.sync.SyncEngine
 import com.todowka.app.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.UUID
 
 class AuthRepositoryImpl(
     private val authApi: AuthApi,
     private val authPreferences: AuthPreferences,
     private val userPreferences: UserPreferences,
-    private val db: TodowkaDatabase
+    private val db: TodowkaDatabase,
+    private val syncEngine: SyncEngine
 ) : AuthRepository {
 
-    private val _isLoggedIn = MutableStateFlow(authPreferences.accessToken != null)
+    private val _isLoggedIn = MutableStateFlow(
+        authPreferences.accessToken != null || authPreferences.guestUserId != null
+    )
     override val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
+
+    private val _isGuestMode = MutableStateFlow(authPreferences.isGuestMode)
+    override val isGuestMode: StateFlow<Boolean> = _isGuestMode.asStateFlow()
 
     private val _currentUser = MutableStateFlow<UserResponse?>(null)
     override val currentUser: StateFlow<UserResponse?> = _currentUser.asStateFlow()
+
+    override suspend fun enterGuestMode() {
+        val guestId = UUID.randomUUID().toString()
+        authPreferences.saveGuestUserId(guestId)
+        _isGuestMode.value = true
+        _isLoggedIn.value = true
+    }
 
     override suspend fun login(username: String, password: String): Result<UserResponse> {
         return try {
@@ -35,7 +51,27 @@ class AuthRepositoryImpl(
                 val body = response.body() ?: return Result.failure(Exception("Empty response"))
                 val accessToken = body.accessToken ?: return Result.failure(Exception("No access token"))
                 val refreshToken = body.refreshToken ?: return Result.failure(Exception("No refresh token"))
-                authPreferences.saveTokens(accessToken, refreshToken, body.user.id)
+                val realUserId = body.user.id
+
+                val guestId = authPreferences.guestUserId
+                if (guestId != null) {
+                    try {
+                        db.migrateGuestData(guestId, realUserId)
+                        authPreferences.clearGuestMode()
+                        authPreferences.saveTokens(accessToken, refreshToken, realUserId)
+                        _isGuestMode.value = false
+                        syncEngine.pushPendingChanges(realUserId)
+                        syncEngine.pullRemoteChanges(realUserId)
+                    } catch (e: Exception) {
+                        Log.e("AuthRepo", "Guest migration failed", e)
+                        authPreferences.clearGuestMode()
+                        authPreferences.saveTokens(accessToken, refreshToken, realUserId)
+                        _isGuestMode.value = false
+                    }
+                } else {
+                    authPreferences.saveTokens(accessToken, refreshToken, realUserId)
+                }
+
                 _currentUser.value = body.user
                 _isLoggedIn.value = true
                 Result.success(body.user)
@@ -62,17 +98,24 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun logout() {
-        try {
-            authApi.logout()
-        } catch (_: Exception) {
+        if (_isGuestMode.value) {
+            authPreferences.clearTokens()
+            authPreferences.clearGuestMode()
+        } else {
+            try {
+                authApi.logout()
+            } catch (_: Exception) {
+            }
+            authPreferences.clearTokens()
         }
-        authPreferences.clearTokens()
         _currentUser.value = null
         _isLoggedIn.value = false
+        _isGuestMode.value = false
         db.clearAllTables()
     }
 
     override suspend fun refreshToken(): Result<TokenResponse> {
+        if (_isGuestMode.value) return Result.failure(Exception("Guest mode"))
         return try {
             val token = authPreferences.refreshToken ?: return Result.failure(Exception("No refresh token"))
             val response = authApi.refresh("Bearer $token")
@@ -95,6 +138,7 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun getCurrentUser(): Result<UserResponse> {
+        if (_isGuestMode.value) return Result.failure(Exception("Guest mode"))
         return try {
             val response = authApi.getMe()
             if (response.isSuccessful) {

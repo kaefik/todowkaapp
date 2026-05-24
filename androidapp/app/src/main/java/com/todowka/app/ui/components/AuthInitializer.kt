@@ -10,7 +10,7 @@ fun AuthInitializer() {
     val authRepository: AuthRepository = koinInject()
 
     LaunchedEffect(Unit) {
-        if (authRepository.isLoggedIn.value) {
+        if (authRepository.isLoggedIn.value && !authRepository.isGuestMode.value) {
             authRepository.getCurrentUser()
         }
     }

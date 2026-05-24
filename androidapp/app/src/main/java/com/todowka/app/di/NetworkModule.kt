@@ -20,6 +20,7 @@ import com.todowka.app.data.remote.api.TasksApi
 import com.todowka.app.data.remote.api.TelegramApi
 import com.todowka.app.data.remote.api.UsersApi
 import com.todowka.app.data.remote.api.VerbTemplatesApi
+import com.todowka.app.data.local.preferences.ServerPreferences
 import com.todowka.app.data.remote.interceptor.AuthInterceptor
 import com.todowka.app.data.remote.interceptor.TokenRefreshInterceptor
 import kotlinx.serialization.json.Json
@@ -64,7 +65,7 @@ val networkModule = module {
     }
 
     single {
-        val baseUrl = "http://10.0.2.2:8000/"
+        val baseUrl = get<ServerPreferences>().serverUrl
         Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(get())

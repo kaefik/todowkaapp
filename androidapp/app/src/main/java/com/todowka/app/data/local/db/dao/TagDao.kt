@@ -24,13 +24,13 @@ interface TagDao {
     fun getById(id: String, userId: String): Flow<TagEntity?>
 
     @Upsert
-    fun upsert(entity: TagEntity)
+    suspend fun upsert(entity: TagEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<TagEntity>)
+    suspend fun upsertAll(entities: List<TagEntity>)
 
     @Query("DELETE FROM tags WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
 
     @Query("""
         SELECT t.*, ctr.taskId as crossTaskId FROM tags t
@@ -40,10 +40,13 @@ interface TagDao {
     fun getRawByTaskIds(taskIds: List<String>): Flow<List<TagWithTaskIdRaw>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertCrossRefs(refs: List<TaskTagCrossRef>)
+    suspend fun insertCrossRefs(refs: List<TaskTagCrossRef>)
 
     @Query("DELETE FROM task_tag_cross_ref WHERE taskId = :taskId")
-    fun deleteCrossRefsForTask(taskId: String)
+    suspend fun deleteCrossRefsForTask(taskId: String)
+
+    @Query("SELECT * FROM tags WHERE id = :id")
+    suspend fun getByIdSync(id: String): TagEntity?
 }
 
 data class TagWithTaskIdRaw(

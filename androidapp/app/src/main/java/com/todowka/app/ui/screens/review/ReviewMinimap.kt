@@ -38,17 +38,17 @@ fun ReviewMinimap(
             val backgroundColor = when {
                 isCurrent -> MaterialTheme.colorScheme.primary
                 isCompleted -> MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                isFuture -> MaterialTheme.colorScheme.surface
+                else -> MaterialTheme.colorScheme.surface
             }
             val borderColor = when {
                 isCurrent -> MaterialTheme.colorScheme.primary
                 isCompleted -> MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                isFuture -> MaterialTheme.colorScheme.outline
+                else -> MaterialTheme.colorScheme.outline
             }
             val contentColor = when {
                 isCurrent -> MaterialTheme.colorScheme.onPrimary
                 isCompleted -> MaterialTheme.colorScheme.onPrimary
-                isFuture -> MaterialTheme.colorScheme.outline
+                else -> MaterialTheme.colorScheme.outline
             }
 
             Box(

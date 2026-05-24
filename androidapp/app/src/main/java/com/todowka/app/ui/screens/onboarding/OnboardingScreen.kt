@@ -67,7 +67,7 @@ fun OnboardingScreen(
                     if (pagerState.currentPage < 2) {
                         scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                     } else {
-                        scope.launch { viewModel.complete(onComplete) }
+                        scope.launch { viewModel.completeOnboarding(); onComplete() }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -76,7 +76,7 @@ fun OnboardingScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
-                onClick = { scope.launch { viewModel.complete(onComplete) } },
+                onClick = { scope.launch { viewModel.completeOnboarding(); onComplete() } },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Пропустить")

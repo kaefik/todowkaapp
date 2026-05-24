@@ -18,13 +18,13 @@ interface AreaDao {
     fun getById(id: String, userId: String): Flow<AreaEntity?>
 
     @Upsert
-    fun upsert(entity: AreaEntity)
+    suspend fun upsert(entity: AreaEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<AreaEntity>)
+    suspend fun upsertAll(entities: List<AreaEntity>)
 
     @Query("DELETE FROM areas WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
 
     @Query("SELECT * FROM areas WHERE userId = :userId AND _syncStatus != 'deleted' ORDER BY sortOrder ASC")
     fun getAllSorted(userId: String): Flow<List<AreaEntity>>

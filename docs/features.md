@@ -10,6 +10,19 @@
 - Регистрация нового аккаунта с email, username и паролем с автоматическим входом
 - Первый зарегистрированный пользователь автоматически становится администратором
 - Вход в систему с автоматическим управлением токенами
+- Гостевой режим ✅ (Реализовано 24.05.2026, Android)
+  - Вход без регистрации — все возможности работают локально без бекенда
+  - UUID генерируется как guestUserId, сохраняется в EncryptedSharedPreferences
+  - Все DAO работают без изменений — гость получает фиктивный userId
+  - SyncEngine/SyncWorker пропускаются в гостевом режиме
+  - LoginScreen: кнопка «Продолжить как гость»
+  - ProfileScreen: сообщение «Гостевой режим» + кнопка «Войти в аккаунт»
+  - SettingsScreen: скрыта вкладка «Безопасность» для гостя, подсказка о URL сервера
+  - При логине из гостя: миграция всех сущностей (UPDATE userId) + push + pull (без performInitialSync)
+  - Диалог подтверждения «Все локальные данные будут удалены» при выходе из гостя
+  - Навигация: единый shell (ModalNavigationDrawer + Scaffold + TopAppBar) с sidebar для основных экранов, back-кнопка для sub-экранов
+  - FAB: подключён к TaskEditModal через GtdTaskList для GTD-экранов
+  - Файлы: `AuthPreferences.kt`, `AuthRepository.kt`, `AuthRepositoryImpl.kt`, `TodowkaDatabase.kt`, `NavGraph.kt`, `LoginScreen.kt`, `LoginViewModel.kt`, `SyncWorker.kt`, `AuthInitializer.kt`, `ProfileScreen.kt`, `SettingsScreen.kt`, `SettingsGeneralTab.kt`, `SettingsViewModel.kt`, `RepositoryModule.kt`, `MainNavGraph.kt`, и все screen-файлы
 - Выход из системы с очисткой сессии
 - Автоматическое продление сессии при работе с приложением
 - Перенаправление на страницу входа при истечении сессии

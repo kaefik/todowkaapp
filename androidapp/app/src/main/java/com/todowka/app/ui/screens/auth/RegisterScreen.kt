@@ -98,10 +98,11 @@ fun RegisterScreen(
                 enabled = !state.isLoading
             )
 
-            if (state.error != null) {
+            val error = state.error
+            if (error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = state.error,
+                    text = error,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )

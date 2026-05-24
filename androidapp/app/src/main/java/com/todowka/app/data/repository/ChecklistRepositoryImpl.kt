@@ -70,29 +70,38 @@ class ChecklistRepositoryImpl(
     }
 
     override suspend fun toggleItem(itemId: String, userId: String) {
-        val items = checklistItemDao.getByUserId(userId)
+        val item = checklistItemDao.getByIdSync(itemId) ?: return
         val now = DateTimeUtils.nowIso()
+        val updated = item.copy(
+            isCompleted = !item.isCompleted,
+            updatedAt = now,
+            _syncStatus = "modified"
+        )
+        checklistItemDao.upsert(updated)
         mutationDao.insert(
             MutationEntity(
                 userId = userId,
                 entityType = "checklist_item",
                 entityId = itemId,
                 operation = "toggle",
-                payload = null,
+                payload = """{"task_id":"${updated.taskId}"}""",
                 createdAt = now
             )
         )
     }
 
     override suspend fun deleteItem(itemId: String, userId: String) {
+        val item = checklistItemDao.getByIdSync(itemId) ?: return
         val now = DateTimeUtils.nowIso()
+        val updated = item.copy(_syncStatus = "deleted", updatedAt = now)
+        checklistItemDao.upsert(updated)
         mutationDao.insert(
             MutationEntity(
                 userId = userId,
                 entityType = "checklist_item",
                 entityId = itemId,
                 operation = "delete",
-                payload = null,
+                payload = """{"task_id":"${updated.taskId}"}""",
                 createdAt = now
             )
         )

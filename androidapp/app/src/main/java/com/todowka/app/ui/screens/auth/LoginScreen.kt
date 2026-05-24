@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -89,10 +90,11 @@ fun LoginScreen(
                 enabled = !state.isLoading
             )
 
-            if (state.error != null) {
+            val error = state.error
+            if (error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = state.error,
+                    text = error,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -120,6 +122,20 @@ fun LoginScreen(
 
             TextButton(onClick = onNavigateToRegister) {
                 Text("Нет аккаунта? Зарегистрироваться")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            HorizontalDivider(modifier = Modifier.fillMaxWidth())
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = { viewModel.enterGuestMode(onLoginSuccess) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isLoading
+            ) {
+                Text("Продолжить как гость")
             }
         }
     }

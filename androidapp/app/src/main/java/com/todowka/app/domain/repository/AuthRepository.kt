@@ -12,6 +12,8 @@ interface AuthRepository {
     suspend fun getCurrentUser(): Result<UserResponse>
     suspend fun changePassword(current: String, new: String): Result<Unit>
     suspend fun deleteAccount(password: String): Result<Unit>
+    suspend fun enterGuestMode()
     val isLoggedIn: StateFlow<Boolean>
+    val isGuestMode: StateFlow<Boolean>
     val currentUser: StateFlow<UserResponse?>
 }

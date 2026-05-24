@@ -1,6 +1,7 @@
 package com.todowka.app.di
 
 import com.todowka.app.data.local.preferences.AuthPreferences
+import com.todowka.app.data.local.preferences.ServerPreferences
 import com.todowka.app.data.local.preferences.SyncPreferences
 import com.todowka.app.data.local.preferences.UserPreferences
 import com.todowka.app.data.repository.AreaRepositoryImpl
@@ -30,6 +31,7 @@ import org.koin.dsl.module
 
 val repositoryModule = module {
     single { AuthPreferences(get()) }
+    single { ServerPreferences(get()) }
     single { UserPreferences(get()) }
     single { SyncPreferences(get()) }
 
@@ -38,7 +40,8 @@ val repositoryModule = module {
             authApi = get(),
             authPreferences = get(),
             userPreferences = get(),
-            db = get()
+            db = get(),
+            syncEngine = get()
         )
     }
 

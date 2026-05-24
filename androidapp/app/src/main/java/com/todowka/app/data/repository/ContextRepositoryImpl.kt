@@ -74,8 +74,10 @@ class ContextRepositoryImpl(
     }
 
     override suspend fun deleteContext(contextId: String, userId: String) {
-        val context = contextDao.getByUserId(userId)
+        val context = contextDao.getByIdSync(contextId) ?: return
         val now = DateTimeUtils.nowIso()
+        val updated = context.copy(_syncStatus = "deleted", updatedAt = now)
+        contextDao.upsert(updated)
         mutationDao.insert(
             MutationEntity(
                 userId = userId,

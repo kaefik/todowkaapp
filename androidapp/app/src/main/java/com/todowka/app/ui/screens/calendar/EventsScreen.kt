@@ -10,14 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,10 +46,12 @@ class EventsViewModel(
     val state: StateFlow<EventsState> = _state.asStateFlow()
 
     init {
-        val userId = authPreferences.currentUserId ?: return
-        viewModelScope.launch {
-            calendarEventRepository.getAll(userId).collect { events ->
-                _state.value = _state.value.copy(events = events, isLoading = false)
+        val userId = authPreferences.currentUserId
+        if (userId != null) {
+            viewModelScope.launch {
+                calendarEventRepository.getAll(userId).collect { events ->
+                    _state.value = _state.value.copy(events = events, isLoading = false)
+                }
             }
         }
     }
@@ -63,7 +62,6 @@ class EventsViewModel(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventsScreen(
     onAddEvent: () -> Unit = {},
@@ -71,21 +69,14 @@ fun EventsScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(
-        topBar = { TopAppBar(title = { Text("События") }) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddEvent) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить событие")
-            }
-        }
-    ) { padding ->
+    Box(modifier = Modifier.fillMaxSize()) {
         if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp, horizontal = 16.dp)
             ) {
                 items(state.events, key = { it.id }) { event ->
@@ -104,6 +95,15 @@ fun EventsScreen(
                     }
                 }
             }
+        }
+
+        FloatingActionButton(
+            onClick = onAddEvent,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Добавить событие")
         }
     }
 }

@@ -18,11 +18,11 @@ interface VerbTemplateDao {
     fun getById(id: String, userId: String): Flow<VerbTemplateEntity?>
 
     @Upsert
-    fun upsert(entity: VerbTemplateEntity)
+    suspend fun upsert(entity: VerbTemplateEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsertAll(entities: List<VerbTemplateEntity>)
+    suspend fun upsertAll(entities: List<VerbTemplateEntity>)
 
     @Query("DELETE FROM verb_templates WHERE userId = :userId")
-    fun deleteByUserId(userId: String)
+    suspend fun deleteByUserId(userId: String)
 }

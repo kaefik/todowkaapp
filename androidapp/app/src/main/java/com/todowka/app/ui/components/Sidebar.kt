@@ -1,9 +1,13 @@
 package com.todowka.app.ui.components
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -55,13 +59,6 @@ fun Sidebar(
     modifier: Modifier = Modifier
 ) {
     ModalDrawerSheet(modifier = modifier) {
-        Text(
-            text = "Todowka",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp)
-        )
-
         val gtdItems = listOf(
             SidebarItem(Route.Inbox.route, "Входящие", Icons.Filled.Inbox, gtdCounts["inbox"]),
             SidebarItem(Route.Active.route, "Активные", Icons.Filled.PlayArrow, gtdCounts["active"]),
@@ -72,22 +69,6 @@ fun Sidebar(
             SidebarItem(Route.Someday.route, "Когда-нибудь", Icons.Filled.Schedule, gtdCounts["someday"]),
         )
 
-        SidebarSection(title = "GTD") {
-            gtdItems.forEach { item ->
-                NavigationDrawerItem(
-                    icon = {
-                        SidebarIcon(icon = item.icon, badge = item.badge)
-                    },
-                    label = { Text(item.label) },
-                    selected = currentRoute == item.route,
-                    onClick = { onNavigate(item.route) },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
         val viewItems = listOf(
             SidebarItem(Route.Calendar.route, "Календарь", Icons.Filled.CalendarMonth),
             SidebarItem(Route.Projects.route, "Проекты", Icons.Filled.Folder),
@@ -96,93 +77,135 @@ fun Sidebar(
             SidebarItem(Route.Tags.route, "Теги", Icons.Filled.Tag),
         )
 
-        SidebarSection(title = "Представления") {
-            viewItems.forEach { item ->
-                NavigationDrawerItem(
-                    icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(24.dp)) },
-                    label = { Text(item.label) },
-                    selected = currentRoute == item.route,
-                    onClick = { onNavigate(item.route) },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
         val manageItems = listOf(
             SidebarItem(Route.Completed.route, "Завершено", Icons.Filled.CheckCircle, gtdCounts["completed"]),
             SidebarItem(Route.Trash.route, "Корзина", Icons.Filled.Delete, gtdCounts["trash"]),
         )
 
-        SidebarSection(title = "Управление") {
-            manageItems.forEach { item ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            item {
+                Text(
+                    text = "Todowka",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 28.dp, vertical = 16.dp)
+                )
+            }
+
+            item {
+                SidebarSection(title = "GTD") {
+                    gtdItems.forEach { item ->
+                        NavigationDrawerItem(
+                            icon = { SidebarIcon(icon = item.icon, badge = item.badge) },
+                            label = { Text(item.label) },
+                            selected = currentRoute == item.route,
+                            onClick = { onNavigate(item.route) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+
+            item {
+                SidebarSection(title = "Представления") {
+                    viewItems.forEach { item ->
+                        NavigationDrawerItem(
+                            icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(24.dp)) },
+                            label = { Text(item.label) },
+                            selected = currentRoute == item.route,
+                            onClick = { onNavigate(item.route) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+
+            item {
+                SidebarSection(title = "Управление") {
+                    manageItems.forEach { item ->
+                        NavigationDrawerItem(
+                            icon = { SidebarIcon(icon = item.icon, badge = item.badge) },
+                            label = { Text(item.label) },
+                            selected = currentRoute == item.route,
+                            onClick = { onNavigate(item.route) },
+                            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        )
+                    }
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+
+            item {
                 NavigationDrawerItem(
-                    icon = {
-                        SidebarIcon(icon = item.icon, badge = item.badge)
-                    },
-                    label = { Text(item.label) },
-                    selected = currentRoute == item.route,
-                    onClick = { onNavigate(item.route) },
+                    icon = { Icon(Icons.Filled.Notifications, contentDescription = "Уведомления", modifier = Modifier.size(24.dp)) },
+                    label = { Text("Уведомления") },
+                    selected = currentRoute == Route.Notifications.route,
+                    onClick = { onNavigate(Route.Notifications.route) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
             }
-        }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Filled.Notifications, contentDescription = "Уведомления", modifier = Modifier.size(24.dp)) },
-            label = { Text("Уведомления") },
-            selected = currentRoute == Route.Notifications.route,
-            onClick = { onNavigate(Route.Notifications.route) },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Filled.Person, contentDescription = "Профиль", modifier = Modifier.size(24.dp)) },
-            label = { Text("Профиль") },
-            selected = currentRoute == Route.Profile.route,
-            onClick = { onNavigate(Route.Profile.route) },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Filled.Settings, contentDescription = "Настройки", modifier = Modifier.size(24.dp)) },
-            label = { Text("Настройки") },
-            selected = currentRoute == Route.Settings.route,
-            onClick = { onNavigate(Route.Settings.route) },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Filled.RateReview, contentDescription = "Обзор", modifier = Modifier.size(24.dp)) },
-            label = { Text("Обзор GTD") },
-            selected = currentRoute == Route.Review.route,
-            onClick = { onNavigate(Route.Review.route) },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-        NavigationDrawerItem(
-            icon = {
-                Icon(
-                    Icons.Filled.Logout,
-                    contentDescription = "Выход",
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.error
+            item {
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Person, contentDescription = "Профиль", modifier = Modifier.size(24.dp)) },
+                    label = { Text("Профиль") },
+                    selected = currentRoute == Route.Profile.route,
+                    onClick = { onNavigate(Route.Profile.route) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
-            },
-            label = { Text("Выход", color = MaterialTheme.colorScheme.error) },
-            selected = false,
-            onClick = onLogout,
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
+            }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            item {
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Настройки", modifier = Modifier.size(24.dp)) },
+                    label = { Text("Настройки") },
+                    selected = currentRoute == Route.Settings.route,
+                    onClick = { onNavigate(Route.Settings.route) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+            }
+
+            item {
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.RateReview, contentDescription = "Обзор", modifier = Modifier.size(24.dp)) },
+                    label = { Text("Обзор GTD") },
+                    selected = currentRoute == Route.Review.route,
+                    onClick = { onNavigate(Route.Review.route) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
+
+            item {
+                NavigationDrawerItem(
+                    icon = {
+                        Icon(
+                            Icons.Filled.Logout,
+                            contentDescription = "Выход",
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    label = { Text("Выход", color = MaterialTheme.colorScheme.error) },
+                    selected = false,
+                    onClick = onLogout,
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+        }
     }
 }
 

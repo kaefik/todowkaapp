@@ -4,6 +4,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.todowka.app.data.local.preferences.AuthPreferences
+import com.todowka.app.ui.components.GtdTaskList
 import com.todowka.app.ui.screens.areas.AreaDetailScreen
 import com.todowka.app.ui.screens.areas.AreasScreen
 import com.todowka.app.ui.screens.calendar.CalendarScreen
@@ -16,30 +18,46 @@ import com.todowka.app.ui.screens.projects.ProjectsScreen
 import com.todowka.app.ui.screens.review.ReviewScreen
 import com.todowka.app.ui.screens.settings.SettingsScreen
 import com.todowka.app.ui.screens.tags.TagsScreen
-import com.todowka.app.ui.screens.tasks.ActiveScreen
 import com.todowka.app.ui.screens.tasks.CompletedScreen
-import com.todowka.app.ui.screens.tasks.InboxScreen
-import com.todowka.app.ui.screens.tasks.NextActionsScreen
-import com.todowka.app.ui.screens.tasks.SomedayScreen
 import com.todowka.app.ui.screens.tasks.TodayScreen
 import com.todowka.app.ui.screens.tasks.TomorrowScreen
 import com.todowka.app.ui.screens.tasks.TrashScreen
 import com.todowka.app.ui.screens.tasks.TasksScreen
-import com.todowka.app.ui.screens.tasks.WaitingForScreen
+import org.koin.compose.koinInject
 
 fun NavGraphBuilder.mainNavGraph(
     navController: NavHostController,
     isLoggedIn: Boolean,
-    onLogout: () -> Unit
+    isGuestMode: Boolean = false,
+    onLogout: () -> Unit,
+    onNavigateToLogin: () -> Unit = {}
 ) {
     composable(Route.Tasks.route) {
+        val authPreferences: AuthPreferences = koinInject()
+        val userId = authPreferences.currentUserId ?: ""
         TasksScreen()
     }
     composable(Route.Inbox.route) {
-        InboxScreen()
+        val authPreferences: AuthPreferences = koinInject()
+        val userId = authPreferences.currentUserId ?: ""
+        GtdTaskList(
+            title = "Входящие",
+            gtdStatus = "inbox",
+            userId = userId,
+            emptyMessage = "Входящие пусты",
+            onTaskClick = {}
+        )
     }
     composable(Route.Active.route) {
-        ActiveScreen()
+        val authPreferences: AuthPreferences = koinInject()
+        val userId = authPreferences.currentUserId ?: ""
+        GtdTaskList(
+            title = "Активные",
+            gtdStatus = "active",
+            userId = userId,
+            emptyMessage = "Нет активных задач",
+            onTaskClick = {}
+        )
     }
     composable(Route.Today.route) {
         TodayScreen()
@@ -48,13 +66,37 @@ fun NavGraphBuilder.mainNavGraph(
         TomorrowScreen()
     }
     composable(Route.NextActions.route) {
-        NextActionsScreen()
+        val authPreferences: AuthPreferences = koinInject()
+        val userId = authPreferences.currentUserId ?: ""
+        GtdTaskList(
+            title = "Следующие действия",
+            gtdStatus = "next",
+            userId = userId,
+            emptyMessage = "Нет следующих действий",
+            onTaskClick = {}
+        )
     }
     composable(Route.WaitingFor.route) {
-        WaitingForScreen()
+        val authPreferences: AuthPreferences = koinInject()
+        val userId = authPreferences.currentUserId ?: ""
+        GtdTaskList(
+            title = "Ожидание",
+            gtdStatus = "waiting",
+            userId = userId,
+            emptyMessage = "Нет задач в ожидании",
+            onTaskClick = {}
+        )
     }
     composable(Route.Someday.route) {
-        SomedayScreen()
+        val authPreferences: AuthPreferences = koinInject()
+        val userId = authPreferences.currentUserId ?: ""
+        GtdTaskList(
+            title = "Когда-нибудь",
+            gtdStatus = "someday",
+            userId = userId,
+            emptyMessage = "Нет задач на «когда-нибудь»",
+            onTaskClick = {}
+        )
     }
     composable(Route.Completed.route) {
         CompletedScreen()
@@ -113,7 +155,12 @@ fun NavGraphBuilder.mainNavGraph(
     }
     composable(Route.Profile.route) {
         ProfileScreen(
+            isGuestMode = isGuestMode,
             onLogout = onLogout,
+            onNavigateToLogin = onNavigateToLogin,
+            onNavigateToSettings = {
+                navController.navigate(Route.Settings.route)
+            },
             onBack = { navController.popBackStack() }
         )
     }

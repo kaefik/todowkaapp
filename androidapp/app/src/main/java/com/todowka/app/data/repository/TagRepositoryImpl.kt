@@ -72,7 +72,10 @@ class TagRepositoryImpl(
     }
 
     override suspend fun deleteTag(tagId: String, userId: String) {
+        val tag = tagDao.getByIdSync(tagId) ?: return
         val now = DateTimeUtils.nowIso()
+        val updated = tag.copy(_syncStatus = "deleted", updatedAt = now)
+        tagDao.upsert(updated)
         mutationDao.insert(
             MutationEntity(
                 userId = userId,
