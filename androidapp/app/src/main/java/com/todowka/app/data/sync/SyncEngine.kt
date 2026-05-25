@@ -35,6 +35,7 @@ import com.todowka.app.data.remote.dto.request.TaskCreateRequest
 import com.todowka.app.data.remote.dto.request.TaskMoveRequest
 import com.todowka.app.data.remote.dto.request.TaskReorderRequest
 import com.todowka.app.data.remote.dto.request.TaskUpdateRequest
+import com.todowka.app.di.RetrofitProvider
 import com.todowka.app.util.DateTimeUtils
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -47,14 +48,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 
 class SyncEngine(
-    private val tasksApi: TasksApi,
-    private val projectsApi: ProjectsApi,
-    private val areasApi: AreasApi,
-    private val contextsApi: ContextsApi,
-    private val tagsApi: TagsApi,
-    private val checklistApi: ChecklistApi,
-    private val calendarEventsApi: CalendarEventsApi,
-    private val verbTemplatesApi: VerbTemplatesApi,
+    private val retrofitProvider: RetrofitProvider,
     private val authPreferences: AuthPreferences,
     private val db: TodowkaDatabase,
     private val taskDao: TaskDao,
@@ -68,6 +62,14 @@ class SyncEngine(
     private val calendarEventDao: CalendarEventDao,
     private val verbTemplateDao: VerbTemplateDao
 ) {
+    private val tasksApi: TasksApi get() = retrofitProvider.getApi(TasksApi::class)
+    private val projectsApi: ProjectsApi get() = retrofitProvider.getApi(ProjectsApi::class)
+    private val areasApi: AreasApi get() = retrofitProvider.getApi(AreasApi::class)
+    private val contextsApi: ContextsApi get() = retrofitProvider.getApi(ContextsApi::class)
+    private val tagsApi: TagsApi get() = retrofitProvider.getApi(TagsApi::class)
+    private val checklistApi: ChecklistApi get() = retrofitProvider.getApi(ChecklistApi::class)
+    private val calendarEventsApi: CalendarEventsApi get() = retrofitProvider.getApi(CalendarEventsApi::class)
+    private val verbTemplatesApi: VerbTemplatesApi get() = retrofitProvider.getApi(VerbTemplatesApi::class)
     private val mutex = Mutex()
     private val echoSuppressor = EchoSuppressor()
     val statusTracker = SyncStatusTracker()

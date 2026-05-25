@@ -119,8 +119,6 @@ fun SettingsGeneralTab(
             supportingText = {
                 if (isGuestMode) {
                     Text("Укажите URL сервера для входа в аккаунт")
-                } else {
-                    Text("Изменения применятся после перезапуска приложения")
                 }
             },
             singleLine = true,

@@ -11,6 +11,7 @@ import com.todowka.app.data.remote.dto.response.UserResponse
 import com.todowka.app.data.remote.api.SessionsApi
 import com.todowka.app.data.remote.api.UsersApi
 import com.todowka.app.data.remote.dto.request.UserUpdateRequest
+import com.todowka.app.di.RetrofitProvider
 import com.todowka.app.domain.repository.AuthRepository
 import com.todowka.app.domain.repository.VerbTemplateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,9 +38,11 @@ class SettingsViewModel(
     private val authPreferences: AuthPreferences,
     private val serverPreferences: ServerPreferences,
     private val verbTemplateRepository: VerbTemplateRepository,
-    private val sessionsApi: SessionsApi,
-    private val usersApi: UsersApi
+    private val retrofitProvider: RetrofitProvider
 ) : ViewModel() {
+
+    private val sessionsApi: SessionsApi get() = retrofitProvider.getApi(SessionsApi::class)
+    private val usersApi: UsersApi get() = retrofitProvider.getApi(UsersApi::class)
 
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
@@ -118,6 +121,7 @@ class SettingsViewModel(
 
     fun updateServerUrl(url: String) {
         serverPreferences.serverUrl = url
+        retrofitProvider.rebuild()
         _state.value = _state.value.copy(serverUrl = url)
     }
 

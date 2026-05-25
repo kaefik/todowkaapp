@@ -3,11 +3,14 @@ package com.todowka.app.data.repository
 import com.todowka.app.data.remote.api.NotificationsApi
 import com.todowka.app.data.remote.dto.response.NotificationListResponse
 import com.todowka.app.data.remote.dto.response.NotificationResponse
+import com.todowka.app.di.RetrofitProvider
 import com.todowka.app.domain.repository.NotificationRepository
 
 class NotificationRepositoryImpl(
-    private val notificationsApi: NotificationsApi
+    private val retrofitProvider: RetrofitProvider
 ) : NotificationRepository {
+
+    private val notificationsApi: NotificationsApi get() = retrofitProvider.getApi(NotificationsApi::class)
 
     override suspend fun getNotifications(unreadOnly: Boolean?, limit: Int, offset: Int): Result<NotificationListResponse> {
         return try {

@@ -12,6 +12,7 @@ import com.todowka.app.data.remote.dto.request.RegisterRequest
 import com.todowka.app.data.remote.dto.response.TokenResponse
 import com.todowka.app.data.remote.dto.response.UserResponse
 import com.todowka.app.data.sync.SyncEngine
+import com.todowka.app.di.RetrofitProvider
 import com.todowka.app.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,12 +20,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
 class AuthRepositoryImpl(
-    private val authApi: AuthApi,
+    private val retrofitProvider: RetrofitProvider,
     private val authPreferences: AuthPreferences,
     private val userPreferences: UserPreferences,
     private val db: TodowkaDatabase,
     private val syncEngine: SyncEngine
 ) : AuthRepository {
+
+    private val authApi: AuthApi get() = retrofitProvider.getApi(AuthApi::class)
 
     private val _isLoggedIn = MutableStateFlow(
         authPreferences.accessToken != null || authPreferences.guestUserId != null

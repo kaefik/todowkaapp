@@ -4,11 +4,14 @@ import com.todowka.app.data.remote.api.ReviewApi
 import com.todowka.app.data.remote.dto.response.ReviewCompleteResponse
 import com.todowka.app.data.remote.dto.response.ReviewStatusResponse
 import com.todowka.app.data.remote.dto.response.ReviewSummaryResponse
+import com.todowka.app.di.RetrofitProvider
 import com.todowka.app.domain.repository.ReviewRepository
 
 class ReviewRepositoryImpl(
-    private val reviewApi: ReviewApi
+    private val retrofitProvider: RetrofitProvider
 ) : ReviewRepository {
+
+    private val reviewApi: ReviewApi get() = retrofitProvider.getApi(ReviewApi::class)
 
     override suspend fun getSummary(): Result<ReviewSummaryResponse> {
         return try {

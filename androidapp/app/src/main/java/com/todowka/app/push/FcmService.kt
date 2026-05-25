@@ -11,6 +11,7 @@ import com.todowka.app.MainActivity
 import com.todowka.app.R
 import com.todowka.app.data.remote.api.DevicesApi
 import com.todowka.app.data.remote.dto.request.DeviceRegisterRequest
+import com.todowka.app.di.RetrofitProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,7 +19,8 @@ import org.koin.android.ext.android.inject
 
 class FcmService : FirebaseMessagingService() {
 
-    private val devicesApi: DevicesApi by inject()
+    private val retrofitProvider: RetrofitProvider by inject()
+    private val devicesApi: DevicesApi get() = retrofitProvider.getApi(DevicesApi::class)
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)

@@ -37,7 +37,7 @@ val repositoryModule = module {
 
     single<AuthRepository> {
         AuthRepositoryImpl(
-            authApi = get(),
+            retrofitProvider = get(),
             authPreferences = get(),
             userPreferences = get(),
             db = get(),
@@ -104,26 +104,19 @@ val repositoryModule = module {
 
     single<NotificationRepository> {
         NotificationRepositoryImpl(
-            notificationsApi = get()
+            retrofitProvider = get()
         )
     }
 
     single<ReviewRepository> {
         ReviewRepositoryImpl(
-            reviewApi = get()
+            retrofitProvider = get()
         )
     }
 
     single {
         SyncEngine(
-            tasksApi = get(),
-            projectsApi = get(),
-            areasApi = get(),
-            contextsApi = get(),
-            tagsApi = get(),
-            checklistApi = get(),
-            calendarEventsApi = get(),
-            verbTemplatesApi = get(),
+            retrofitProvider = get(),
             authPreferences = get(),
             db = get(),
             taskDao = get(),
