@@ -21,6 +21,11 @@ class TokenRefreshInterceptor(
             return response
         }
 
+        val path = originalRequest.url.encodedPath
+        if (path == "/api/auth/login" || path == "/api/auth/register" || path == "/api/auth/refresh") {
+            return response
+        }
+
         response.close()
 
         val refreshToken = getRefreshToken()

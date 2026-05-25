@@ -17,6 +17,7 @@ import com.todowka.app.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
 import java.util.UUID
 
 class AuthRepositoryImpl(
@@ -47,6 +48,16 @@ class AuthRepositoryImpl(
         _isLoggedIn.value = true
     }
 
+    private fun parseErrorMessage(response: retrofit2.Response<*>): String {
+        val body = response.errorBody()?.string() ?: return response.message()
+        return try {
+            val json = JSONObject(body)
+            json.optString("detail", response.message())
+        } catch (_: Exception) {
+            response.message()
+        }
+    }
+
     override suspend fun login(username: String, password: String): Result<UserResponse> {
         return try {
             val response = authApi.login(LoginRequest(username, password))
@@ -60,26 +71,20 @@ class AuthRepositoryImpl(
                 if (guestId != null) {
                     try {
                         db.migrateGuestData(guestId, realUserId)
-                        authPreferences.clearGuestMode()
-                        authPreferences.saveTokens(accessToken, refreshToken, realUserId)
-                        _isGuestMode.value = false
-                        syncEngine.pushPendingChanges(realUserId)
-                        syncEngine.pullRemoteChanges(realUserId)
                     } catch (e: Exception) {
                         Log.e("AuthRepo", "Guest migration failed", e)
-                        authPreferences.clearGuestMode()
-                        authPreferences.saveTokens(accessToken, refreshToken, realUserId)
-                        _isGuestMode.value = false
                     }
-                } else {
-                    authPreferences.saveTokens(accessToken, refreshToken, realUserId)
+                    authPreferences.clearGuestMode()
                 }
+                authPreferences.saveTokens(accessToken, refreshToken, realUserId)
+                _isGuestMode.value = false
+                syncEngine.performInitialSync(realUserId)
 
                 _currentUser.value = body.user
                 _isLoggedIn.value = true
                 Result.success(body.user)
             } else {
-                Result.failure(Exception(response.message()))
+                Result.failure(Exception(parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -93,7 +98,7 @@ class AuthRepositoryImpl(
                 val body = response.body() ?: return Result.failure(Exception("Empty response"))
                 Result.success(body)
             } else {
-                Result.failure(Exception(response.message()))
+                Result.failure(Exception(parseErrorMessage(response)))
             }
         } catch (e: Exception) {
             Result.failure(e)

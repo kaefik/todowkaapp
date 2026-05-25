@@ -39,7 +39,7 @@ class LoginViewModel(
 
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            val result = authRepository.login(state.username, state.password)
+            val result = authRepository.login(state.username.trim(), state.password)
             _state.value = _state.value.copy(isLoading = false)
             if (result.isSuccess) {
                 onSuccess()

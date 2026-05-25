@@ -101,13 +101,13 @@ class SyncEngine(
 
             coroutineScope {
                 val tasksDeferred = async {
-                    runCatching { tasksApi.getTasks(limit = 10000) }.getOrNull()?.body()
+                    runCatching { tasksApi.getTasks(limit = 100) }.getOrNull()?.body()
                 }
                 val projectsDeferred = async {
-                    runCatching { projectsApi.getProjects(limit = 10000) }.getOrNull()?.body()
+                    runCatching { projectsApi.getProjects(limit = 100) }.getOrNull()?.body()
                 }
                 val areasDeferred = async {
-                    runCatching { areasApi.getAreas(limit = 10000) }.getOrNull()?.body()
+                    runCatching { areasApi.getAreas(limit = 100) }.getOrNull()?.body()
                 }
                 val contextsDeferred = async {
                     runCatching { contextsApi.getContexts() }.getOrNull()?.body()
@@ -119,7 +119,7 @@ class SyncEngine(
                     runCatching { checklistApi.getAllChecklistItems() }.getOrNull()?.body()
                 }
                 val eventsDeferred = async {
-                    runCatching { calendarEventsApi.getEvents(limit = 10000) }.getOrNull()?.body()
+                    runCatching { calendarEventsApi.getEvents(limit = 100) }.getOrNull()?.body()
                 }
                 val verbsDeferred = async {
                     runCatching { verbTemplatesApi.getTemplates() }.getOrNull()?.body()
@@ -589,7 +589,7 @@ class SyncEngine(
             val taskSync = syncMetaDao.get(userId, "task")
             val taskSince = taskSync?.lastSyncedAt
             if (taskSince != null) {
-                val response = tasksApi.getTasks(updatedSince = taskSince, limit = 10000)
+                val response = tasksApi.getTasks(updatedSince = taskSince, limit = 100)
                 if (response.isSuccessful) {
                     response.body()?.items?.forEach { task ->
                         if (!echoSuppressor.wasRecentlyPushed(task.id)) {
@@ -603,7 +603,7 @@ class SyncEngine(
             val projectSync = syncMetaDao.get(userId, "project")
             val projectSince = projectSync?.lastSyncedAt
             if (projectSince != null) {
-                val response = projectsApi.getProjects(updatedSince = projectSince, limit = 10000)
+                val response = projectsApi.getProjects(updatedSince = projectSince, limit = 100)
                 if (response.isSuccessful) {
                     response.body()?.items?.forEach { project ->
                         if (!echoSuppressor.wasRecentlyPushed(project.id)) {
@@ -617,7 +617,7 @@ class SyncEngine(
             val areaSync = syncMetaDao.get(userId, "area")
             val areaSince = areaSync?.lastSyncedAt
             if (areaSince != null) {
-                val response = areasApi.getAreas(updatedSince = areaSince, limit = 10000)
+                val response = areasApi.getAreas(updatedSince = areaSince, limit = 100)
                 if (response.isSuccessful) {
                     response.body()?.items?.forEach { area ->
                         if (!echoSuppressor.wasRecentlyPushed(area.id)) {
@@ -687,7 +687,7 @@ class SyncEngine(
             val eventSync = syncMetaDao.get(userId, "calendar_event")
             val eventSince = eventSync?.lastSyncedAt
             if (eventSince != null) {
-                val response = calendarEventsApi.getEvents(updatedSince = eventSince, limit = 10000)
+                val response = calendarEventsApi.getEvents(updatedSince = eventSince, limit = 100)
                 if (response.isSuccessful) {
                     response.body()?.items?.forEach { event ->
                         if (!echoSuppressor.wasRecentlyPushed(event.id)) {
