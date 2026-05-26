@@ -29,7 +29,7 @@ export const exportImportApi = {
     let filename = `todowka_export_${new Date().toISOString().split('T')[0]}.json`
     if (disposition) {
       const match = disposition.match(/filename="?([^";\n]+)"?/)
-      if (match) filename = match[1]
+      if (match) filename = match[1]!
     }
 
     const blob = await response.blob()
