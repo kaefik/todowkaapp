@@ -1,5 +1,6 @@
 import io
 import json
+import zipfile
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -7,6 +8,37 @@ import pytest_asyncio
 from sqlalchemy import select
 
 from app.models.user import User
+
+
+def _extract_export_json(response) -> dict:
+    content = response.content
+    with zipfile.ZipFile(io.BytesIO(content), "r") as zf:
+        json_names = [n for n in zf.namelist() if n.endswith(".json")]
+        assert len(json_names) >= 1
+        return json.loads(zf.read(json_names[0]))
+
+
+def _make_zip(payload: dict) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("export.json", json.dumps(payload).encode())
+    return buf.getvalue()
+
+
+def _empty_data():
+    return {
+        "areas": [],
+        "contexts": [],
+        "tags": [],
+        "verb_templates": [],
+        "projects": [],
+        "calendar_events": [],
+        "tasks": [],
+        "checklist_items": [],
+        "task_recurrences": [],
+        "event_recurrences": [],
+        "task_tags": [],
+    }
 
 
 @pytest_asyncio.fixture
@@ -36,19 +68,7 @@ async def test_import_requires_auth(client):
     data = json.dumps({
         "version": "1.0",
         "app": "todowka",
-        "data": {
-            "areas": [],
-            "contexts": [],
-            "tags": [],
-            "verb_templates": [],
-            "projects": [],
-            "calendar_events": [],
-            "tasks": [],
-            "checklist_items": [],
-            "task_recurrences": [],
-            "event_recurrences": [],
-            "task_tags": [],
-        },
+        "data": _empty_data(),
     }).encode()
     response = await client.post(
         "/api/export-import/import",
@@ -58,10 +78,20 @@ async def test_import_requires_auth(client):
 
 
 @pytest.mark.asyncio
+async def test_export_returns_zip(client, auth_user):
+    response = await client.get("/api/export-import/export")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+    content_disp = response.headers.get("content-disposition", "")
+    assert "todowka_export_" in content_disp
+    assert ".zip" in content_disp
+
+
+@pytest.mark.asyncio
 async def test_export_empty_data(client, auth_user):
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = response.json()
+    data = _extract_export_json(response)
     assert data["version"] == "1.0"
     assert data["app"] == "todowka"
     assert "data" in data
@@ -81,7 +111,7 @@ async def test_export_with_tasks(client, auth_user):
 
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = response.json()
+    data = _extract_export_json(response)
     tasks = data["data"]["tasks"]
     assert len(tasks) == 2
     titles = {t["title"] for t in tasks}
@@ -123,7 +153,7 @@ async def test_export_with_related_data(client, auth_user):
 
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = response.json()
+    data = _extract_export_json(response)
 
     assert len(data["data"]["tags"]) == 1
     assert data["data"]["tags"][0]["id"] == tag_id
@@ -161,7 +191,7 @@ async def test_export_with_calendar_events(client, auth_user):
 
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = response.json()
+    data = _extract_export_json(response)
 
     assert len(data["data"]["calendar_events"]) == 1
     exported_event = data["data"]["calendar_events"][0]
@@ -174,7 +204,7 @@ async def test_export_with_calendar_events(client, auth_user):
 
 
 @pytest.mark.asyncio
-async def test_import_creates_new_data(client, auth_user):
+async def test_import_json_creates_new_data(client, auth_user):
     tag_id = "aaaaaaaa-0000-0000-0000-000000000001"
     task_id = "aaaaaaaa-0000-0000-0000-000000000002"
     import_payload = {
@@ -217,6 +247,52 @@ async def test_import_creates_new_data(client, auth_user):
     task_resp = await client.get(f"/api/tasks/{task_id}")
     assert task_resp.status_code == 200
     assert task_resp.json()["title"] == "Imported task"
+
+
+@pytest.mark.asyncio
+async def test_import_zip_creates_new_data(client, auth_user):
+    tag_id = "aaaaaaaa-0000-0000-0000-000000000001"
+    task_id = "aaaaaaaa-0000-0000-0000-000000000002"
+    import_payload = {
+        "version": "1.0",
+        "app": "todowka",
+        "exported_at": datetime.now(UTC).isoformat(),
+        "data": {
+            "areas": [],
+            "contexts": [],
+            "tags": [
+                {"id": tag_id, "name": "zip-tag", "color": "#00FF00"},
+            ],
+            "verb_templates": [],
+            "projects": [],
+            "calendar_events": [],
+            "tasks": [
+                {"id": task_id, "title": "ZIP imported task", "tag_ids": [tag_id]},
+            ],
+            "checklist_items": [],
+            "task_recurrences": [],
+            "event_recurrences": [],
+            "task_tags": [
+                {"task_id": task_id, "tag_id": tag_id},
+            ],
+        },
+    }
+    zip_bytes = _make_zip(import_payload)
+
+    response = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.zip", io.BytesIO(zip_bytes), "application/zip")},
+    )
+    assert response.status_code == 200
+    report = response.json()
+    assert report["imported"]["tags"] == 1
+    assert report["imported"]["tasks"] == 1
+    assert report["imported"]["task_tags"] == 1
+    assert report["skipped"] == 0
+
+    task_resp = await client.get(f"/api/tasks/{task_id}")
+    assert task_resp.status_code == 200
+    assert task_resp.json()["title"] == "ZIP imported task"
 
 
 @pytest.mark.asyncio
@@ -299,6 +375,33 @@ async def test_import_rejects_wrong_app(client, auth_user):
 
 
 @pytest.mark.asyncio
+async def test_import_rejects_invalid_zip(client, auth_user):
+    bad_bytes = b"this is not a zip at all"
+
+    response = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.zip", io.BytesIO(bad_bytes), "application/zip")},
+    )
+    assert response.status_code == 400
+    assert "Invalid ZIP" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_import_rejects_zip_without_json(client, auth_user):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("readme.txt", "hello")
+    zip_bytes = buf.getvalue()
+
+    response = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.zip", io.BytesIO(zip_bytes), "application/zip")},
+    )
+    assert response.status_code == 400
+    assert "does not contain" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_import_upsert_updates_existing(client, auth_user):
     create_resp = await client.post(
         "/api/tasks", json={"title": "Original Title"}
@@ -355,7 +458,7 @@ async def test_cross_user_import_creates_with_new_ids(client, auth_user, db_sess
 
     export_resp = await client.get("/api/export-import/export")
     assert export_resp.status_code == 200
-    export_content = json.dumps(export_resp.json())
+    export_data = _extract_export_json(export_resp)
 
     user_b_data = {
         "username": "importer",
@@ -368,7 +471,7 @@ async def test_cross_user_import_creates_with_new_ids(client, auth_user, db_sess
         json={"username": "importer", "password": "Password123!"},
     )
 
-    json_bytes = export_content.encode()
+    json_bytes = json.dumps(export_data).encode()
     import_resp = await client.post(
         "/api/export-import/import",
         files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
@@ -407,7 +510,7 @@ async def test_roundtrip_with_calendar_events(client, auth_user):
 
     export_resp = await client.get("/api/export-import/export")
     assert export_resp.status_code == 200
-    export_data = export_resp.json()
+    export_data = _extract_export_json(export_resp)
 
     assert len(export_data["data"]["calendar_events"]) == 1
     assert export_data["data"]["calendar_events"][0]["title"] == "Workshop"
@@ -445,3 +548,37 @@ async def test_roundtrip_with_calendar_events(client, auth_user):
     events_data = events_resp.json()
     events = events_data.get("items", events_data) if isinstance(events_data, dict) else events_data
     assert any(e["title"] == "Workshop" for e in events)
+
+
+@pytest.mark.asyncio
+async def test_roundtrip_export_zip_import_zip(client, auth_user):
+    await client.post("/api/tags", json={"name": "roundtrip-tag", "color": "#123456"})
+    await client.post("/api/tasks", json={"title": "Roundtrip task"})
+
+    export_resp = await client.get("/api/export-import/export")
+    assert export_resp.status_code == 200
+    zip_content = export_resp.content
+
+    user_b_data = {
+        "username": "zipper",
+        "email": "zipper@example.com",
+        "password": "Password123!",
+    }
+    await client.post("/api/auth/register", json=user_b_data)
+    await client.post(
+        "/api/auth/login",
+        json={"username": "zipper", "password": "Password123!"},
+    )
+
+    import_resp = await client.post(
+        "/api/export-import/import",
+        files={"file": ("import.zip", io.BytesIO(zip_content), "application/zip")},
+    )
+    assert import_resp.status_code == 200
+    report = import_resp.json()
+    assert report["imported"]["tasks"] >= 1
+    assert report["imported"]["tags"] >= 1
+
+    tasks_resp = await client.get("/api/tasks")
+    tasks = tasks_resp.json()["items"]
+    assert any(t["title"] == "Roundtrip task" for t in tasks)

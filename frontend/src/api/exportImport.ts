@@ -26,7 +26,7 @@ export const exportImportApi = {
     }
 
     const disposition = response.headers.get('Content-Disposition')
-    let filename = `todowka_export_${new Date().toISOString().split('T')[0]}.json`
+    let filename = `todowka_export_${new Date().toISOString().split('T')[0]}.zip`
     if (disposition) {
       const match = disposition.match(/filename="?([^";\n]+)"?/)
       if (match) filename = match[1]!

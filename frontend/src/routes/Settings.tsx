@@ -575,7 +575,7 @@ function SettingsContent() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".json"
+                  accept=".json,.zip"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0]

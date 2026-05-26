@@ -1,4 +1,6 @@
+import io
 import json
+import zipfile
 from datetime import UTC, datetime
 from typing import Annotated
 
@@ -18,6 +20,24 @@ export_import_router = APIRouter(prefix="/export-import", tags=["export-import"]
 MAX_FILE_SIZE = 50 * 1024 * 1024
 
 
+def _build_zip(data: dict) -> io.BytesIO:
+    json_parts: list[str] = []
+    from app.services.export_import_service import _stream_json_chunks
+
+    for chunk in _stream_json_chunks(data):
+        json_parts.append(chunk)
+    json_bytes = "".join(json_parts).encode("utf-8")
+
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
+    json_filename = f"todowka_export_{date_str}.json"
+
+    zip_buf = io.BytesIO()
+    with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(json_filename, json_bytes)
+    zip_buf.seek(0)
+    return zip_buf
+
+
 @export_import_router.get("/export")
 @limiter.limit(export_limit)
 async def export_data(
@@ -27,12 +47,13 @@ async def export_data(
 ):
     service = ExportImportService(db)
     data = await service.preload_export_data(user_id=current_user.id)
-    filename = f"todowka_export_{datetime.now(UTC).strftime('%Y-%m-%d')}.json"
-    from app.services.export_import_service import _stream_json_chunks
+    date_str = datetime.now(UTC).strftime("%Y-%m-%d")
+    zip_filename = f"todowka_export_{date_str}.zip"
+    zip_buf = _build_zip(data)
     return StreamingResponse(
-        _stream_json_chunks(data),
-        media_type="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        zip_buf,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_filename}"'},
     )
 
 
@@ -44,10 +65,12 @@ async def import_data(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    if not file.filename or not file.filename.endswith(".json"):
+    if not file.filename or not (
+        file.filename.endswith(".json") or file.filename.endswith(".zip")
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File must be a .json file",
+            detail="File must be a .json or .zip file",
         )
 
     content = await file.read()
@@ -57,13 +80,33 @@ async def import_data(
             detail="File size exceeds 50MB limit",
         )
 
-    try:
-        data = json.loads(content)
-    except (json.JSONDecodeError, ValueError):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid JSON file",
-        ) from None
+    if file.filename.endswith(".zip"):
+        try:
+            zip_buf = io.BytesIO(content)
+            with zipfile.ZipFile(zip_buf, "r") as zf:
+                json_names = [n for n in zf.namelist() if n.endswith(".json")]
+                if not json_names:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="ZIP archive does not contain a .json file",
+                    )
+                json_content = zf.read(json_names[0])
+            data = json.loads(json_content)
+        except HTTPException:
+            raise
+        except (zipfile.BadZipFile, json.JSONDecodeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ZIP archive or JSON inside",
+            ) from None
+    else:
+        try:
+            data = json.loads(content)
+        except (json.JSONDecodeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid JSON file",
+            ) from None
 
     if data.get("app") != "todowka":
         raise HTTPException(
