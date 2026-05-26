@@ -61,10 +61,7 @@ async def test_import_requires_auth(client):
 async def test_export_empty_data(client, auth_user):
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    body = response.json()
-    assert "content" in body
-    assert "filename" in body
-    data = json.loads(body["content"])
+    data = response.json()
     assert data["version"] == "1.0"
     assert data["app"] == "todowka"
     assert "data" in data
@@ -84,7 +81,7 @@ async def test_export_with_tasks(client, auth_user):
 
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = json.loads(response.json()["content"])
+    data = response.json()
     tasks = data["data"]["tasks"]
     assert len(tasks) == 2
     titles = {t["title"] for t in tasks}
@@ -126,7 +123,7 @@ async def test_export_with_related_data(client, auth_user):
 
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = json.loads(response.json()["content"])
+    data = response.json()
 
     assert len(data["data"]["tags"]) == 1
     assert data["data"]["tags"][0]["id"] == tag_id
@@ -164,7 +161,7 @@ async def test_export_with_calendar_events(client, auth_user):
 
     response = await client.get("/api/export-import/export")
     assert response.status_code == 200
-    data = json.loads(response.json()["content"])
+    data = response.json()
 
     assert len(data["data"]["calendar_events"]) == 1
     exported_event = data["data"]["calendar_events"][0]
@@ -358,7 +355,7 @@ async def test_cross_user_import_creates_with_new_ids(client, auth_user, db_sess
 
     export_resp = await client.get("/api/export-import/export")
     assert export_resp.status_code == 200
-    export_content = export_resp.json()["content"]
+    export_content = json.dumps(export_resp.json())
 
     user_b_data = {
         "username": "importer",
@@ -410,7 +407,7 @@ async def test_roundtrip_with_calendar_events(client, auth_user):
 
     export_resp = await client.get("/api/export-import/export")
     assert export_resp.status_code == 200
-    export_data = json.loads(export_resp.json()["content"])
+    export_data = export_resp.json()
 
     assert len(export_data["data"]["calendar_events"]) == 1
     assert export_data["data"]["calendar_events"][0]["title"] == "Workshop"

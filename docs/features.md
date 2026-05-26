@@ -1697,7 +1697,15 @@
     - Task.event_id обрабатывается как FK с resolve + validation
     - Обратная совместимость: старые JSON-файлы без calendar_events импортируются без ошибок
     - Тесты: 13 тестов в test_export_import.py (включая roundtrip с календарными событиями)
-  - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, backend/app/schemas/export_import.py, backend/tests/test_export_import.py, frontend/src/api/exportImport.ts, frontend/src/routes/Settings.tsx
+  - **26 мая 2026 — оптимизация экспорта (StreamingResponse):**
+    - Убран indent=2 — сокращает размер файла на 30-40%
+    - StreamingResponse вместо JSON-оболочки `{"content": "...", "filename": "..."}`
+    - Предзагрузка данных в async-обработчике, sync generator _stream_json_chunks для сериализации
+    - tag_ids в задачах через отдельный SQL-запрос к task_tags (без N+1 через relationship)
+    - Фронтенд скачивает файл как binary blob из StreamingResponse
+    - Nginx: отдельный location /api/export-import/ с proxy_read_timeout 300s
+    - Старый метод export_data() не тронут — используется BackupScheduleService
+    - Файлы: backend/app/services/export_import_service.py, backend/app/api/export_import.py, frontend/src/api/exportImport.ts, docker/nginx.conf, docker/nginx-http.conf, docker/nginx-ssl.conf, deploy/nginx.conf
 
 ### Android-приложение — подробности реализации
 

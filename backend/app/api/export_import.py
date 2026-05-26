@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -25,10 +26,14 @@ async def export_data(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     service = ExportImportService(db)
-    result = await service.export_data(user_id=current_user.id)
-    content = json.dumps(result, ensure_ascii=False, indent=2)
+    data = await service.preload_export_data(user_id=current_user.id)
     filename = f"todowka_export_{datetime.now(UTC).strftime('%Y-%m-%d')}.json"
-    return {"content": content, "filename": filename}
+    from app.services.export_import_service import _stream_json_chunks
+    return StreamingResponse(
+        _stream_json_chunks(data),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @export_import_router.post("/import", response_model=ImportReport)

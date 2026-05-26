@@ -10,9 +10,7 @@ export const exportImportApi = {
   async exportData(): Promise<void> {
     const { useAuthStore } = await import('../stores/authStore')
     const authStore = useAuthStore.getState()
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
+    const headers: Record<string, string> = {}
     if (authStore.isAuthenticated) {
       headers['X-Requested-With'] = 'XMLHttpRequest'
     }
@@ -27,13 +25,14 @@ export const exportImportApi = {
       throw new Error(`Export failed: ${response.statusText}`)
     }
 
-    const result = await response.json()
-    const content = result.content
-    const filename =
-      result.filename ||
-      `todowka_export_${new Date().toISOString().split('T')[0]}.json`
+    const disposition = response.headers.get('Content-Disposition')
+    let filename = `todowka_export_${new Date().toISOString().split('T')[0]}.json`
+    if (disposition) {
+      const match = disposition.match(/filename="?([^";\n]+)"?/)
+      if (match) filename = match[1]
+    }
 
-    const blob = new Blob([content], { type: 'application/json' })
+    const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

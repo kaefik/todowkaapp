@@ -258,6 +258,112 @@ class ExportImportService:
             },
         }
 
+    async def preload_export_data(self, user_id: UUID) -> dict:
+        uid = str(user_id)
+
+        areas_result = await self.db.execute(
+            select(Area).where(Area.user_id == uid)
+        )
+        areas = [_serialize_area(a) for a in areas_result.scalars().all()]
+
+        contexts_result = await self.db.execute(
+            select(Context).where(Context.user_id == uid)
+        )
+        contexts = [_serialize_context(c) for c in contexts_result.scalars().all()]
+
+        tags_result = await self.db.execute(
+            select(Tag).where(Tag.user_id == uid)
+        )
+        tags = [_serialize_tag(t) for t in tags_result.scalars().all()]
+
+        vt_result = await self.db.execute(
+            select(VerbTemplate).where(VerbTemplate.user_id == uid)
+        )
+        verb_templates = [_serialize_verb_template(v) for v in vt_result.scalars().all()]
+
+        projects_result = await self.db.execute(
+            select(Project).where(Project.user_id == uid)
+        )
+        projects = [_serialize_project(p) for p in projects_result.scalars().all()]
+
+        cal_result = await self.db.execute(
+            select(CalendarEvent).where(CalendarEvent.user_id == uid)
+        )
+        calendar_events = [_serialize_calendar_event(e) for e in cal_result.scalars().all()]
+
+        tasks_result = await self.db.execute(
+            select(Task).where(Task.user_id == uid)
+        )
+        tasks = [_serialize_task(t) for t in tasks_result.scalars().all()]
+
+        task_ids = [t["id"] for t in tasks]
+
+        if task_ids:
+            tt_result = await self.db.execute(
+                select(task_tags).where(task_tags.c.task_id.in_(task_ids))
+            )
+            tag_map: dict[str, list[str]] = {}
+            for row in tt_result.all():
+                tag_map.setdefault(row.task_id, []).append(row.tag_id)
+            for t in tasks:
+                t["tag_ids"] = tag_map.get(t["id"], [])
+        else:
+            for t in tasks:
+                t["tag_ids"] = []
+
+        if task_ids:
+            cl_result = await self.db.execute(
+                select(ChecklistItem).where(ChecklistItem.task_id.in_(task_ids))
+            )
+            checklist_items = [_serialize_checklist_item(c) for c in cl_result.scalars().all()]
+
+            rec_result = await self.db.execute(
+                select(TaskRecurrence).where(TaskRecurrence.task_id.in_(task_ids))
+            )
+            task_recurrences = [_serialize_task_recurrence(r) for r in rec_result.scalars().all()]
+        else:
+            checklist_items = []
+            task_recurrences = []
+
+        event_ids = [e["id"] for e in calendar_events]
+        if event_ids:
+            er_result = await self.db.execute(
+                select(EventRecurrence).where(EventRecurrence.event_id.in_(event_ids))
+            )
+            event_recurrences = [_serialize_event_recurrence(r) for r in er_result.scalars().all()]
+        else:
+            event_recurrences = []
+
+        if task_ids:
+            tt_list_result = await self.db.execute(
+                select(task_tags).where(task_tags.c.task_id.in_(task_ids))
+            )
+            task_tags_list = [
+                {"task_id": row.task_id, "tag_id": row.tag_id}
+                for row in tt_list_result.all()
+            ]
+        else:
+            task_tags_list = []
+
+        return {
+            "version": "1.0",
+            "app": "todowka",
+            "exported_at": datetime.now(UTC).isoformat(),
+            "data": {
+                "areas": areas,
+                "contexts": contexts,
+                "tags": tags,
+                "verb_templates": verb_templates,
+                "projects": projects,
+                "calendar_events": calendar_events,
+                "tasks": tasks,
+                "checklist_items": checklist_items,
+                "task_recurrences": task_recurrences,
+                "event_recurrences": event_recurrences,
+                "task_tags": task_tags_list,
+            },
+        }
+
     @staticmethod
     def _parse_datetime(value: str | None) -> datetime | None:
         if value is None:
@@ -722,3 +828,27 @@ class ExportImportService:
             "skipped": skipped,
             "errors": errors,
         }
+
+
+def _stream_json_chunks(data: dict):
+    import json as _json
+
+    yield '{"version":"1.0","app":"todowka","exported_at":"'
+    yield _json.dumps(data["exported_at"], default=str).strip('"')
+    yield '","data":{'
+
+    inner = data["data"]
+    keys = [
+        "areas", "contexts", "tags", "verb_templates",
+        "projects", "calendar_events", "tasks",
+        "checklist_items", "task_recurrences", "event_recurrences",
+        "task_tags",
+    ]
+
+    for i, key in enumerate(keys):
+        if i > 0:
+            yield ","
+        yield '"' + key + '":'
+        yield _json.dumps(inner[key], ensure_ascii=False, default=str)
+
+    yield "}}"
