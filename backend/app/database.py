@@ -4,14 +4,14 @@ from collections.abc import AsyncGenerator
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from app.config import settings
 
 engine = create_async_engine(
     settings.database_url,
     connect_args={"check_same_thread": False},
-    pool_size=1,
-    max_overflow=0,
+    poolclass=NullPool,
     echo=settings.app_env == "development",
 )
 
