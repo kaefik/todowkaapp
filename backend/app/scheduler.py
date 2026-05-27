@@ -64,7 +64,8 @@ class TaskScheduler:
                 minutes=1,
                 id='send_deadline_notifications',
                 replace_existing=True,
-                max_instances=1
+                max_instances=1,
+                next_run_time=datetime.now() + timedelta(seconds=20),
             )
 
             self.scheduler.add_job(
@@ -124,7 +125,7 @@ class TaskScheduler:
             self.scheduler.add_job(
                 _job_poll_telegram_bots,
                 'interval',
-                seconds=5,
+                seconds=30,
                 id='poll_telegram_bots',
                 replace_existing=True,
                 max_instances=1,
@@ -137,6 +138,7 @@ class TaskScheduler:
                 id='send_backup_schedules',
                 replace_existing=True,
                 max_instances=1,
+                next_run_time=datetime.now() + timedelta(seconds=40),
             )
 
             self.scheduler.add_job(
@@ -162,7 +164,7 @@ class TaskScheduler:
                 reminder_service = ReminderService(session)
 
                 due_items = await reminder_service.find_due_tasks()
-                logger.info(f"Recovery: found {len(due_items)} missed reminders")
+                logger.debug(f"Recovery: found {len(due_items)} missed reminders")
                 await session.commit()
 
                 sent_count = 0
@@ -240,7 +242,7 @@ class TaskScheduler:
                         logger.error(f"Recovery error for task '{task.title}': {e}")
                         await session.rollback()
 
-                logger.info(f"Recovery: sent {sent_count} missed reminders")
+                logger.debug(f"Recovery: sent {sent_count} missed reminders")
 
         except Exception as e:
             logger.error(f"Error in reminder_recovery: {e}")
@@ -337,7 +339,7 @@ class TaskScheduler:
                 reminder_service = ReminderService(session)
 
                 due_items = await reminder_service.find_due_tasks()
-                logger.info(f"Found {len(due_items)} tasks with due reminders")
+                logger.debug(f"Found {len(due_items)} tasks with due reminders")
                 await session.commit()
 
                 for task, offset_minutes in due_items:
@@ -407,7 +409,7 @@ class TaskScheduler:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()
 
-                logger.info(f"Processed {len(due_items)} due tasks for reminders")
+                logger.debug(f"Processed {len(due_items)} due tasks for reminders")
 
         except Exception as e:
             logger.error(f"Error in job_send_due_reminders: {e}")
@@ -423,7 +425,7 @@ class TaskScheduler:
                 reminder_service = ReminderService(session)
 
                 tasks = await reminder_service.find_deadline_arrived_tasks()
-                logger.info(f"Found {len(tasks)} tasks with arrived deadlines")
+                logger.debug(f"Found {len(tasks)} tasks with arrived deadlines")
 
                 for task in tasks:
                     try:
@@ -619,10 +621,15 @@ task_scheduler = TaskScheduler()
 
 _telegram_poll_offsets: dict[str, int] = {}
 _polling_thread: threading.Thread | None = None
+_no_pending_users_until: float = 0.0
 
 
 async def _do_poll_telegram_bots():
+    import time as _time
+
     from app.services.telegram_notifier import TelegramNotifierService
+
+    global _no_pending_users_until
 
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -633,6 +640,12 @@ async def _do_poll_telegram_bots():
             )
         )
         users = list(result.scalars().all())
+
+        if not users:
+            _no_pending_users_until = _time.monotonic() + 60
+            return
+
+        _no_pending_users_until = 0.0
 
         for user in users:
             try:
@@ -680,7 +693,12 @@ def _run_polling_in_thread():
 
 
 async def _job_poll_telegram_bots():
+    import time as _time
     global _polling_thread
+
+    if _time.monotonic() < _no_pending_users_until:
+        return
+
     if _polling_thread is not None and _polling_thread.is_alive():
         return
 

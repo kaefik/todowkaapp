@@ -56,9 +56,10 @@ class RecurrenceService:
         stmt = select(TaskRecurrence).where(
             TaskRecurrence.task_id == task_id,
             func.date(TaskRecurrence.due_date_of_generated_task) == due_date.date(),
-        )
+        ).limit(1)
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        rows = result.scalars().all()
+        return rows[0] if rows else None
 
     def calculate_next_due_date(self, task: Task) -> datetime | None:
         if not task.due_date:

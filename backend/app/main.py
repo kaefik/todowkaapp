@@ -8,7 +8,6 @@ from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from app.api.devices import devices_router
 from app.api.areas import areas_router
 from app.api.auth import auth_router
 from app.api.backup_schedules import backup_schedules_router
@@ -17,6 +16,7 @@ from app.api.checklist import checklist_router
 from app.api.config import config_router
 from app.api.contexts import contexts_router
 from app.api.deleted import deleted_router
+from app.api.devices import devices_router
 from app.api.export_import import export_import_router
 from app.api.notifications import notifications_router
 from app.api.projects import projects_router
@@ -37,6 +37,7 @@ logging.basicConfig(
     level=getattr(logging, settings.log_level.upper(), logging.INFO),
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
+logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 
 @asynccontextmanager

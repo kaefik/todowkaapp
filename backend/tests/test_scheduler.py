@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 
 from app.models.task import Task
 from app.models.user import User
@@ -99,3 +100,34 @@ async def test_scheduler_tuple_unpacking(db_session, user_for_scheduler):
 
     await db_session.refresh(task)
     assert task.sent_reminder_offsets == [5]
+
+
+@pytest.mark.asyncio
+async def test_startup_recovery_multiple_recurring_tasks(db_session, user_for_scheduler):
+    now = datetime.now(UTC)
+
+    for i in range(3):
+        task = Task(
+            user_id=user_for_scheduler.id,
+            title=f"Recurring {i}",
+            due_date=now - timedelta(days=2),
+            recurrence_type="daily",
+            recurrence_interval=1,
+            is_completed=True,
+        )
+        db_session.add(task)
+    await db_session.commit()
+
+    from app.services.recurrence_service import RecurrenceService
+
+    result = await db_session.execute(
+        select(Task).where(Task.user_id == user_for_scheduler.id)
+    )
+    tasks = list(result.scalars().all())
+
+    for task in tasks:
+        svc = RecurrenceService(db_session)
+        try:
+            await svc.catch_up_missed_tasks(task, max_days=7)
+        except Exception as e:
+            pytest.fail(f"catch_up_missed_tasks should not raise: {e}")
