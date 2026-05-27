@@ -4,14 +4,12 @@ from collections.abc import AsyncGenerator
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.pool import NullPool
 
 from app.config import settings
 
 engine = create_async_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False, "timeout": 30},
-    poolclass=NullPool,
+    connect_args={"check_same_thread": False},
     echo=settings.app_env == "development",
 )
 
@@ -32,8 +30,6 @@ def _regexp(pattern, string):
 def _set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA busy_timeout=30000")
-    cursor.execute("PRAGMA synchronous=NORMAL")
     dbapi_connection.create_function("LOWER", 1, _unicode_lower)
     dbapi_connection.create_function("REGEXP", 2, _regexp)
     cursor.close()

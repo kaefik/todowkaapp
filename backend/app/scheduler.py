@@ -164,7 +164,7 @@ class TaskScheduler:
                 reminder_service = ReminderService(session)
 
                 due_items = await reminder_service.find_due_tasks()
-                logger.debug(f"Recovery: found {len(due_items)} missed reminders")
+                logger.info(f"Recovery: found {len(due_items)} missed reminders")
                 await session.commit()
 
                 sent_count = 0
@@ -242,7 +242,7 @@ class TaskScheduler:
                         logger.error(f"Recovery error for task '{task.title}': {e}")
                         await session.rollback()
 
-                logger.debug(f"Recovery: sent {sent_count} missed reminders")
+                logger.info(f"Recovery: sent {sent_count} missed reminders")
 
         except Exception as e:
             logger.error(f"Error in reminder_recovery: {e}")
@@ -339,7 +339,7 @@ class TaskScheduler:
                 reminder_service = ReminderService(session)
 
                 due_items = await reminder_service.find_due_tasks()
-                logger.debug(f"Found {len(due_items)} tasks with due reminders")
+                logger.info(f"Found {len(due_items)} tasks with due reminders")
                 await session.commit()
 
                 for task, offset_minutes in due_items:
@@ -409,7 +409,7 @@ class TaskScheduler:
                         logger.error(f"Error sending reminder for task '{task.title}': {e}")
                         await session.rollback()
 
-                logger.debug(f"Processed {len(due_items)} due tasks for reminders")
+                logger.info(f"Processed {len(due_items)} due tasks for reminders")
 
         except Exception as e:
             logger.error(f"Error in job_send_due_reminders: {e}")
@@ -425,7 +425,7 @@ class TaskScheduler:
                 reminder_service = ReminderService(session)
 
                 tasks = await reminder_service.find_deadline_arrived_tasks()
-                logger.debug(f"Found {len(tasks)} tasks with arrived deadlines")
+                logger.info(f"Found {len(tasks)} tasks with arrived deadlines")
 
                 for task in tasks:
                     try:
