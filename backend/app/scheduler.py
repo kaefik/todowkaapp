@@ -89,7 +89,7 @@ class TaskScheduler:
             self.scheduler.add_job(
                 self._job_startup_recovery_events,
                 'date',
-                run_date=datetime.now(),
+                run_date=datetime.now() + timedelta(seconds=5),
                 id='startup_recovery_events',
                 replace_existing=True,
                 max_instances=1
@@ -116,7 +116,7 @@ class TaskScheduler:
             self.scheduler.add_job(
                 self._job_reminder_recovery,
                 'date',
-                run_date=datetime.now(),
+                run_date=datetime.now() + timedelta(seconds=10),
                 id='reminder_recovery',
                 replace_existing=True,
                 max_instances=1,
