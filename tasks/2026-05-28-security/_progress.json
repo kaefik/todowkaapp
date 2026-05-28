@@ -1,0 +1,20 @@
+{
+  "plan": "2026-05-28-security",
+  "created": "2026-05-28",
+  "description": "Security audit remediation — full backend vulnerability fixes",
+  "status": "ready",
+  "total_tasks": 35,
+  "completed": 0,
+  "in_progress": "",
+  "layers": {
+    "L0": 2,
+    "L1": 2,
+    "L2": 6,
+    "L3": 7,
+    "L4": 5,
+    "L5": 6,
+    "L6": 3,
+    "L7": 7,
+    "L8": 1
+  }
+}
