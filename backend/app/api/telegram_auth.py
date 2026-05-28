@@ -1,34 +1,40 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
+from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.telegram_auth import (
-    TelegramLoginRequest,
-    TelegramLoginResponse,
     TelegramBindRequest,
     TelegramBindResponse,
+    TelegramLoginRequest,
+    TelegramLoginResponse,
 )
+from app.security import clear_access_cookie
 from app.services.telegram_auth_service import TelegramAuthService
 
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 
 @router.post("/login", response_model=TelegramLoginResponse)
+@limiter.limit("5/minute")
 async def telegram_login(
-    request: TelegramLoginRequest,
-    db: AsyncSession = Depends(get_db)
+    request: Request,
+    data: TelegramLoginRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Аутентификация через Telegram WebApp"""
     service = TelegramAuthService(db)
     try:
-        result = await service.login_via_telegram(request.init_data)
+        result = await service.login_via_telegram(data.init_data)
         user_model = result["user"]
         return TelegramLoginResponse(
             access_token=result["access_token"],
-            refresh_token=result.get("refresh_token"),
             user={
-                "id": int(user_model.id.replace("-", "")[:8]),
+                "id": str(user_model.id),
                 "email": user_model.email,
                 "username": user_model.username,
                 "language": user_model.language or "ru",
@@ -40,22 +46,24 @@ async def telegram_login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e)
-        )
+        ) from None
 
 
 @router.post("/bind", response_model=TelegramBindResponse)
+@limiter.limit(write_limit)
 async def bind_telegram(
-    request: TelegramBindRequest,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    request: Request,
+    data: TelegramBindRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Привязка аккаунта к Telegram"""
     service = TelegramAuthService(db)
-    telegram_chat_id = str(current_user.get("id", ""))
+    telegram_chat_id = str(current_user.id)
     success = await service.bind_account(
-        current_user["sub"],
+        str(current_user.id),
         telegram_chat_id,
-        request.token
+        data.token
     )
     if not success:
         raise HTTPException(
@@ -66,19 +74,25 @@ async def bind_telegram(
 
 
 @router.get("/bind-link")
+@limiter.limit(read_limit)
 async def get_bind_link(
-    current_user: dict = Depends(get_current_user)
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Получить ссылку для привязки Telegram"""
-    from app.database import AsyncSessionLocal
-    
-    async with AsyncSessionLocal() as session:
-        service = TelegramAuthService(session)
-        link = await service.generate_bind_link(current_user["sub"])
-        return {"link": link}
+    service = TelegramAuthService(db)
+    link = await service.generate_bind_link(str(current_user.id))
+    return {"link": link}
 
 
 @router.post("/logout")
-async def telegram_logout():
+@limiter.limit(write_limit)
+async def telegram_logout(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+    response: Response,
+):
     """Выход из Telegram"""
+    clear_access_cookie(response)
     return {"success": True}

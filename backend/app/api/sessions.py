@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.session import RevokeAllRequest, SessionListResponse, SessionResponse
 from app.services.session_service import SessionService
 
@@ -13,7 +14,9 @@ sessions_router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
 @sessions_router.get("", response_model=SessionListResponse)
+@limiter.limit(read_limit)
 async def list_sessions(
+    request: Request,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     current_session_id: str | None = Query(default=None),
@@ -38,7 +41,9 @@ async def list_sessions(
 
 
 @sessions_router.delete("/{session_id}")
+@limiter.limit(write_limit)
 async def revoke_session(
+    request: Request,
     session_id: str,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -50,7 +55,9 @@ async def revoke_session(
 
 
 @sessions_router.delete("")
+@limiter.limit(write_limit)
 async def revoke_all_sessions(
+    request: Request,
     data: RevokeAllRequest,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

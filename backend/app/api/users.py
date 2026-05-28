@@ -1,6 +1,8 @@
-import random
+import hashlib
+import hmac as hmac_module
+import secrets
 import string
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -8,13 +10,26 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_admin_user, get_current_user
 from app.models.user import User
 from app.rate_limit import limiter, read_limit, write_limit
 from app.schemas.user import UserResponse, UserUpdate
+from app.services.crypto_service import encrypt_secret
 
 users_router = APIRouter(prefix="/users", tags=["users"])
+
+
+def _hash_verification_code(code: str) -> str:
+    return hmac_module.new(
+        settings.secret_key.encode(), code.encode(), hashlib.sha256
+    ).hexdigest()
+
+
+def _verify_code_hash(code: str, code_hash: str) -> bool:
+    expected = _hash_verification_code(code)
+    return hmac_module.compare_digest(expected, code_hash)
 
 
 @users_router.get("", response_model=list[UserResponse])
@@ -142,15 +157,12 @@ async def update_current_user(
 
     if 'telegram_bot_token' in update_data:
         new_token = update_data['telegram_bot_token']
-        if new_token != (current_user.telegram_bot_token or ''):
+        current_decrypted = current_user.decrypted_telegram_bot_token or ''
+        if new_token != current_decrypted:
             update_data['telegram_chat_id'] = None
             update_data['telegram_notifications_enabled'] = False
-
-    if data.password:
-        from app.security import hash_password
-        update_data['password_hash'] = hash_password(data.password)
-        if 'password' in update_data:
-            del update_data['password']
+        if new_token:
+            update_data['telegram_bot_token'] = encrypt_secret(new_token)
 
     if update_data:
         await db.execute(
@@ -234,7 +246,8 @@ async def verify_email(
             detail="Email already used by another user",
         )
 
-    code = "".join(random.choices(string.digits, k=6))
+    code = "".join(secrets.choice(string.digits) for _ in range(6))
+    code_hash = _hash_verification_code(code)
 
     from app.services.email_service import get_email_service_from_db
 
@@ -250,7 +263,12 @@ async def verify_email(
     await db.execute(
         update(User)
         .where(User.id == current_user.id)
-        .values(email_verification_code=code, notification_email=email)
+        .values(
+            email_verification_code=code_hash,
+            email_verification_code_expires_at=datetime.now(UTC) + timedelta(minutes=15),
+            email_verification_attempts=0,
+            notification_email=email,
+        )
     )
     await db.commit()
 
@@ -258,7 +276,7 @@ async def verify_email(
 
 
 @users_router.post("/confirm-email", response_model=ConfirmEmailResponse)
-@limiter.limit(write_limit)
+@limiter.limit("5/minute")
 async def confirm_email(
     request: Request,
     data: ConfirmEmailRequest,
@@ -274,7 +292,32 @@ async def confirm_email(
             detail="No verification code requested",
         )
 
-    if user.email_verification_code != data.code:
+    if user.email_verification_code_expires_at:
+        if datetime.now(UTC) > user.email_verification_code_expires_at.replace(tzinfo=UTC):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code expired",
+            )
+
+    if user.email_verification_attempts >= 5:
+        await db.execute(
+            update(User)
+            .where(User.id == current_user.id)
+            .values(email_verification_code=None, email_verification_code_expires_at=None, email_verification_attempts=0)
+        )
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Too many attempts. Please request a new code.",
+        )
+
+    if not _verify_code_hash(data.code, user.email_verification_code):
+        await db.execute(
+            update(User)
+            .where(User.id == current_user.id)
+            .values(email_verification_attempts=user.email_verification_attempts + 1)
+        )
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code",
@@ -286,12 +329,16 @@ async def confirm_email(
     await db.execute(
         update(User)
         .where(User.id == current_user.id)
-        .values(email_verification_code=None, email_verified_at=datetime.now())
+        .values(
+            email_verification_code=None,
+            email_verification_code_expires_at=None,
+            email_verification_attempts=0,
+            email_verified_at=datetime.now(UTC),
+        )
     )
     await db.commit()
 
     if notification_email:
-        from app.config import settings
         from app.services.email_service import get_email_service_from_db
 
         try:
@@ -305,7 +352,6 @@ async def confirm_email(
         except Exception as e:
             import logging
             logging.getLogger(__name__).error(f"Failed to send confirmation email: {e}")
-
     return ConfirmEmailResponse(
         message="Email подтверждён",
         notification_email=notification_email,

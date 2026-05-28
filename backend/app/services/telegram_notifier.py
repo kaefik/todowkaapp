@@ -187,7 +187,8 @@ class TelegramNotifierService:
 
     @staticmethod
     async def send_reminder(user: 'User', task: 'Task') -> bool:
-        if not user.telegram_bot_token or not user.telegram_chat_id:
+        bot_token = user.decrypted_telegram_bot_token
+        if not bot_token or not user.telegram_chat_id:
             return False
 
         user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
@@ -197,7 +198,7 @@ class TelegramNotifierService:
         text = TelegramNotifierService.format_full_task_info(task, user_tz, frontend_url=settings.frontend_url, lang=lang)
 
         success = await TelegramNotifierService.send_message(
-            user.telegram_bot_token, user.telegram_chat_id, text
+            bot_token, user.telegram_chat_id, text
         )
 
         if not success:

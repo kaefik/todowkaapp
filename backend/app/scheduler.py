@@ -255,13 +255,15 @@ class TaskScheduler:
         logger.info("Running job: cleanup_revoked_tokens")
 
         try:
+            from app.config import settings
+
             async with AsyncSessionLocal() as session:
-                cutoff = datetime.now() - timedelta(days=7)
+                cutoff = datetime.now() - timedelta(days=settings.refresh_token_expire_days)
                 result = await session.execute(
                     delete(RevokedToken).where(RevokedToken.revoked_at < cutoff)
                 )
                 await session.commit()
-                logger.info(f"Deleted {result.rowcount} expired revoked tokens")
+                logger.info(f"Deleted {result.rowcount} expired revoked tokens (older than {settings.refresh_token_expire_days} days)")
 
         except Exception as e:
             logger.error(f"Error in cleanup_revoked_tokens: {e}")
@@ -467,7 +469,7 @@ class TaskScheduler:
                                 from app.services.telegram_notifier import TelegramNotifierService
                                 task_link = TelegramNotifierService._build_task_link(task.id, settings.frontend_url, lang)
                                 await TelegramNotifierService.send_message(
-                                    user.telegram_bot_token,
+                                    user.decrypted_telegram_bot_token,
                                     user.telegram_chat_id,
                                     f'{i18n_t("deadlineArrivedTelegram", lang, title=task.title)}\n\n{task_link}',
                                 )
@@ -636,9 +638,10 @@ async def _do_poll_telegram_bots():
 
         for user in users:
             try:
+                bot_token = user.decrypted_telegram_bot_token
                 offset = _telegram_poll_offsets.get(str(user.id))
                 updates, new_offset = await TelegramNotifierService.poll_updates(
-                    user.telegram_bot_token, offset
+                    bot_token, offset
                 )
                 if new_offset is not None:
                     _telegram_poll_offsets[str(user.id)] = new_offset
@@ -658,7 +661,7 @@ async def _do_poll_telegram_bots():
 
                         lang = getattr(user, 'language', None) or "ru"
                         await TelegramNotifierService.send_message(
-                            user.telegram_bot_token,
+                            bot_token,
                             chat_id,
                             i18n_t("telegramBotConnected", lang),
                         )

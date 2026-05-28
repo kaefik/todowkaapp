@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import get_current_admin_user
 from app.models.user import User
+from app.services.crypto_service import encrypt_secret
 
 settings_router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -77,7 +78,7 @@ async def update_smtp_settings(
         ('smtp_host', config.smtp_host),
         ('smtp_port', str(config.smtp_port) if config.smtp_port else '587'),
         ('smtp_user', config.smtp_user),
-        ('smtp_password', config.smtp_password),
+        ('smtp_password', encrypt_secret(config.smtp_password) if config.smtp_password else None),
         ('smtp_from', config.smtp_from),
     ]
 

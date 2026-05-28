@@ -1,3 +1,4 @@
+import asyncio
 import uuid as uuid_mod
 from datetime import UTC, datetime
 from typing import Annotated
@@ -130,6 +131,9 @@ def _serialize_task_recurrence(r: TaskRecurrence) -> dict:
         "generated_at": _dt(r.generated_at),
         "status": r.status,
     }
+
+
+_import_locks: dict[str, asyncio.Lock] = {}
 
 
 class ExportImportService:
@@ -292,6 +296,12 @@ class ExportImportService:
 
     async def import_data(self, user_id: UUID, import_data: dict) -> dict:
         uid = str(user_id)
+        if uid not in _import_locks:
+            _import_locks[uid] = asyncio.Lock()
+        async with _import_locks[uid]:
+            return await self._import_data_impl(uid, import_data)
+
+    async def _import_data_impl(self, uid: str, import_data: dict) -> dict:
         data = import_data.get("data", import_data)
         imported: dict[str, int] = {}
         errors: list[str] = []

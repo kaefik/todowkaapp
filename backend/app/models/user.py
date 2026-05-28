@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime
 
@@ -5,6 +6,8 @@ from sqlalchemy import Boolean, DateTime, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base as Base
+
+_logger = logging.getLogger(__name__)
 
 
 class User(Base):
@@ -24,6 +27,17 @@ class User(Base):
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     telegram_bot_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    @property
+    def decrypted_telegram_bot_token(self) -> str | None:
+        from app.services.crypto_service import decrypt_secret
+        if not self.telegram_bot_token:
+            return self.telegram_bot_token
+        decrypted = decrypt_secret(self.telegram_bot_token)
+        if decrypted is None:
+            _logger.warning(f"Failed to decrypt telegram_bot_token for user {self.id}")
+            return self.telegram_bot_token
+        return decrypted
     telegram_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     telegram_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
     capitalize_first: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text('1'), nullable=False)
@@ -33,7 +47,9 @@ class User(Base):
     review_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
     email_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
     notification_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    email_verification_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
+    email_verification_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    email_verification_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=text('0'), nullable=False)
+    email_verification_code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

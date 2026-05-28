@@ -123,6 +123,8 @@ class EmailService:
 async def get_email_service_from_db(db) -> EmailService | None:
     from sqlalchemy import text
 
+    from app.services.crypto_service import decrypt_secret
+
     result = await db.execute(text(
         "SELECT key, value FROM system_settings WHERE key LIKE 'smtp_%'"
     ))
@@ -137,7 +139,11 @@ async def get_email_service_from_db(db) -> EmailService | None:
         elif row[0] == 'smtp_user':
             smtp_config['username'] = row[1]
         elif row[0] == 'smtp_password':
-            smtp_config['password'] = row[1]
+            password = row[1]
+            if password:
+                decrypted = decrypt_secret(password)
+                password = decrypted if decrypted is not None else password
+            smtp_config['password'] = password
         elif row[0] == 'smtp_from':
             smtp_config['from_addr'] = row[1]
 

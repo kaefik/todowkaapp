@@ -53,7 +53,7 @@ class BackupScheduleService:
         await self.db.flush()
 
     async def send_backup_now(self, user: User) -> bool:
-        if not user.telegram_bot_token or not user.telegram_chat_id:
+        if not user.decrypted_telegram_bot_token or not user.telegram_chat_id:
             return False
         return await self._generate_and_send(user)
 
@@ -64,10 +64,12 @@ class BackupScheduleService:
             content = json.dumps(data, ensure_ascii=False, indent=2)
             json_bytes = content.encode("utf-8")
 
+            bot_token = user.decrypted_telegram_bot_token
+
             if len(json_bytes) > MAX_BACKUP_SIZE:
                 lang = getattr(user, 'language', None) or "ru"
                 await TelegramNotifierService.send_message(
-                    user.telegram_bot_token,
+                    bot_token,
                     user.telegram_chat_id,
                     i18n_t("backupTooLarge", lang),
                 )
@@ -78,7 +80,7 @@ class BackupScheduleService:
             caption = f"\U0001f4be Todowka backup {now.strftime('%d.%m.%Y %H:%M')} UTC"
 
             success = await TelegramNotifierService.send_document(
-                user.telegram_bot_token, user.telegram_chat_id, filename, json_bytes, caption
+                bot_token, user.telegram_chat_id, filename, json_bytes, caption
             )
             return success
         except Exception as e:
@@ -101,7 +103,7 @@ class BackupScheduleService:
             user = user_result.scalar_one_or_none()
             if not user:
                 continue
-            if not user.telegram_bot_token or not user.telegram_chat_id:
+            if not user.decrypted_telegram_bot_token or not user.telegram_chat_id:
                 continue
 
             user_tz = ZoneInfo(user.timezone or "Europe/Moscow")

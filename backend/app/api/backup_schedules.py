@@ -40,7 +40,7 @@ async def create_backup_schedule(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    if not current_user.telegram_bot_token or not current_user.telegram_chat_id:
+    if not current_user.decrypted_telegram_bot_token or not current_user.telegram_chat_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Telegram bot must be connected first",
@@ -97,7 +97,7 @@ async def send_backup_now(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    if not current_user.telegram_bot_token or not current_user.telegram_chat_id:
+    if not current_user.decrypted_telegram_bot_token or not current_user.telegram_chat_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Telegram bot must be connected first",

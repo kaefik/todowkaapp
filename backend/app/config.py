@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./data/todowka.db"
     secret_key: str = "changeme-generate-random-string-64-chars"
-    access_token_expire_minutes: int = 15
+    access_token_expire_minutes: int = 5
     refresh_token_expire_days: int = 7
     registration_enabled: bool = True
     invite_code: str | None = None
@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     smtp_user: str | None = None
     smtp_password: str | None = None
     smtp_from: str | None = None
+    trusted_proxies: str = ""
+    secrets_encryption_key: str | None = None
 
     @property
     def frontend_url(self) -> str:

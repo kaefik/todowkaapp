@@ -57,12 +57,17 @@ def _rate_limit_exceeded_handler_with_logging(request: Request, exc: RateLimitEx
 
 
 def create_app() -> FastAPI:
+    is_production = settings.app_env == "production"
+
     app = FastAPI(
         title="Todowka API",
         description="Todo application with authentication",
         version="0.1.0",
         lifespan=lifespan,
         default_response_class=JSONResponse,
+        docs_url=None if is_production else "/docs",
+        redoc_url=None if is_production else "/redoc",
+        openapi_url=None if is_production else "/openapi.json",
     )
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler_with_logging)
@@ -74,6 +79,8 @@ def create_app() -> FastAPI:
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
             response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+            if is_production:
+                response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
             content_type = response.headers.get("content-type", "")
             if "text/event-stream" not in content_type:
                 response.headers["Content-Security-Policy"] = (
@@ -89,7 +96,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.allowed_origins.split(","),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
+        allow_headers=["Authorization", "Content-Type", "Accept"],
     )
 
     api_router.include_router(areas_router)

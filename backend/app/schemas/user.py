@@ -51,8 +51,14 @@ class UserResponse(BaseResponseSchema):
 
     @model_validator(mode='after')
     def mask_telegram_token(self) -> 'UserResponse':
-        if self.telegram_bot_token and len(self.telegram_bot_token) > 5:
-            self.telegram_bot_token = '*****' + self.telegram_bot_token[-5:]
+        if self.telegram_bot_token:
+            from app.services.crypto_service import decrypt_secret
+            decrypted = decrypt_secret(self.telegram_bot_token)
+            token = decrypted if decrypted is not None else self.telegram_bot_token
+            if len(token) > 5:
+                self.telegram_bot_token = '*****' + token[-5:]
+            else:
+                self.telegram_bot_token = '*****'
         return self
 
 
@@ -62,7 +68,6 @@ class UserUpdate(BaseModel):
     timezone: str | None = Field(default=None, max_length=50)
     default_section: str | None = Field(default=None, max_length=30)
     language: str | None = Field(default=None, max_length=10)
-    password: str | None = None
     telegram_bot_token: str | None = None
     telegram_notifications_enabled: bool | None = None
     capitalize_first: bool | None = None
@@ -89,20 +94,6 @@ class UserUpdate(BaseModel):
             raise ValueError('Invalid timezone') from e
         return v
 
-    @field_validator('password')
-    @classmethod
-    def validate_password(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        if len(v) < 8 or len(v) > 100:
-            raise ValueError('Password must be between 8 and 100 characters')
-        if not re.search(r'\d', v):
-            raise ValueError('Password must contain at least one digit')
-        if not _has_uppercase(v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not _has_special(v):
-            raise ValueError('Password must contain at least one special character')
-        return v
 
 
 class RegisterRequest(BaseModel):

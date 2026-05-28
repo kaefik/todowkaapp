@@ -1,13 +1,15 @@
 import hashlib
 import logging
 import time
+from collections import OrderedDict
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
-_range_cache: dict[str, tuple[float, str]] = {}
+_range_cache: OrderedDict[str, tuple[float, str]] = OrderedDict()
 _CACHE_TTL = 3600
+_MAX_CACHE_SIZE = 100
 
 
 def _sha1_hex(text: str) -> str:
@@ -32,7 +34,9 @@ async def check_password_breach(password: str) -> int:
     if prefix in _range_cache:
         cached_time, range_text = _range_cache[prefix]
         if now - cached_time < _CACHE_TTL:
+            _range_cache.move_to_end(prefix)
             return _find_in_range(suffix, range_text)
+        del _range_cache[prefix]
 
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
@@ -46,4 +50,6 @@ async def check_password_breach(password: str) -> int:
         return 0
 
     _range_cache[prefix] = (now, range_text)
+    if len(_range_cache) > _MAX_CACHE_SIZE:
+        _range_cache.popitem(last=False)
     return _find_in_range(suffix, range_text)

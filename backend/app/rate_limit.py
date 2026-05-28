@@ -7,7 +7,13 @@ from app.config import settings
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        ips = [ip.strip() for ip in forwarded.split(",")]
+        trusted = settings.trusted_proxies.split(",") if settings.trusted_proxies else []
+        if trusted:
+            for ip in reversed(ips):
+                if ip not in trusted:
+                    return ip
+        return ips[-1].strip()
     return request.client.host if request.client else "unknown"
 
 

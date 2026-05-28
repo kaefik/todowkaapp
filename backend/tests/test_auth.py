@@ -53,7 +53,7 @@ async def test_register_duplicate_username(client, db_session):
         },
     )
     assert response.status_code == 400
-    assert "Username already exists" in response.json()["detail"]
+    assert "Username or email already exists" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_register_duplicate_email(client, db_session):
         },
     )
     assert response.status_code == 400
-    assert "Email already exists" in response.json()["detail"]
+    assert "Username or email already exists" in response.json()["detail"]
 
 
 @pytest.mark.asyncio

@@ -4,6 +4,60 @@
 
 ## Текущие возможности
 
+### Безопасность (Security Audit Remediation) ✅ (Реализовано 28.05.2026)
+
+**Telegram Auth — полный ремонт (Epic T-01..T-08):**
+- HMAC-SHA256 верификация initData вместо API-вызова respondWebAppQuery (T-01)
+- Проверка свежести auth_date (не старше 5 минут)
+- Только короткоживущий access_token (5 мин), без refresh_token (T-02)
+- Исправлен краш int() на UUID — id возвращается как строка (T-03)
+- Исправлены типы User vs dict во всех telegram-эндпоинтах (T-04)
+- Rate limiting на всех telegram-эндпоинтах: login 5/мин, bind/bind-link/logout (T-05)
+- init_data ограничена max_length=4096 (T-06)
+- telegram_logout реально очищает cookies (T-07)
+- Удалён token_type="bearer" из ответа (T-08)
+- Файлы: `backend/app/services/telegram_auth_service.py`, `backend/app/api/telegram_auth.py`, `backend/app/schemas/telegram_auth.py`
+
+**Критические исправления (CRITICAL):**
+- Смена пароля только через /auth/change-password — password удалён из UserUpdate (C-01)
+
+**Высокоприоритетные исправления (HIGH):**
+- X-Forwarded-For спуфинг устранён: единая функция с TRUSTED_PROXIES, убран дубликат из auth.py (H-01)
+- Секреты в БД шифруются Fernet (SECRETS_ENCRYPTION_KEY): telegram_bot_token, smtp_password (H-02)
+- CSPRNG (secrets.choice) вместо random для генерации кода верификации email (H-03)
+- Защита от перебора кода email: 5 попыток, затем инвалидация + rate limit 5/мин (H-04)
+- Миграция python-jose → PyJWT (поддерживаемая библиотека), удалена passlib (H-05)
+
+**Средние исправления (MEDIUM):**
+- HIBP кэш ограничен 100 записями (LRU через OrderedDict) (M-01)
+- Периодическая очистка истёкших revoked_tokens через APScheduler (M-02)
+- JWT access token TTL уменьшен с 15 до 5 минут (M-03)
+- HSTS заголовок в production: max-age=31536000; includeSubDomains (M-04)
+- CSP unsafe-inline задокументирован как необходимый для Tailwind CSS (M-05)
+- Server-side срок действия кода email: 15 минут, проверка при подтверждении (M-06)
+- Bare except в telegram_auth_service заменён на логирование (M-07)
+- Email/username enumeration устранён: единое сообщение + постоянное время (M-08)
+- Race condition при параллельном импорте: asyncio.Lock по user_id (M-09)
+
+**Низкоприоритетные исправления (LOW):**
+- Swagger UI отключён в production (docs_url/redoc_url/openapi_url = None) (L-01)
+- Код верификации email хешируется HMAC-SHA256 в БД (L-02)
+- Удалена лишняя зависимость passlib (L-03)
+- Telegram bot token маскируется в API-ответе (L-04)
+- CORS allow_headers ограничен конкретным списком (L-05)
+- Убрано раскрытие списка эндпоинтов в /api/ (L-06)
+- Rate limiting добавлен на все /sessions эндпоинты (L-07)
+
+**Новые переменные окружения:**
+- `SECRETS_ENCRYPTION_KEY` — Fernet key для шифрования секретов в БД
+- `TRUSTED_PROXIES` — список доверенных прокси (через запятую)
+- `ACCESS_TOKEN_EXPIRE_MINUTES` — default изменён с 15 на 5
+
+**Миграции:**
+- `add_email_verification_code_expires_at` — срок действия кода
+- `add_email_verification_attempts` — счётчик попыток перебора
+- ` widen_email_verification_code_to_128` — для хранения хеша
+
 ### Пользовательский опыт и основной функционал
 
 #### Аутентификация и авторизация

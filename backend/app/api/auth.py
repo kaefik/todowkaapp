@@ -4,7 +4,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPBearer
-from slowapi import Limiter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +13,7 @@ from app.dependencies import get_current_user
 from app.i18n import t as i18n_t
 from app.models.revoked_token import RevokedToken
 from app.models.user import User
+from app.rate_limit import limiter
 from app.schemas.auth import ChangePasswordRequest, DeleteAccountRequest
 from app.schemas.user import LoginRequest, RegisterRequest, TokenResponse, UserResponse
 from app.security import (
@@ -34,15 +34,6 @@ from app.services.session_service import SessionService
 
 logger = logging.getLogger(__name__)
 
-
-def get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
-limiter = Limiter(key_func=get_client_ip, enabled=settings.app_env != "test")
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 security = HTTPBearer()
@@ -76,18 +67,12 @@ async def register(
             detail=f"Maximum number of users ({settings.max_users}) reached",
         )
 
-    result = await db.execute(select(User).where(User.username == data.username))
-    if result.scalar_one_or_none():
+    username_result = await db.execute(select(User).where(User.username == data.username))
+    email_result = await db.execute(select(User).where(User.email == data.email))
+    if username_result.scalar_one_or_none() or email_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exists",
-        )
-
-    result = await db.execute(select(User).where(User.email == data.email))
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already exists",
+            detail="Username or email already exists",
         )
 
     is_first_user = user_count == 0
