@@ -71,14 +71,17 @@ sw.addEventListener('notificationclick', (event: SWNotificationEvent) => {
 **Файлы:**
 - `src/stores/authStore.ts:15,341-348`
 - `src/api/users.ts:12`
+- `src/routes/Settings.tsx:435,439,421,486`
+- `src/components/BackupScheduleSettings.tsx:42`
 
 Объект `User` содержит `telegram_bot_token` (маскированное значение `*****12345`) и через Zustand persist сохраняется в localStorage. **Бэкенд уже маскирует токен** (`backend/app/schemas/user.py:52-62`), поэтому полный токен никогда не попадает в localStorage. Однако маскированное значение раскрывает 5 последних символов, и вся концепция хранения PII в localStorage уязвима при XSS.
 
 **Архитектурное улучшение (не критический фикс):**
 - Бэкенд: заменить `telegram_bot_token` на `has_telegram_bot: boolean` + `telegram_bot_token_masked: string | null`
 - Фронтенд: backward compatibility — `const hasTelegramBot = user.has_telegram_bot ?? !!user.telegram_bot_token`
-- Zustand persist: исключить `telegram_bot_token` из partialize через деструктуризацию
+- Zustand persist: исключить `telegram_bot_token` из partialize (см. тип `PersistedUser` ниже)
 - Учесть эндпоинты записи в Settings.tsx (строки 421, 486) — для отправки нового токена нужно оставить поле в `updateCurrentUser`
+- Обновить чтение в Settings.tsx (строки 435, 439) и BackupScheduleSettings.tsx (строка 42) — заменить на `has_telegram_bot`
 
 ### 4. [MEDIUM] SW перехватывает навигацию без проверки origin
 
@@ -243,8 +246,19 @@ await db.calendarEvents.where('userId').equals(userId).delete()
 
 - **Бэкенд:** добавить `has_telegram_bot: bool` в UserResponse, убрать полное поле (маскированное оставить как опциональное)
 - **Фронтенд:** backward compatibility `user.has_telegram_bot ?? !!user.telegram_bot_token`
-- **Zustand partialize:** деструктуризация `telegram_bot_token` из `state.user`
+- **Zustand partialize:** деструктуризация `telegram_bot_token` из `state.user`. Нужен отдельный тип `PersistedUser`, т.к. `Omit<User, 'telegram_bot_token'>` не присваиваем к `User` в strict mode:
+  ```ts
+  type PersistedUser = Omit<User, 'telegram_bot_token'>
+  
+  partialize: (state) => ({
+    user: state.user
+      ? (({ telegram_bot_token: _, ...rest }: User) => rest) as PersistedUser
+      : null,
+    isAuthenticated: state.isAuthenticated,
+  }),
+  ```
 - **Settings.tsx:** оставить `telegram_bot_token` для записи (строки 421, 486), использовать `has_telegram_bot` для чтения (строки 435, 439)
+- **BackupScheduleSettings.tsx:** заменить `user.telegram_bot_token` на `user.has_telegram_bot` (строка 42)
 
 **Критерии приёмки:**
 - localStorage не содержит полный/маскированный `telegram_bot_token`
@@ -279,6 +293,12 @@ await db.calendarEvents.where('userId').equals(userId).delete()
 #### 3.5. Заголовки для Vite dev server
 
 **Файл:** `vite.config.ts` — добавить `server.headers` для dev-режима (production уже покрыт бэкендом).
+
+#### 3.6. Устранить конфликт PWA манифестов
+
+`public/manifest.json` (theme_color `#2563eb`) и VitePWA-генерируемый манифест (theme_color `#4f46e5`, другие иконки) конфликтуют. `index.html:11` содержит `<meta name="theme-color" content="#2563eb">`, не совпадающий с VitePWA.
+
+**Решение:** Удалить `public/manifest.json`, привести `<meta name="theme-color">` в соответствие с VitePWA конфигом.
 
 ---
 
