@@ -248,13 +248,17 @@
   - Компонент: `frontend/src/components/ConfirmDialog.tsx`
   - Файлы: `frontend/src/routes/GtdTaskList.tsx`, `frontend/src/routes/Trash.tsx`
 - Очистка корзины одной кнопкой с подтверждением действия (DELETE /api/tasks/trash/clear)
+  - Bulk-удаление через единый API-запрос вместо N индивидуальных мутаций
+  - При успехе: bulkDelete локальных записей + очистка pending-мутаций
+  - При ошибке сети: fallback на индивидуальные мутации + toast-предупреждение «будет синхронизировано позже»
+  - Файлы: `frontend/src/routes/Trash.tsx`
 - Удаление всех завершённых задач одной кнопкой ✅ (Реализовано 26.04.2026)
   - Кнопка «Удалить все завершённые» на странице Completed (/completed)
   - Двойное подтверждение: первый диалог «Удалить все завершённые задачи?» → второй диалог «Вы действительно уверены?»
   - Кнопка заблокирована если нет завершённых задач или идёт удаление
   - Backend: `TaskService.clear_completed()` — удаление всех задач с `gtd_status=completed` (подзадачи первыми)
   - API: `DELETE /api/tasks/completed/clear`
-  - Frontend: локальное удаление через Dexie (`_syncStatus: 'deleted'` + мутации) с синхронизацией
+  - Frontend: bulk-удаление через единый API-запрос (DELETE /tasks/completed/clear) с fallback на мутации при ошибке сети
   - Файлы: `backend/app/services/task_service.py`, `backend/app/api/tasks.py`, `frontend/src/routes/Completed.tsx`
 - Восстановление задачи из корзины ✅ (Реализовано 24.04.2026)
   - Кнопка «Восстановить» на каждой задаче в корзине
@@ -423,6 +427,14 @@
   - Diagnostic logging в `mergeRecord` и `pull()`
   - Миграция: `alembic/versions/20260518_*_add_deleted_entities_table_*.py`
   - Файлы: `backend/app/models/deleted_entity.py`, `backend/app/api/deleted.py`, `backend/app/models/__init__.py`, `backend/app/main.py`, `backend/app/api/tasks.py`, `backend/app/api/projects.py`, `backend/app/api/areas.py`, `backend/app/api/contexts.py`, `backend/app/api/tags.py`, `backend/app/api/calendar_events.py`, `backend/app/api/checklist.py`, `backend/app/services/task_service.py`, `backend/app/schemas/task.py`, `backend/app/scheduler.py`, `frontend/src/components/SyncProvider.tsx`, `frontend/src/db/syncEngine.ts`, `frontend/src/db/conflictResolution.ts`, `frontend/src/hooks/useTasks.ts`
+
+- **Исправление бага re-download удалённых задач ✅ (Реализовано 31.05.2026)**
+  - Tombstone cache (`Set<string>`) в syncEngine — предотвращает повторную загрузку записей, удалённых на сервере
+  - `processTombstones()` заполняет кэш, `mergeAndPut()` проверяет кэш перед обработкой
+  - Кэш очищается в начале каждого `pull()` и `initialSyncInternal()`
+  - `processTombstones()` вызывается в `initialSyncInternal()` ДО `mergeAndPut`
+  - Обработка 429 в `executeMutationGroup`: exponential backoff (5s, 10s, 20s), первые 3 попытки не считаются за failed
+  - Файлы: `frontend/src/db/syncEngine.ts`, `frontend/src/routes/Trash.tsx`, `frontend/src/routes/Completed.tsx`
 
 #### Календарь ✅ (Реализовано 05.05.2026)
 - Страница `/calendar` с 4 видами: День, Неделя, Месяц, Год
