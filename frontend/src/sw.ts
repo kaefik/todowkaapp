@@ -45,6 +45,14 @@ interface SWGlobalScope {
 
 const sw = self as unknown as SWGlobalScope
 
+function isValidLocalUrl(url: string): boolean {
+  try {
+    return new URL(url, self.location.origin).origin === self.location.origin
+  } catch {
+    return false
+  }
+}
+
 sw.addEventListener('install', () => {
   console.log('[SW] Install event')
   sw.skipWaiting()
@@ -57,6 +65,8 @@ sw.addEventListener('activate', (event: SWExtendableEvent) => {
 
 sw.addEventListener('fetch', (event: SWFetchEvent) => {
   const url = new URL(event.request.url)
+
+  if (url.origin !== self.location.origin) return
 
   if (url.pathname === '/offline.html') {
     event.respondWith(fetch(event.request))
@@ -76,18 +86,17 @@ sw.addEventListener('fetch', (event: SWFetchEvent) => {
 sw.addEventListener('notificationclick', (event: SWNotificationEvent) => {
   event.notification.close()
 
-  const url = event.notification.data?.url
+  const rawUrl = event.notification.data?.url
+  const url = rawUrl && isValidLocalUrl(rawUrl) ? rawUrl : '/'
 
   event.waitUntil(
     sw.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients: SWClient[]) => {
       if (clients.length > 0) {
         const client = clients[0]!
-        if (url) {
-          client.navigate(url)
-        }
+        client.navigate(url)
         return client.focus()
       }
-      return sw.clients.openWindow(url || '/')
+      return sw.clients.openWindow(url)
     })
   )
 })

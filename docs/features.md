@@ -6,6 +6,18 @@
 
 ### Безопасность (Security Audit Remediation) ✅ (Реализовано 28.05.2026)
 
+**Аудит безопасности фронтенда ✅ (Реализовано 31.05.2026):**
+- telegram_bot_token исключён из localStorage через деструктуризацию в partialize
+- SSE-данные в SyncProvider валидируются: try/catch + проверка структуры перед обработкой
+- Service Worker: валидация origin URL в notificationclick (isValidLocalUrl) и fetch handler
+- Очистка IndexedDB при logout дополнена таблицами checklistItems и calendarEvents
+- Чувствительные console-вызовы обёрнуты в import.meta.env.DEV (payload, notification data)
+- Заголовки безопасности для статики в nginx.conf (X-Content-Type-Options, X-Frame-Options, Referrer-Policy)
+- API_BASE_URL унифицирован в authStore.ts (6 хардкод `/api/` заменены на env variable)
+- Валидация default-section через VALID_SECTIONS в Login.tsx и Register.tsx
+- Документация TLS-терминации: docs/deployment.md (Traefik, Caddy, nginx reverse-proxy)
+- Файлы: `frontend/src/stores/authStore.ts`, `frontend/src/components/SyncProvider.tsx`, `frontend/src/sw.ts`, `frontend/src/db/init.ts`, `frontend/src/db/syncEngine.ts`, `frontend/src/utils/browserNotifications.ts`, `frontend/src/components/NotificationProvider.tsx`, `frontend/nginx.conf`, `frontend/src/routes/Login.tsx`, `frontend/src/routes/Register.tsx`, `docs/deployment.md`
+
 **Telegram Auth — полный ремонт (Epic T-01..T-08):**
 - HMAC-SHA256 верификация initData вместо API-вызова respondWebAppQuery (T-01)
 - Проверка свежести auth_date (не старше 5 минут)

@@ -28,6 +28,11 @@ const registerSchema = z
 
 type RegisterFormData = z.infer<typeof registerSchema>
 
+const VALID_SECTIONS = new Set([
+  'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
+  'completed', 'trash', 'projects', 'contexts', 'areas', 'tags',
+])
+
 export function Register() {
   const navigate = useNavigate()
   const { registerAndLogin, isLoading, error, clearError } = useAuthStore()
@@ -73,7 +78,8 @@ export function Register() {
         navigate('/onboarding')
       } else {
         const saved = localStorage.getItem('default-section')
-        navigate(saved ? `/${saved}` : '/inbox')
+        const section = saved && VALID_SECTIONS.has(saved) ? saved : 'inbox'
+        navigate(`/${section}`)
       }
     } catch {
     }

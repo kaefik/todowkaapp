@@ -802,7 +802,7 @@ async function executeMutation(
 
   switch (mutation.action) {
     case 'create': {
-      console.log('[sync] POST', endpoint, 'payload:', payload)
+      if (import.meta.env.DEV) console.log('[sync] POST', endpoint)
       await httpClient.post(endpoint, payload)
       break
     }

@@ -67,18 +67,14 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   }, [])
 
   useEffect(() => {
-    console.log('[NotificationProvider] Setting up reminder handler')
     const isSupported = typeof Notification !== 'undefined'
-    console.log('[NotificationProvider] Notification API supported:', isSupported, 'Browser notifications enabled:', enabled)
 
     const handler = async (e: Event) => {
-      console.log('[NotificationProvider] === Reminder Event Start ===')
       const customEvent = e as CustomEvent
       const { taskId, notificationData } = customEvent.detail || {}
-      console.log('[NotificationProvider] task:reminder-fired event', { taskId, notificationData, enabled, isSupported })
 
       if (!taskId) {
-        console.warn('[NotificationProvider] No taskId in event')
+        if (import.meta.env.DEV) console.warn('[NotificationProvider] No taskId in event')
         return
       }
 
@@ -86,7 +82,6 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
       if (notificationData?.message) {
         taskTitle = notificationData.message
-        console.log('[NotificationProvider] Using message from notificationData:', taskTitle)
       } else {
         const notifications = useNotificationStore.getState().notifications
         const notification = notifications.find(
@@ -94,31 +89,21 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         )
         if (notification?.message) {
           taskTitle = notification.message
-          console.log('[NotificationProvider] Using message from store:', taskTitle)
-        } else {
-          console.warn('[NotificationProvider] No message found in notificationData or store')
         }
       }
 
-      console.log('[NotificationProvider] Will show:', { isSupported, enabled, taskTitle })
-
       try {
         if (isSupported && enabled) {
-          console.log('[NotificationProvider] Showing browser notification')
           const ok = await showReminder(taskTitle, taskId)
           if (!ok) {
-            console.log('[NotificationProvider] Browser notification failed, showing toast')
             addToast({
               title: t('taskReminder'),
               body: taskTitle,
               type: 'reminder',
               taskId,
             })
-          } else {
-            console.log('[NotificationProvider] Browser notification shown successfully')
           }
         } else {
-          console.log('[NotificationProvider] Browser notifications disabled or not supported, showing toast')
           addToast({
             title: t('taskReminder'),
             body: taskTitle,
@@ -127,7 +112,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           })
         }
       } catch (error) {
-        console.error('[NotificationProvider] Error showing notification:', error)
+        if (import.meta.env.DEV) console.error('[NotificationProvider] Error showing notification:', error)
         addToast({
           title: t('taskReminder'),
           body: taskTitle,
@@ -135,13 +120,10 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           taskId,
         })
       }
-
-      console.log('[NotificationProvider] === Reminder Event End ===')
     }
 
     window.addEventListener('task:reminder-fired', handler)
     return () => {
-      console.log('[NotificationProvider] Cleaning up reminder handler')
       window.removeEventListener('task:reminder-fired', handler)
     }
   }, [enabled, showReminder, addToast, t])

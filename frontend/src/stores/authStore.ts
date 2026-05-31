@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware'
 import { clearLocalData, performInitialSync } from '../db/init'
 import i18n from '../i18n'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+
 export interface User {
   id: string
   username: string
@@ -44,6 +46,14 @@ interface AuthState {
   deleteAccount: (password: string) => Promise<void>
 }
 
+type PersistedUser = Omit<User, 'telegram_bot_token'>
+
+function omitBotToken(user: User): PersistedUser {
+  const { telegram_bot_token, ...rest } = user
+  void telegram_bot_token
+  return rest
+}
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -56,7 +66,7 @@ export const useAuthStore = create<AuthState>()(
   login: async (credentials) => {
     set({ isLoading: true, error: null })
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
@@ -110,7 +120,7 @@ export const useAuthStore = create<AuthState>()(
         registerData.invite_code = data.invite_code
       }
 
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData),
@@ -146,7 +156,7 @@ export const useAuthStore = create<AuthState>()(
         registerData.invite_code = data.invite_code
       }
 
-      const registerResponse = await fetch('/api/auth/register', {
+      const registerResponse = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(registerData),
@@ -157,7 +167,7 @@ export const useAuthStore = create<AuthState>()(
         throw new Error(error.detail || 'Registration failed')
       }
 
-      const loginResponse = await fetch('/api/auth/login', {
+      const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: data.username, password: data.password }),
@@ -198,7 +208,7 @@ export const useAuthStore = create<AuthState>()(
 
   logout: () => {
     const userId = useAuthStore.getState().user?.id
-    fetch('/api/auth/logout', {
+    fetch(`${API_BASE_URL}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
     }).catch(() => {})
@@ -219,7 +229,7 @@ export const useAuthStore = create<AuthState>()(
 
   refreshToken: async () => {
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       })
@@ -252,7 +262,7 @@ export const useAuthStore = create<AuthState>()(
   fetchCurrentUser: async () => {
     set({ isLoading: true, error: null })
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
         credentials: 'include',
       })
@@ -308,7 +318,7 @@ export const useAuthStore = create<AuthState>()(
 
   deleteAccount: async (password) => {
     const userId = useAuthStore.getState().user?.id
-    const response = await fetch('/api/auth/delete-account', {
+    const response = await fetch(`${API_BASE_URL}/auth/delete-account`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
@@ -341,7 +351,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({
-        user: state.user,
+        user: state.user ? omitBotToken(state.user) : null,
         isAuthenticated: state.isAuthenticated,
       }),
     }

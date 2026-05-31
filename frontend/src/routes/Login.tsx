@@ -14,6 +14,11 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 
+const VALID_SECTIONS = new Set([
+  'inbox', 'active', 'today', 'tomorrow', 'next', 'waiting', 'someday',
+  'completed', 'trash', 'projects', 'contexts', 'areas', 'tags',
+])
+
 export function Login() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -47,7 +52,8 @@ export function Login() {
         navigate('/onboarding')
       } else {
         const saved = localStorage.getItem('default-section')
-        navigate(saved ? `/${saved}` : '/inbox')
+        const section = saved && VALID_SECTIONS.has(saved) ? saved : 'inbox'
+        navigate(`/${section}`)
       }
     } catch {
     }

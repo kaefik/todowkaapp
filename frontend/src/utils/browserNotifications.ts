@@ -91,12 +91,14 @@ export async function show(options: ShowOptions): Promise<boolean> {
 
 export async function showReminder(taskTitle: string, taskId?: string): Promise<boolean> {
   const reminderTitle = i18n.t('sync:taskReminder')
-  console.log('[BrowserNotifications] Showing notification:', {
-    title: reminderTitle,
-    body: taskTitle,
-    permission: getPermission(),
-    enabled: isEnabled()
-  })
+  if (import.meta.env.DEV) {
+    console.log('[BrowserNotifications] Showing notification:', {
+      title: reminderTitle,
+      body: taskTitle,
+      permission: getPermission(),
+      enabled: isEnabled()
+    })
+  }
   return show({
     title: reminderTitle,
     body: taskTitle,

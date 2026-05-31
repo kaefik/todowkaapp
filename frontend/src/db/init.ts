@@ -34,6 +34,8 @@ export async function clearLocalData(userId: string): Promise<void> {
   await db.contexts.where('userId').equals(userId).delete()
   await db.tags.where('userId').equals(userId).delete()
   await db.verbTemplates.where('userId').equals(userId).delete()
+  await db.checklistItems.where('userId').equals(userId).delete()
+  await db.calendarEvents.where('userId').equals(userId).delete()
   await db.mutations.clear()
   await db.syncMeta.clear()
 }

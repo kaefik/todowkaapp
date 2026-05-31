@@ -128,7 +128,14 @@ class SyncSSEListener {
     ]
     for (const evt of events) {
       this.es!.addEventListener(evt, (event) => {
-        const data = JSON.parse((event as MessageEvent).data)
+        let data: Record<string, unknown>
+        try {
+          data = JSON.parse((event as MessageEvent).data)
+          if (!data || typeof data !== 'object') return
+        } catch {
+          if (import.meta.env.DEV) console.warn('[SyncSSE] Invalid SSE payload for', evt)
+          return
+        }
         const entityId = extractEntityId(data)
         const resourceType = getResourceTypeFromSSE(evt)
 
