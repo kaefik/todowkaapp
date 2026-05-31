@@ -180,6 +180,12 @@ const RESOURCES: SyncResourceConfig[] = [
   },
 ]
 
+let _tombstoneCache = new Set<string>()
+
+function clearTombstoneCache(): void {
+  _tombstoneCache = new Set<string>()
+}
+
 async function fetchAllPages(endpoint: string, updatedSince?: string | null): Promise<Record<string, unknown>[]> {
   const allItems: Record<string, unknown>[] = []
   let offset = 0
@@ -233,6 +239,7 @@ async function mergeAndPut(
       }
     }
 
+    if (_tombstoneCache.has(`${entityType}:${id}`)) continue
     const serverRecord = transform(item, userId)
     const localRecord = await table.get(id)
     if (localRecord && (localRecord as unknown as { _syncStatus: SyncStatus })._syncStatus === 'deleted') continue
@@ -322,6 +329,12 @@ export async function initialSync(userId: string): Promise<void> {
 }
 
 async function initialSyncInternal(userId: string): Promise<void> {
+  clearTombstoneCache()
+  try {
+    await processTombstones()
+  } catch (err) {
+    console.warn('[SyncEngine] Tombstone processing in initialSync failed, continuing:', err)
+  }
   await Promise.all(RESOURCES.map(async (resource) => {
     const items = await fetchAllPages(resource.endpoint)
     const serverIds = await mergeAndPut(resource.table, resource.entityType, items, userId, resource.transform)
@@ -387,6 +400,7 @@ async function processTombstones(): Promise<void> {
 
   const byTable = new Map<ReturnType<typeof getTableForType>, string[]>()
   for (const item of response.data.items) {
+    _tombstoneCache.add(`${item.entity_type}:${item.entity_id}`)
     const table = getTableForType(item.entity_type as EntityType)
     if (!table) continue
     const existing = byTable.get(table) ?? []
@@ -402,6 +416,7 @@ async function processTombstones(): Promise<void> {
 export async function pull(userId: string): Promise<void> {
   const since = (await db.syncMeta.get('lastPullAt'))?.value ?? null
   console.debug('[SyncEngine] pull started', { since })
+  clearTombstoneCache()
   try {
     await processTombstones()
   } catch (err) {
@@ -684,6 +699,18 @@ async function executeMutationGroup(
             console.warn(`[SyncEngine] 422 for ${mutation.entityType}/${mutation.entityId}:`, err.message)
             await db.mutations.delete(mutation.id)
             success = true
+            break
+          }
+
+          if (err.status === 429) {
+            if (attempt < 2) {
+              await sleep(5000 * Math.pow(2, attempt))
+              continue
+            }
+            await db.mutations.update(mutation.id, {
+              retryCount: mutation.retryCount + 1,
+              lastError: err.message,
+            })
             break
           }
 

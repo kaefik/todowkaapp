@@ -190,6 +190,7 @@
   "clearTrash": "Clear trash",
   "clearing": "Clearing...",
   "clearTrashFailed": "Failed to clear trash",
+  "willSyncLater": "Will be synced later",
   "clearTrashConfirm": "Clear trash?",
   "clearTrashMessage": "All tasks will be permanently deleted. This action cannot be undone.",
   "clearBtn": "Clear",

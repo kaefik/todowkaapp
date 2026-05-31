@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { db } from '../db/database'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { useAuthStore } from '../stores/authStore'
+import { useToastStore } from '../stores/toastStore'
+import { httpClient } from '../api/httpClient'
 import { v4 as uuidv4 } from 'uuid'
 import { GtdTaskList } from './GtdTaskList'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -41,24 +43,48 @@ export function Completed() {
         .filter(t => t._syncStatus !== 'deleted')
         .toArray()
 
-      const now = new Date().toISOString()
-      for (const task of completedTasks) {
-        await db.tasks.update(task.id, {
-          _syncStatus: 'deleted',
-          updatedAt: now,
-        })
-        await db.mutations.add({
-          id: uuidv4(),
-          entityType: 'task',
-          entityId: task.id,
-          action: 'delete',
-          payload: null,
-          timestamp: Date.now(),
-          retryCount: 0,
-          lastError: null,
+      const completedIds = completedTasks.map(t => t.id)
+
+      if (completedIds.length === 0) {
+        setIsClearing(false)
+        return
+      }
+
+      try {
+        await httpClient.delete('/tasks/completed/clear')
+        await db.tasks.bulkDelete(completedIds)
+        for (const id of completedIds) {
+          await db.mutations
+            .where('[entityType+entityId]')
+            .equals(['task', id])
+            .delete()
+        }
+        setRefreshKey((k) => k + 1)
+      } catch {
+        const now = new Date().toISOString()
+        for (const task of completedTasks) {
+          await db.tasks.update(task.id, {
+            _syncStatus: 'deleted',
+            updatedAt: now,
+          })
+          await db.mutations.add({
+            id: uuidv4(),
+            entityType: 'task',
+            entityId: task.id,
+            action: 'delete',
+            payload: null,
+            timestamp: Date.now(),
+            retryCount: 0,
+            lastError: null,
+          })
+        }
+        setRefreshKey((k) => k + 1)
+        useToastStore.getState().addToast({
+          title: t('clearCompletedFailed'),
+          body: t('willSyncLater'),
+          type: 'warning',
         })
       }
-      setRefreshKey((k) => k + 1)
     } catch {
       setClearError(t('clearCompletedFailed'))
     } finally {

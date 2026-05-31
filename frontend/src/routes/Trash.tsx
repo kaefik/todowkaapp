@@ -4,6 +4,8 @@ import { db } from '../db/database'
 import { useGtdCounts } from '../hooks/useGtdCounts'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { useAuthStore } from '../stores/authStore'
+import { useToastStore } from '../stores/toastStore'
+import { httpClient } from '../api/httpClient'
 import { v4 as uuidv4 } from 'uuid'
 import { GtdTaskList } from './GtdTaskList'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -38,29 +40,60 @@ export function Trash() {
         .filter(t => t._syncStatus !== 'deleted')
         .toArray()
 
-      const now = new Date().toISOString()
-      for (const task of trashTasks) {
-        await db.tasks.update(task.id, {
-          _syncStatus: 'deleted',
-          updatedAt: now,
-        })
-        await db.mutations.add({
-          id: uuidv4(),
-          entityType: 'task',
-          entityId: task.id,
-          action: 'delete',
-          payload: null,
-          timestamp: Date.now(),
-          retryCount: 0,
-          lastError: null,
-        })
+      const trashIds = trashTasks.map(t => t.id)
+
+      if (trashIds.length === 0 && deletedEvents.length === 0) {
+        setIsClearing(false)
+        return
       }
 
-      for (const event of deletedEvents) {
-        await permanentDeleteEvent(event.id)
-      }
+      try {
+        if (trashIds.length > 0) {
+          await httpClient.delete('/tasks/trash/clear')
+          await db.tasks.bulkDelete(trashIds)
+          for (const id of trashIds) {
+            await db.mutations
+              .where('[entityType+entityId]')
+              .equals(['task', id])
+              .delete()
+          }
+        }
 
-      setRefreshKey((k) => k + 1)
+        for (const event of deletedEvents) {
+          await permanentDeleteEvent(event.id)
+        }
+
+        setRefreshKey((k) => k + 1)
+      } catch {
+        const now = new Date().toISOString()
+        for (const task of trashTasks) {
+          await db.tasks.update(task.id, {
+            _syncStatus: 'deleted',
+            updatedAt: now,
+          })
+          await db.mutations.add({
+            id: uuidv4(),
+            entityType: 'task',
+            entityId: task.id,
+            action: 'delete',
+            payload: null,
+            timestamp: Date.now(),
+            retryCount: 0,
+            lastError: null,
+          })
+        }
+
+        for (const event of deletedEvents) {
+          await permanentDeleteEvent(event.id)
+        }
+
+        setRefreshKey((k) => k + 1)
+        useToastStore.getState().addToast({
+          title: t('clearTrashFailed'),
+          body: t('willSyncLater'),
+          type: 'warning',
+        })
+      }
     } catch {
       setClearError(t('clearTrashFailed'))
     } finally {
