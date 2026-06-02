@@ -935,6 +935,24 @@
 - i18n: ключи telegram* в ru/en settings.json
 - Файлы: `backend/app/services/telegram_notifier.py`, `backend/app/services/reminder_service.py`, `backend/app/models/user.py`, `backend/app/schemas/user.py`, `backend/app/api/users.py`, `backend/app/scheduler.py`, `frontend/src/routes/Settings.tsx`, `frontend/src/api/users.ts`, `frontend/src/stores/authStore.ts`
 
+**Telegram Bot Commands — интерактивные команды ✅ (Реализовано 02.06.2026)**
+- Просмотр задач через команды: /today, /tomorrow, /date (календарь), /inbox
+- Добавление задач через /add (календарь → ввод названия) или просто текстом (quick add во входящие)
+- Отметка выполнено через inline-кнопки (✓) под списком задач
+- Команда /help — список всех команд
+- Inline-календарь для выбора даты (навигация ◀️ ▶️ по месяцам)
+- Просроченные задачи показываются отдельно (макс 5 + «и ещё N»)
+- Список задач с inline-кнопками для отметки выполнено (макс 20)
+- Быстрое добавление: любой текст → задача во входящих (inbox)
+- Добавление с датой: /add → календарь → выбор даты → ввод названия → задача в active
+- Polling расширен: все пользователи с ботом опрашиваются, не только неподключённые
+- /start повторно: показывает /help вместо повторной привязки chat_id
+- TelegramNotifierService расширен: send_message_with_buttons, answer_callback_query, edit_message_text
+- Сервис: `backend/app/services/telegram_command_service.py` (TelegramCommandService)
+- i18n: ключи telegramCmd*, telegramNoTasks, telegramOverdue, telegramAdd*, telegramQuickAdd, telegramTaskDone, telegramHelp (ru/en/tt)
+- Тесты: `backend/tests/test_telegram_command_service.py` (22 теста)
+- Файлы: `backend/app/services/telegram_command_service.py`, `backend/app/services/telegram_notifier.py`, `backend/app/scheduler.py`, `backend/app/i18n/locales/ru.json`, `backend/app/i18n/locales/en.json`, `backend/app/i18n/locales/tt.json`
+
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Очистка прочитанных уведомлений ✅ (Реализовано 24.04.2026)
   - Кнопка «Очистить прочитанные» на странице уведомлений (`/notifications`)

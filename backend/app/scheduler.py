@@ -631,7 +631,6 @@ async def _do_poll_telegram_bots():
             select(User).where(
                 User.telegram_bot_token.isnot(None),
                 User.telegram_bot_token != '',
-                User.telegram_chat_id.is_(None),
             )
         )
         users = list(result.scalars().all())
@@ -646,26 +645,58 @@ async def _do_poll_telegram_bots():
                 if new_offset is not None:
                     _telegram_poll_offsets[str(user.id)] = new_offset
 
+                from app.services.telegram_command_service import TelegramCommandService
+
+                cmd_service = TelegramCommandService()
+
                 for upd in updates:
+                    callback_query = upd.get("callback_query")
+                    if callback_query:
+                        if user.telegram_chat_id:
+                            await cmd_service.handle_callback(user, callback_query, session)
+                            await session.commit()
+                        continue
+
                     message = upd.get("message", {})
                     text = message.get("text", "").strip()
                     chat_id = str(message.get("chat", {}).get("id", ""))
 
-                    if text == "/start" and chat_id:
-                        user.telegram_chat_id = chat_id
-                        user.telegram_notifications_enabled = True
-                        await session.commit()
-                        logger.info(
-                            f"Telegram chat_id {chat_id} linked for user {user.username}"
-                        )
+                    if not text or not chat_id:
+                        continue
 
-                        lang = getattr(user, 'language', None) or "ru"
-                        await TelegramNotifierService.send_message(
-                            bot_token,
-                            chat_id,
-                            i18n_t("telegramBotConnected", lang),
-                        )
-                        break
+                    if text == "/start":
+                        if not user.telegram_chat_id:
+                            user.telegram_chat_id = chat_id
+                            user.telegram_notifications_enabled = True
+                            await session.commit()
+                            logger.info(
+                                f"Telegram chat_id {chat_id} linked for user {user.username}"
+                            )
+                            lang = getattr(user, 'language', None) or "ru"
+                            await TelegramNotifierService.send_message(
+                                bot_token,
+                                chat_id,
+                                i18n_t("telegramBotConnected", lang),
+                            )
+                        else:
+                            lang = getattr(user, 'language', None) or "ru"
+                            await TelegramNotifierService.send_message(
+                                bot_token,
+                                chat_id,
+                                i18n_t("telegramHelp", lang),
+                            )
+                        continue
+
+                    if not user.telegram_chat_id or chat_id != user.telegram_chat_id:
+                        continue
+
+                    if text.startswith("/"):
+                        command = text.split()[0]
+                        await cmd_service.handle_command(user, command, session)
+                        await session.commit()
+                    else:
+                        await cmd_service.handle_text(user, text, session)
+                        await session.commit()
 
             except Exception as e:
                 logger.error(f"Error polling bot for user {user.id}: {e}")

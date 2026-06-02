@@ -45,5 +45,22 @@
 
   "backupTooLarge": "⚠️ Резервная копия слишком большая (>50MB). Обратитесь в поддержку.",
 
-  "telegramBotConnected": "✅ Бот Todowka подключён! Теперь вы будете получать напоминания о задачах."
+  "telegramBotConnected": "✅ Бот Todowka подключён! Теперь вы будете получать напоминания о задачах.",
+
+  "telegramCmdToday": "📋 Задачи на сегодня",
+  "telegramCmdTomorrow": "📋 Задачи на завтра",
+  "telegramCmdDate": "📋 Задачи на {date}",
+  "telegramCmdInbox": "📥 Входящие",
+  "telegramNoTasks": "Нет задач",
+  "telegramOverdue": "⚠️ Просроченные",
+  "telegramMoreTasks": "...и ещё {count} задач",
+  "telegramAddSelectDate": "Выберите дату:",
+  "telegramAddNoDate": "Без даты",
+  "telegramAddTitle": "Введите название задачи:",
+  "telegramAddSuccess": "✅ Задача «{title}» создана",
+  "telegramQuickAdd": "✅ Добавлено во входящие: «{title}»",
+  "telegramTaskDone": "✅ Выполнено: «{title}»",
+  "telegramTaskAlreadyDone": "Уже выполнено",
+  "telegramAddError": "❌ Ошибка при создании задачи",
+  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие."
 }

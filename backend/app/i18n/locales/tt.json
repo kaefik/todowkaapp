@@ -45,5 +45,22 @@
 
   "backupTooLarge": "⚠️ Резерв күчермә бик зур (>50МБ). Ярдәмгә мөрәҗәгать итегез.",
 
-  "telegramBotConnected": "✅ Todowka боты тоташты! Хәзер сез бурычлар искәрмәләрен алачаксыз."
+  "telegramBotConnected": "✅ Todowka боты тоташты! Хәзер сез бурычлар искәрмәләрен алачаксыз.",
+
+  "telegramCmdToday": "📋 Бүгенге бурычлар",
+  "telegramCmdTomorrow": "📋 Иртәгәге бурычлар",
+  "telegramCmdDate": "📋 {date} бурычлары",
+  "telegramCmdInbox": "📥 Кергән",
+  "telegramNoTasks": "Бурычлар юк",
+  "telegramOverdue": "⚠️ Вакыты узган",
+  "telegramMoreTasks": "...тагын {count} бурыч",
+  "telegramAddSelectDate": "Дата сайлагыз:",
+  "telegramAddNoDate": "Датасыз",
+  "telegramAddTitle": "Бурыч исемен кертегез:",
+  "telegramAddSuccess": "✅ «{title}» бурычы булдырылды",
+  "telegramQuickAdd": "✅ Кергәнгә өстәлде: «{title}»",
+  "telegramTaskDone": "✅ Үтәлгән: «{title}»",
+  "telegramTaskAlreadyDone": "Инде үтәлгән",
+  "telegramAddError": "❌ Бурыч булдыру хатасы",
+  "telegramHelp": "🤖 Todowka командалары:\n\n/today — бүгенге бурычлар\n/tomorrow — иртәгәге бурычлар\n/date — датага бурычлар\n/inbox — кергән\n/add — бурыч өстәү\n/help — ярдәм\n\nЯки текст языгыз — бурыч кергәнгә өстәләчәк."
 }

@@ -75,6 +75,72 @@ class TelegramNotifierService:
             return False
 
     @staticmethod
+    async def send_message_with_buttons(
+        bot_token: str, chat_id: str, text: str, reply_markup: dict | None = None
+    ) -> dict | None:
+        url = TELEGRAM_API_BASE.format(token=bot_token, method="sendMessage")
+        payload: dict = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.post(url, json=payload)
+                data = resp.json()
+                if not data.get("ok"):
+                    logger.warning(f"Telegram send_message_with_buttons failed: {data}")
+                    return None
+                return data["result"]
+        except httpx.HTTPError as e:
+            logger.warning(f"Telegram send_message_with_buttons error: {e}")
+            return None
+
+    @staticmethod
+    async def answer_callback_query(
+        bot_token: str, callback_query_id: str, text: str = ""
+    ) -> bool:
+        url = TELEGRAM_API_BASE.format(token=bot_token, method="answerCallbackQuery")
+        payload: dict = {"callback_query_id": callback_query_id}
+        if text:
+            payload["text"] = text
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.post(url, json=payload)
+                data = resp.json()
+                if not data.get("ok"):
+                    logger.warning(f"Telegram answerCallbackQuery failed: {data}")
+                    return False
+                return True
+        except httpx.HTTPError as e:
+            logger.warning(f"Telegram answerCallbackQuery error: {e}")
+            return False
+
+    @staticmethod
+    async def edit_message_text(
+        bot_token: str, chat_id: str, message_id: int, text: str,
+        reply_markup: dict | None = None
+    ) -> bool:
+        url = TELEGRAM_API_BASE.format(token=bot_token, method="editMessageText")
+        payload: dict = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "parse_mode": "HTML",
+        }
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.post(url, json=payload)
+                data = resp.json()
+                if not data.get("ok"):
+                    logger.warning(f"Telegram editMessageText failed: {data}")
+                    return False
+                return True
+        except httpx.HTTPError as e:
+            logger.warning(f"Telegram edit_message_text error: {e}")
+            return False
+
+    @staticmethod
     async def send_document(
         bot_token: str, chat_id: str, filename: str, json_bytes: bytes, caption: str = ""
     ) -> bool:

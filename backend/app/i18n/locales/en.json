@@ -45,5 +45,22 @@
 
   "backupTooLarge": "⚠️ Backup file is too large (>50MB). Please contact support.",
 
-  "telegramBotConnected": "✅ Todowka bot is connected! You will now receive task reminders."
+  "telegramBotConnected": "✅ Todowka bot is connected! You will now receive task reminders.",
+
+  "telegramCmdToday": "📋 Tasks for today",
+  "telegramCmdTomorrow": "📋 Tasks for tomorrow",
+  "telegramCmdDate": "📋 Tasks for {date}",
+  "telegramCmdInbox": "📥 Inbox",
+  "telegramNoTasks": "No tasks",
+  "telegramOverdue": "⚠️ Overdue",
+  "telegramMoreTasks": "...and {count} more tasks",
+  "telegramAddSelectDate": "Select date:",
+  "telegramAddNoDate": "No date",
+  "telegramAddTitle": "Enter task title:",
+  "telegramAddSuccess": "✅ Task «{title}» created",
+  "telegramQuickAdd": "✅ Added to inbox: «{title}»",
+  "telegramTaskDone": "✅ Done: «{title}»",
+  "telegramTaskAlreadyDone": "Already done",
+  "telegramAddError": "❌ Error creating task",
+  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/help — help\n\nOr just type text — task will be added to inbox."
 }
