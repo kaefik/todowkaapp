@@ -62,5 +62,7 @@
   "telegramTaskDone": "✅ Done: «{title}»",
   "telegramTaskAlreadyDone": "Already done",
   "telegramAddError": "❌ Error creating task",
-  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/help — help\n\nOr just type text — task will be added to inbox."
+  "telegramExportSuccess": "📦 Data export from {date}",
+  "telegramExportError": "❌ Error exporting data",
+  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/export — export JSON\n/help — help\n\nOr just type text — task will be added to inbox."
 }

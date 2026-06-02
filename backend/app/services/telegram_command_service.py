@@ -1,3 +1,4 @@
+import json
 import logging
 from calendar import monthcalendar
 from datetime import UTC, date, datetime, time, timedelta
@@ -337,6 +338,29 @@ class TelegramCommandService:
             await TelegramNotifierService.send_message(
                 bot_token, chat_id, i18n_t("telegramHelp", lang)
             )
+
+        elif command == "/export":
+            from app.services.export_import_service import ExportImportService
+
+            try:
+                export_service = ExportImportService(db)
+                data = await export_service.export_data(user_id=user.id)
+                json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+                today_str = datetime.now(user_tz).strftime("%Y-%m-%d")
+                filename = f"todowka_export_{today_str}.json"
+                caption = i18n_t("telegramExportSuccess", lang, date=today_str)
+                success = await TelegramNotifierService.send_document(
+                    bot_token, chat_id, filename, json_bytes, caption
+                )
+                if not success:
+                    await TelegramNotifierService.send_message(
+                        bot_token, chat_id, i18n_t("telegramExportError", lang)
+                    )
+            except Exception as e:
+                logger.error(f"Telegram export error for user {user.id}: {e}")
+                await TelegramNotifierService.send_message(
+                    bot_token, chat_id, i18n_t("telegramExportError", lang)
+                )
 
     async def handle_callback(
         self, user: User, callback_query: dict, db: AsyncSession

@@ -62,5 +62,7 @@
   "telegramTaskDone": "✅ Выполнено: «{title}»",
   "telegramTaskAlreadyDone": "Уже выполнено",
   "telegramAddError": "❌ Ошибка при создании задачи",
-  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие."
+  "telegramExportSuccess": "📦 Экспорт данных от {date}",
+  "telegramExportError": "❌ Ошибка при экспорте данных",
+  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/export — экспорт JSON\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие."
 }

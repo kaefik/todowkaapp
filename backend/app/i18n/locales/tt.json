@@ -62,5 +62,7 @@
   "telegramTaskDone": "✅ Үтәлгән: «{title}»",
   "telegramTaskAlreadyDone": "Инде үтәлгән",
   "telegramAddError": "❌ Бурыч булдыру хатасы",
-  "telegramHelp": "🤖 Todowka командалары:\n\n/today — бүгенге бурычлар\n/tomorrow — иртәгәге бурычлар\n/date — датага бурычлар\n/inbox — кергән\n/add — бурыч өстәү\n/help — ярдәм\n\nЯки текст языгыз — бурыч кергәнгә өстәләчәк."
+  "telegramExportSuccess": "📦 {date} мәгълүматлар экспорты",
+  "telegramExportError": "❌ Мәгълүматларны экспортлау хатасы",
+  "telegramHelp": "🤖 Todowka командалары:\n\n/today — бүгенге бурычлар\n/tomorrow — иртәгәге бурычлар\n/date — датага бурычлар\n/inbox — кергән\n/add — бурыч өстәү\n/export — JSON экспорт\n/help — ярдәм\n\nЯки текст языгыз — бурыч кергәнгә өстәләчәк."
 }
