@@ -64,5 +64,16 @@
   "telegramAddError": "❌ Бурыч булдыру хатасы",
   "telegramExportSuccess": "📦 {date} мәгълүматлар экспорты",
   "telegramExportError": "❌ Мәгълүматларны экспортлау хатасы",
+  "telegramAddToday": "📅 Бүген",
+  "telegramAddTomorrow": "📅 Иртәгә",
+  "telegramAddCancel": "❌ Баш тарту",
+  "telegramAddCancelled": "❌ Бурыч өстәүдән баш тартылды",
+  "telegramAddSelectArea": "Өлкә сайлагыз:",
+  "telegramAddSelectProject": "Проект сайлагыз:",
+  "telegramAddSkip": "⏭️ Уздырып җибәрү",
+  "telegramAddSummary": "✅ «{title}» бурычы булдырылды",
+  "telegramAddAreaLabel": "📂 Өлкә: {name}",
+  "telegramAddProjectLabel": "📁 Проект: {name}",
+  "telegramAddDateLabel": "📅 Дата: {date}",
   "telegramHelp": "🤖 Todowka командалары:\n\n/today — бүгенге бурычлар\n/tomorrow — иртәгәге бурычлар\n/date — датага бурычлар\n/inbox — кергән\n/add — бурыч өстәү\n/export — JSON экспорт\n/help — ярдәм\n\nЯки текст языгыз — бурыч кергәнгә өстәләчәк."
 }

@@ -64,5 +64,16 @@
   "telegramAddError": "❌ Error creating task",
   "telegramExportSuccess": "📦 Data export from {date}",
   "telegramExportError": "❌ Error exporting data",
+  "telegramAddToday": "📅 Today",
+  "telegramAddTomorrow": "📅 Tomorrow",
+  "telegramAddCancel": "❌ Cancel",
+  "telegramAddCancelled": "❌ Task creation cancelled",
+  "telegramAddSelectArea": "Select area:",
+  "telegramAddSelectProject": "Select project:",
+  "telegramAddSkip": "⏭️ Skip",
+  "telegramAddSummary": "✅ Task «{title}» created",
+  "telegramAddAreaLabel": "📂 Area: {name}",
+  "telegramAddProjectLabel": "📁 Project: {name}",
+  "telegramAddDateLabel": "📅 Date: {date}",
   "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/export — export JSON\n/help — help\n\nOr just type text — task will be added to inbox."
 }

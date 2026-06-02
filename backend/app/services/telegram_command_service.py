@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.i18n import t as i18n_t
+from app.models.area import Area
+from app.models.project import Project
 from app.models.task import GtdStatus, Task
 from app.models.user import User
 from app.schemas.task import TaskCreate
@@ -73,6 +75,13 @@ class TelegramCommandService:
 
         buttons = [header, day_header]
 
+        if prefix == "addcal":
+            quick_row = [
+                {"text": i18n_t("telegramAddToday", lang), "callback_data": "addcal:today"},
+                {"text": i18n_t("telegramAddTomorrow", lang), "callback_data": "addcal:tomorrow"},
+            ]
+            buttons.insert(0, quick_row)
+
         today = date.today()
 
         for week in weeks:
@@ -95,6 +104,7 @@ class TelegramCommandService:
         if prefix == "addcal":
             no_date_text = i18n_t("telegramAddNoDate", lang)
             buttons.append([{"text": no_date_text, "callback_data": f"{prefix}:nodate"}])
+            buttons.append([{"text": i18n_t("telegramAddCancel", lang), "callback_data": "addcancel"}])
 
         return {"inline_keyboard": buttons}
 
@@ -227,6 +237,8 @@ class TelegramCommandService:
         title: str,
         due_date: datetime | None,
         lang: str,
+        area_id: str | None = None,
+        project_id: str | None = None,
     ) -> None:
         bot_token = user.decrypted_telegram_bot_token
         chat_id = user.telegram_chat_id
@@ -244,13 +256,15 @@ class TelegramCommandService:
                 title=title,
                 gtd_status=gtd_status,
                 due_date=due_date,
+                area_id=area_id,
+                project_id=project_id,
             )
             task = await task_service.create_task(user.id, task_data)
             await db.flush()
 
-            await TelegramNotifierService.send_message(
-                bot_token, chat_id,
-                i18n_t("telegramAddSuccess", lang, title=title),
+            await self._send_task_summary(
+                db, bot_token, chat_id, title, due_date, lang,
+                area_id=area_id, project_id=project_id,
             )
 
             from app.event_bus import event_bus
@@ -264,6 +278,173 @@ class TelegramCommandService:
                 bot_token, chat_id,
                 i18n_t("telegramAddError", lang),
             )
+
+    async def _send_task_summary(
+        self,
+        db: AsyncSession,
+        bot_token: str,
+        chat_id: str,
+        title: str,
+        due_date: datetime | None,
+        lang: str,
+        area_id: str | None = None,
+        project_id: str | None = None,
+    ) -> None:
+        lines = [i18n_t("telegramAddSummary", lang, title=title)]
+
+        if area_id:
+            area = await db.get(Area, area_id)
+            if area:
+                lines.append(i18n_t("telegramAddAreaLabel", lang, name=area.name))
+
+        if project_id:
+            project = await db.get(Project, project_id)
+            if project:
+                lines.append(i18n_t("telegramAddProjectLabel", lang, name=project.name))
+
+        if due_date:
+            lines.append(i18n_t("telegramAddDateLabel", lang, date=due_date.strftime("%d.%m.%Y")))
+
+        await TelegramNotifierService.send_message(
+            bot_token, chat_id, "\n".join(lines),
+        )
+
+    async def _get_user_areas(
+        self, db: AsyncSession, user_id: str
+    ) -> list[Area]:
+        result = await db.execute(
+            select(Area)
+            .where(Area.user_id == user_id)
+            .order_by(Area.sort_order)
+        )
+        return list(result.scalars().all())
+
+    async def _get_user_projects(
+        self, db: AsyncSession, user_id: str
+    ) -> list[Project]:
+        result = await db.execute(
+            select(Project)
+            .where(Project.user_id == user_id, Project.is_active.is_(True))
+            .order_by(Project.sort_order)
+        )
+        return list(result.scalars().all())
+
+    async def _send_area_selection(
+        self, bot_token: str, chat_id: str, areas: list[Area], lang: str,
+    ) -> None:
+        keyboard = []
+        for area in areas:
+            keyboard.append([{
+                "text": area.name,
+                "callback_data": f"addarea:{area.id}",
+            }])
+        keyboard.append([{
+            "text": i18n_t("telegramAddSkip", lang),
+            "callback_data": "addarea:skip",
+        }])
+        keyboard.append([{
+            "text": i18n_t("telegramAddCancel", lang),
+            "callback_data": "addcancel",
+        }])
+        await TelegramNotifierService.send_message_with_buttons(
+            bot_token, chat_id,
+            i18n_t("telegramAddSelectArea", lang),
+            {"inline_keyboard": keyboard},
+        )
+
+    async def _send_project_selection(
+        self, bot_token: str, chat_id: str, projects: list[Project], lang: str,
+    ) -> None:
+        keyboard = []
+        for project in projects:
+            keyboard.append([{
+                "text": project.name,
+                "callback_data": f"addproj:{project.id}",
+            }])
+        keyboard.append([{
+            "text": i18n_t("telegramAddSkip", lang),
+            "callback_data": "addproj:skip",
+        }])
+        keyboard.append([{
+            "text": i18n_t("telegramAddCancel", lang),
+            "callback_data": "addcancel",
+        }])
+        await TelegramNotifierService.send_message_with_buttons(
+            bot_token, chat_id,
+            i18n_t("telegramAddSelectProject", lang),
+            {"inline_keyboard": keyboard},
+        )
+
+    async def _proceed_after_area(
+        self,
+        db: AsyncSession,
+        user: User,
+        chat_id: str,
+        state: dict,
+        lang: str,
+    ) -> None:
+        bot_token = user.decrypted_telegram_bot_token
+        projects = await self._get_user_projects(db, user.id)
+
+        if projects:
+            _pending_adds[chat_id] = {
+                "step": "select_project",
+                "selected_date": state.get("selected_date"),
+                "title": state.get("title"),
+                "area_id": state.get("area_id"),
+                "created_at": state.get("created_at", datetime.now(UTC)),
+            }
+            await self._send_project_selection(bot_token, chat_id, projects, lang)
+        else:
+            selected_date = state.get("selected_date")
+            due_date = None
+            if selected_date:
+                user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+                due_date = datetime.combine(selected_date, time.min, tzinfo=user_tz)
+            del _pending_adds[chat_id]
+            await self._create_task(
+                db, user, state["title"], due_date, lang,
+                area_id=state.get("area_id"),
+                project_id=None,
+            )
+
+    async def _proceed_after_title(
+        self,
+        db: AsyncSession,
+        user: User,
+        chat_id: str,
+        title: str,
+        selected_date: date | None,
+        lang: str,
+    ) -> None:
+        bot_token = user.decrypted_telegram_bot_token
+        areas = await self._get_user_areas(db, user.id)
+
+        if areas:
+            _pending_adds[chat_id] = {
+                "step": "select_area",
+                "selected_date": selected_date,
+                "title": title,
+                "created_at": datetime.now(UTC),
+            }
+            await self._send_area_selection(bot_token, chat_id, areas, lang)
+        else:
+            projects = await self._get_user_projects(db, user.id)
+            if projects:
+                _pending_adds[chat_id] = {
+                    "step": "select_project",
+                    "selected_date": selected_date,
+                    "title": title,
+                    "area_id": None,
+                    "created_at": datetime.now(UTC),
+                }
+                await self._send_project_selection(bot_token, chat_id, projects, lang)
+            else:
+                user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+                due_date = None
+                if selected_date:
+                    due_date = datetime.combine(selected_date, time.min, tzinfo=user_tz)
+                await self._create_task(db, user, title, due_date, lang)
 
     async def handle_command(
         self, user: User, command: str, db: AsyncSession
@@ -427,23 +608,75 @@ class TelegramCommandService:
 
         elif data.startswith("addcal:") and not data.startswith("addcal_nav:"):
             if data == "addcal:nodate":
-                _pending_adds[chat_id] = {
-                    "step": "waiting_title",
-                    "selected_date": None,
-                    "created_at": datetime.now(UTC),
-                }
+                selected_date = None
+            elif data == "addcal:today":
+                selected_date = datetime.now(user_tz).date()
+            elif data == "addcal:tomorrow":
+                selected_date = datetime.now(user_tz).date() + timedelta(days=1)
             else:
                 parts = data.split(":")
-                year, month, day = int(parts[1]), int(parts[2]), int(parts[3])
-                _pending_adds[chat_id] = {
-                    "step": "waiting_title",
-                    "selected_date": date(year, month, day),
-                    "created_at": datetime.now(UTC),
-                }
+                selected_date = date(int(parts[1]), int(parts[2]), int(parts[3]))
+
+            _pending_adds[chat_id] = {
+                "step": "waiting_title",
+                "selected_date": selected_date,
+                "created_at": datetime.now(UTC),
+            }
+
+            if selected_date:
+                date_str = selected_date.strftime("%d.%m.%Y")
+            else:
+                date_str = i18n_t("telegramAddNoDate", lang)
+            await TelegramNotifierService.edit_message_text(
+                bot_token, chat_id, message_id, date_str, None,
+            )
+
             await TelegramNotifierService.send_message(
                 bot_token, chat_id, i18n_t("telegramAddTitle", lang)
             )
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+
+        elif data == "addcancel":
+            self._clear_user_state(chat_id)
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+            await TelegramNotifierService.send_message(
+                bot_token, chat_id, i18n_t("telegramAddCancelled", lang)
+            )
+
+        elif data.startswith("addarea:"):
+            state = _pending_adds.get(chat_id)
+            if not state or state.get("step") != "select_area":
+                await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+                return
+
+            if data == "addarea:skip":
+                state["area_id"] = None
+            else:
+                state["area_id"] = data.split(":")[1]
+
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+            await self._proceed_after_area(db, user, chat_id, state, lang)
+
+        elif data.startswith("addproj:"):
+            state = _pending_adds.get(chat_id)
+            if not state or state.get("step") != "select_project":
+                await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+                return
+
+            project_id = None if data == "addproj:skip" else data.split(":")[1]
+
+            selected_date = state.get("selected_date")
+            due_date = None
+            if selected_date:
+                due_date = datetime.combine(selected_date, time.min, tzinfo=user_tz)
+
+            del _pending_adds[chat_id]
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+            await self._create_task(
+                db, user, state["title"], due_date, lang,
+                area_id=state.get("area_id"),
+                project_id=project_id,
+            )
 
         elif data.startswith("done:"):
             task_id = data.split(":")[1]
@@ -462,19 +695,15 @@ class TelegramCommandService:
 
         chat_id = user.telegram_chat_id
         lang = getattr(user, "language", None) or "ru"
-        user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
 
         state = _pending_adds.get(chat_id)
         if state and state.get("step") == "waiting_title":
             selected_date = state.get("selected_date")
-            due_date = None
-            if selected_date:
-                due_date = datetime.combine(
-                    selected_date, time.min, tzinfo=user_tz
-                )
+            title = text[:255]
 
-            del _pending_adds[chat_id]
-            await self._create_task(db, user, text, due_date, lang)
+            await self._proceed_after_title(
+                db, user, chat_id, title, selected_date, lang,
+            )
             return
 
         await self._create_task(db, user, text, None, lang)

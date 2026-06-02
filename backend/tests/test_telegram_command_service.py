@@ -53,8 +53,12 @@ class TestCalendarKeyboard:
 
     def test_add_prefix_has_nodate_button(self, cmd_service):
         kb = cmd_service._build_calendar_keyboard(2026, 6, "addcal")
-        last = kb["inline_keyboard"][-1]
-        assert last[0]["callback_data"] == "addcal:nodate"
+        all_callbacks = [
+            btn["callback_data"]
+            for row in kb["inline_keyboard"]
+            for btn in row
+        ]
+        assert "addcal:nodate" in all_callbacks
 
     def test_cal_prefix_no_nodate_button(self, cmd_service):
         kb = cmd_service._build_calendar_keyboard(2026, 6, "cal")
@@ -228,6 +232,13 @@ class TestHandleText:
             "selected_date": date(2026, 6, 15),
             "created_at": datetime.now(UTC),
         }
+        mock_db = AsyncMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
         with patch(
             "app.services.telegram_command_service.TaskService"
         ) as mock_ts_cls:
@@ -242,7 +253,7 @@ class TestHandleText:
                 with patch("app.event_bus.event_bus", create=True) as mock_eb:
                     mock_eb.publish = AsyncMock()
                     await cmd_service.handle_text(
-                        mock_user, "Купить молоко", AsyncMock()
+                        mock_user, "Купить молоко", mock_db
                     )
 
             mock_ts.create_task.assert_called_once()

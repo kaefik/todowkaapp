@@ -64,5 +64,16 @@
   "telegramAddError": "❌ Ошибка при создании задачи",
   "telegramExportSuccess": "📦 Экспорт данных от {date}",
   "telegramExportError": "❌ Ошибка при экспорте данных",
+  "telegramAddToday": "📅 Сегодня",
+  "telegramAddTomorrow": "📅 Завтра",
+  "telegramAddCancel": "❌ Отмена",
+  "telegramAddCancelled": "❌ Добавление задачи отменено",
+  "telegramAddSelectArea": "Выберите область:",
+  "telegramAddSelectProject": "Выберите проект:",
+  "telegramAddSkip": "⏭️ Пропустить",
+  "telegramAddSummary": "✅ Задача «{title}» создана",
+  "telegramAddAreaLabel": "📂 Область: {name}",
+  "telegramAddProjectLabel": "📁 Проект: {name}",
+  "telegramAddDateLabel": "📅 Дата: {date}",
   "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/export — экспорт JSON\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие."
 }
