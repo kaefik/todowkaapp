@@ -424,7 +424,11 @@ class TelegramCommandService:
         elif data.startswith("done:"):
             task_id = data.split(":")[1]
             await self._complete_task(
-                user, task_id, cq_id, db, lang
+                user, task_id, cq_id, db, lang,
+                chat_id=chat_id,
+                message_id=message_id,
+                message_text=message.get("text", ""),
+                reply_markup=message.get("reply_markup"),
             )
 
     async def handle_text(
@@ -458,6 +462,10 @@ class TelegramCommandService:
         cq_id: str,
         db: AsyncSession,
         lang: str,
+        chat_id: str | None = None,
+        message_id: int | None = None,
+        message_text: str = "",
+        reply_markup: dict | None = None,
     ) -> None:
         bot_token = user.decrypted_telegram_bot_token
 
@@ -482,6 +490,23 @@ class TelegramCommandService:
         await TelegramNotifierService.answer_callback_query(
             bot_token, cq_id, i18n_t("telegramTaskDone", lang, title=task_title)
         )
+
+        if chat_id and message_id:
+            new_text = message_text + f"\n✅ «{task_title}» выполнена"
+            new_markup = None
+            if reply_markup and "inline_keyboard" in reply_markup:
+                filtered = [
+                    row for row in reply_markup["inline_keyboard"]
+                    if not any(
+                        btn.get("callback_data") == f"done:{task_id}"
+                        for btn in row
+                    )
+                ]
+                if filtered:
+                    new_markup = {"inline_keyboard": filtered}
+            await TelegramNotifierService.edit_message_text(
+                bot_token, chat_id, message_id, new_text, new_markup
+            )
 
         from app.event_bus import event_bus
         await event_bus.publish(f"{user.id}:sync", "task_updated", {

@@ -274,8 +274,107 @@ class TestHandleCallback:
                 mock_ns.answer_callback_query = AsyncMock()
                 await cmd_service.handle_callback(
                     mock_user,
-                    {"id": "cq1", "data": "done:task-123", "message": {"message_id": 42}},
+                    {
+                        "id": "cq1",
+                        "data": "done:task-123",
+                        "message": {
+                            "message_id": 42,
+                            "text": "Title",
+                            "reply_markup": {
+                                "inline_keyboard": [
+                                    [{"text": "✓ Task", "callback_data": "done:task-123"}]
+                                ]
+                            },
+                        },
+                    },
                     AsyncMock(),
                 )
             mock_complete.assert_called_once()
             assert mock_complete.call_args[0][1] == "task-123"
+            kwargs = mock_complete.call_args[1]
+            assert kwargs["chat_id"] == mock_user.telegram_chat_id
+            assert kwargs["message_id"] == 42
+
+    @pytest.mark.asyncio
+    async def test_complete_task_edits_message(self, cmd_service, mock_user):
+        with patch(
+            "app.services.telegram_command_service.TaskService"
+        ) as mock_ts_cls:
+            mock_ts = AsyncMock()
+            mock_task = MagicMock()
+            mock_task.id = "task-123"
+            mock_task.title = "Купить молоко"
+            mock_task.is_completed = False
+            mock_ts.get_task = AsyncMock(return_value=mock_task)
+            mock_ts.move_task = AsyncMock()
+            mock_ts_cls.return_value = mock_ts
+
+            reply_markup = {
+                "inline_keyboard": [
+                    [{"text": "✓ Task A", "callback_data": "done:task-123"}],
+                    [{"text": "✓ Task B", "callback_data": "done:task-456"}],
+                ]
+            }
+
+            with patch(
+                "app.services.telegram_command_service.TelegramNotifierService"
+            ) as mock_ns:
+                mock_ns.answer_callback_query = AsyncMock()
+                mock_ns.edit_message_text = AsyncMock(return_value=True)
+                with patch("app.event_bus.event_bus", create=True) as mock_eb:
+                    mock_eb.publish = AsyncMock()
+                    await cmd_service._complete_task(
+                        mock_user, "task-123", "cq1", AsyncMock(), "ru",
+                        chat_id="12345",
+                        message_id=42,
+                        message_text="Задачи на сегодня\n\n• Task A\n• Task B",
+                        reply_markup=reply_markup,
+                    )
+
+                mock_ns.edit_message_text.assert_called_once()
+                call_args = mock_ns.edit_message_text.call_args
+                updated_text = call_args[0][3]
+                assert "✅ «Купить молоко» выполнена" in updated_text
+
+                updated_markup = call_args[0][4]
+                assert len(updated_markup["inline_keyboard"]) == 1
+                assert updated_markup["inline_keyboard"][0][0]["callback_data"] == "done:task-456"
+
+    @pytest.mark.asyncio
+    async def test_complete_task_removes_all_buttons_when_empty(self, cmd_service, mock_user):
+        with patch(
+            "app.services.telegram_command_service.TaskService"
+        ) as mock_ts_cls:
+            mock_ts = AsyncMock()
+            mock_task = MagicMock()
+            mock_task.id = "task-123"
+            mock_task.title = "One Task"
+            mock_task.is_completed = False
+            mock_ts.get_task = AsyncMock(return_value=mock_task)
+            mock_ts.move_task = AsyncMock()
+            mock_ts_cls.return_value = mock_ts
+
+            reply_markup = {
+                "inline_keyboard": [
+                    [{"text": "✓ One Task", "callback_data": "done:task-123"}],
+                ]
+            }
+
+            with patch(
+                "app.services.telegram_command_service.TelegramNotifierService"
+            ) as mock_ns:
+                mock_ns.answer_callback_query = AsyncMock()
+                mock_ns.edit_message_text = AsyncMock(return_value=True)
+                with patch("app.event_bus.event_bus", create=True) as mock_eb:
+                    mock_eb.publish = AsyncMock()
+                    await cmd_service._complete_task(
+                        mock_user, "task-123", "cq1", AsyncMock(), "ru",
+                        chat_id="12345",
+                        message_id=42,
+                        message_text="Title\n\n• One Task",
+                        reply_markup=reply_markup,
+                    )
+
+                mock_ns.edit_message_text.assert_called_once()
+                call_args = mock_ns.edit_message_text.call_args
+                assert call_args[0][4] is None
