@@ -75,5 +75,34 @@
   "telegramAddAreaLabel": "📂 Область: {name}",
   "telegramAddProjectLabel": "📁 Проект: {name}",
   "telegramAddDateLabel": "📅 Дата: {date}",
-  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/export — экспорт JSON\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие."
+  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/stats — статистика продуктивности\n/export — экспорт JSON\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие.\nДата: завтра, в пятницу, 15 июня\nТег: #название",
+
+  "telegramSmartCreated": "✅ Задача создана: «{title}»",
+  "telegramSmartDate": "📅 {date}",
+  "telegramSmartTags": "🏷 {tags}",
+
+  "telegramReplyDone": "✅ Задача «{title}» → выполнена",
+  "telegramReplyTomorrow": "📅 Задача «{title}» → перенесена на завтра",
+  "telegramReplyToday": "📅 Задача «{title}» → перенесена на сегодня",
+  "telegramReplyDeleted": "🗑️ Задача «{title}» → удалена",
+  "telegramReplyInbox": "📥 Задача «{title}» → во входящих",
+
+  "telegramStatsTitle": "📊 Твоя статистика ({period})",
+  "telegramStatsWeek": "7 дней",
+  "telegramStatsMonth": "30 дней",
+  "telegramStatsCompleted": "Выполнено",
+  "telegramStatsTasks": "задач",
+  "telegramStatsStreak": "дней подряд",
+  "telegramStatsTopProjects": "🏆 Топ проектов",
+  "telegramStatsNoData": "Пока нет данных",
+  "telegramStatsWeekBtn": "📅 За неделю",
+  "telegramStatsMonthBtn": "📅 За месяц",
+
+  "telegramDigestMorning": "☀️ Доброе утро!",
+  "telegramDigestToday": "📋 Сегодня: {count} задач",
+  "telegramDigestOverdue": "⚠️ Просрочено: {count}",
+  "telegramDigestInbox": "📥 Во входящих: {count}",
+  "telegramDigestAllTasksBtn": "📋 Все задачи",
+  "telegramDigestInboxBtn": "📥 Входящие",
+  "telegramDigestNoTasks": "На сегодня задач нет. Отличный день!"
 }

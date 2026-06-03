@@ -209,6 +209,66 @@ async def validate_telegram_token(
     return TelegramTokenResponse(valid=False, error="Invalid token or Telegram API unreachable")
 
 
+class DigestSettings(BaseModel):
+    enabled: bool = False
+    time: str = "08:00"
+
+
+class DigestSettingsResponse(BaseModel):
+    enabled: bool
+    time: str | None
+
+
+@users_router.get("/me/digest", response_model=DigestSettingsResponse)
+@limiter.limit(read_limit)
+async def get_digest_settings(
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> DigestSettingsResponse:
+    return DigestSettingsResponse(
+        enabled=current_user.digest_enabled,
+        time=current_user.digest_time or "08:00",
+    )
+
+
+@users_router.put("/me/digest", response_model=DigestSettingsResponse)
+@limiter.limit(write_limit)
+async def update_digest_settings(
+    request: Request,
+    data: DigestSettings,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> DigestSettingsResponse:
+    if data.enabled and (not current_user.telegram_bot_token or not current_user.telegram_chat_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Telegram bot must be configured to enable digest",
+        )
+
+    import re as re_mod
+    if not re_mod.match(r"^\d{2}:\d{2}$", data.time):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Time must be in HH:MM format",
+        )
+    h, m = data.time.split(":")
+    if not (0 <= int(h) <= 23 and 0 <= int(m) <= 59):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid time value",
+        )
+
+    current_user.digest_enabled = data.enabled
+    current_user.digest_time = data.time
+    await db.commit()
+    await db.refresh(current_user)
+
+    return DigestSettingsResponse(
+        enabled=current_user.digest_enabled,
+        time=current_user.digest_time,
+    )
+
+
 class VerifyEmailRequest(BaseModel):
     email: EmailStr
 

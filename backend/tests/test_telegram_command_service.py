@@ -213,7 +213,7 @@ class TestHandleText:
             with patch(
                 "app.services.telegram_command_service.TelegramNotifierService"
             ) as mock_ns:
-                mock_ns.send_message = AsyncMock()
+                mock_ns.send_message = AsyncMock(return_value=None)
                 with patch("app.event_bus.event_bus", create=True) as mock_eb:
                     mock_eb.publish = AsyncMock()
                     await cmd_service.handle_text(
@@ -249,7 +249,7 @@ class TestHandleText:
             with patch(
                 "app.services.telegram_command_service.TelegramNotifierService"
             ) as mock_ns:
-                mock_ns.send_message = AsyncMock()
+                mock_ns.send_message = AsyncMock(return_value=None)
                 with patch("app.event_bus.event_bus", create=True) as mock_eb:
                     mock_eb.publish = AsyncMock()
                     await cmd_service.handle_text(

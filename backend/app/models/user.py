@@ -1,8 +1,8 @@
 import logging
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func, text
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base as Base
@@ -51,6 +51,9 @@ class User(Base):
     email_verification_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default=text('0'), nullable=False)
     email_verification_code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    digest_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default='0', nullable=False)
+    digest_time: Mapped[str | None] = mapped_column(String(5), nullable=True)
+    digest_last_sent: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

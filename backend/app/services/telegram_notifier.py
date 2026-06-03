@@ -56,7 +56,7 @@ class TelegramNotifierService:
             return [], offset
 
     @staticmethod
-    async def send_message(bot_token: str, chat_id: str, text: str) -> bool:
+    async def send_message(bot_token: str, chat_id: str, text: str) -> dict | None:
         url = TELEGRAM_API_BASE.format(token=bot_token, method="sendMessage")
         payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
         try:
@@ -65,14 +65,14 @@ class TelegramNotifierService:
                 data = resp.json()
                 if resp.status_code == 403:
                     logger.warning(f"Telegram bot blocked by user chat_id={chat_id}")
-                    return False
+                    return None
                 if not data.get("ok"):
                     logger.warning(f"Telegram sendMessage failed: {data}")
-                    return False
-                return True
+                    return None
+                return data["result"]
         except httpx.HTTPError as e:
             logger.warning(f"Telegram send_message error: {e}")
-            return False
+            return None
 
     @staticmethod
     async def send_message_with_buttons(
@@ -263,11 +263,52 @@ class TelegramNotifierService:
         from app.config import settings
         text = TelegramNotifierService.format_full_task_info(task, user_tz, frontend_url=settings.frontend_url, lang=lang)
 
-        success = await TelegramNotifierService.send_message(
+        result = await TelegramNotifierService.send_message(
             bot_token, user.telegram_chat_id, text
         )
 
-        if not success:
+        if not result:
             logger.warning(f"Failed to send Telegram reminder to user {user.id}")
 
-        return success
+        return result is not None
+
+    @staticmethod
+    async def send_daily_digest(
+        bot_token: str,
+        chat_id: str,
+        today_text: str,
+        today_tasks_lines: list[str],
+        overdue_count: int,
+        inbox_count: int,
+        lang: str,
+    ) -> dict | None:
+        from app.i18n import t as i18n_t
+
+        lines = [i18n_t("telegramDigestMorning", lang), ""]
+
+        if today_tasks_lines:
+            lines.append(i18n_t("telegramDigestToday", lang, count=len(today_tasks_lines)))
+            for task_line in today_tasks_lines[:20]:
+                lines.append(f"  {task_line}")
+        else:
+            lines.append(i18n_t("telegramDigestNoTasks", lang))
+
+        if overdue_count > 0:
+            lines.append("")
+            lines.append(i18n_t("telegramDigestOverdue", lang, count=overdue_count))
+
+        if inbox_count > 0:
+            lines.append(i18n_t("telegramDigestInbox", lang, count=inbox_count))
+
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": i18n_t("telegramDigestAllTasksBtn", lang), "callback_data": "action:today"},
+                    {"text": i18n_t("telegramDigestInboxBtn", lang), "callback_data": "action:inbox"},
+                ]
+            ]
+        }
+
+        return await TelegramNotifierService.send_message_with_buttons(
+            bot_token, chat_id, "\n".join(lines), keyboard,
+        )

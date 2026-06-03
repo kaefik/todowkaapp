@@ -75,5 +75,34 @@
   "telegramAddAreaLabel": "📂 Area: {name}",
   "telegramAddProjectLabel": "📁 Project: {name}",
   "telegramAddDateLabel": "📅 Date: {date}",
-  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/export — export JSON\n/help — help\n\nOr just type text — task will be added to inbox."
+  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/stats — productivity stats\n/export — export JSON\n/help — help\n\nOr just type text — task will be added to inbox.\nDate: tomorrow, on friday, june 15\nTag: #name",
+
+  "telegramSmartCreated": "✅ Task created: «{title}»",
+  "telegramSmartDate": "📅 {date}",
+  "telegramSmartTags": "🏷 {tags}",
+
+  "telegramReplyDone": "✅ Task «{title}» → done",
+  "telegramReplyTomorrow": "📅 Task «{title}» → moved to tomorrow",
+  "telegramReplyToday": "📅 Task «{title}» → moved to today",
+  "telegramReplyDeleted": "🗑️ Task «{title}» → deleted",
+  "telegramReplyInbox": "📥 Task «{title}» → moved to inbox",
+
+  "telegramStatsTitle": "📊 Your stats ({period})",
+  "telegramStatsWeek": "7 days",
+  "telegramStatsMonth": "30 days",
+  "telegramStatsCompleted": "Completed",
+  "telegramStatsTasks": "tasks",
+  "telegramStatsStreak": "days streak",
+  "telegramStatsTopProjects": "🏆 Top projects",
+  "telegramStatsNoData": "No data yet",
+  "telegramStatsWeekBtn": "📅 This week",
+  "telegramStatsMonthBtn": "📅 This month",
+
+  "telegramDigestMorning": "☀️ Good morning!",
+  "telegramDigestToday": "📋 Today: {count} tasks",
+  "telegramDigestOverdue": "⚠️ Overdue: {count}",
+  "telegramDigestInbox": "📥 In inbox: {count}",
+  "telegramDigestAllTasksBtn": "📋 All tasks",
+  "telegramDigestInboxBtn": "📥 Inbox",
+  "telegramDigestNoTasks": "No tasks for today. Great day!"
 }

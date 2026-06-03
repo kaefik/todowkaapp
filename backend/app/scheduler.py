@@ -148,6 +148,15 @@ class TaskScheduler:
                 max_instances=1,
             )
 
+            self.scheduler.add_job(
+                _job_send_daily_digests,
+                'interval',
+                minutes=1,
+                id='send_daily_digests',
+                replace_existing=True,
+                max_instances=1,
+            )
+
             self.scheduler.start()
             logger.info("Scheduler started")
 
@@ -695,6 +704,17 @@ async def _do_poll_telegram_bots():
                         await cmd_service.handle_command(user, command, session)
                         await session.commit()
                     else:
+                        reply_to = message.get("reply_to_message")
+                        if reply_to:
+                            from app.services import message_task_mapper
+                            reply_msg_id = reply_to.get("message_id")
+                            if reply_msg_id:
+                                tid = message_task_mapper.get(bot_token, chat_id, reply_msg_id)
+                                if tid is not None:
+                                    await cmd_service.handle_reply(user, tid, text, session)
+                                    await session.commit()
+                                    continue
+
                         await cmd_service.handle_text(user, text, session)
                         await session.commit()
 
@@ -740,3 +760,77 @@ async def _job_send_backup_schedules():
                 logger.info(f"Sent {sent_count} scheduled backups")
     except Exception as e:
         logger.error(f"Error in send_backup_schedules: {e}")
+
+
+async def _job_send_daily_digests():
+    try:
+        from zoneinfo import ZoneInfo
+
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(User).where(
+                    User.digest_enabled.is_(True),
+                    User.telegram_bot_token.isnot(None),
+                    User.telegram_bot_token != '',
+                    User.telegram_chat_id.isnot(None),
+                )
+            )
+            users = list(result.scalars().all())
+
+            for user in users:
+                try:
+                    user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+                    now_local = datetime.now(user_tz)
+                    current_time = now_local.strftime("%H:%M")
+                    today = now_local.date()
+
+                    if user.digest_time != current_time:
+                        continue
+                    if user.digest_last_sent == today:
+                        continue
+
+                    bot_token = user.decrypted_telegram_bot_token
+                    chat_id = user.telegram_chat_id
+                    lang = getattr(user, "language", None) or "ru"
+
+                    from app.services.telegram_command_service import TelegramCommandService
+                    cmd_service = TelegramCommandService()
+
+                    tasks = await cmd_service._get_tasks_for_date(
+                        session, user.id, today, user_tz
+                    )
+
+                    overdue_count = 0
+                    today_tasks_lines = []
+                    for task in tasks:
+                        if task.due_date:
+                            due_local = task.due_date
+                            if due_local.tzinfo is None:
+                                due_local = due_local.replace(tzinfo=user_tz)
+                            else:
+                                due_local = due_local.astimezone(user_tz)
+                            if due_local.date() < today and not task.is_completed:
+                                overdue_count += 1
+                                continue
+                        today_tasks_lines.append(
+                            TelegramCommandService._format_task_line(task, user_tz)
+                        )
+
+                    inbox_tasks = await cmd_service._get_inbox_tasks(session, user.id)
+                    inbox_count = len(inbox_tasks)
+
+                    from app.services.telegram_notifier import TelegramNotifierService
+                    await TelegramNotifierService.send_daily_digest(
+                        bot_token, chat_id,
+                        "", today_tasks_lines,
+                        overdue_count, inbox_count, lang,
+                    )
+
+                    user.digest_last_sent = today
+                    await session.commit()
+
+                except Exception as e:
+                    logger.error(f"Digest error for user {user.id}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error in _job_send_daily_digests: {e}")

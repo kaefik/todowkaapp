@@ -11,11 +11,13 @@ from sqlalchemy.orm import selectinload
 from app.i18n import t as i18n_t
 from app.models.area import Area
 from app.models.project import Project
+from app.models.tag import Tag
 from app.models.task import GtdStatus, Task
 from app.models.user import User
 from app.schemas.task import TaskCreate
 from app.services.task_service import TaskService
 from app.services.telegram_notifier import TelegramNotifierService
+from app.services.telegram_smart_parser import parse as smart_parse
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +236,27 @@ class TelegramCommandService:
         )
         return list(result.scalars().all())
 
+    async def _resolve_tag_ids(
+        self, db: AsyncSession, user_id: str, tag_names: list[str]
+    ) -> list[str]:
+        tag_ids = []
+        for name in tag_names:
+            result = await db.execute(
+                select(Tag).where(Tag.user_id == user_id, Tag.name == name)
+            )
+            tag = result.scalar_one_or_none()
+            if tag:
+                tag_ids.append(str(tag.id))
+            else:
+                from app.schemas.tag import TagCreate
+                from app.services.tag_service import TagService
+                tag_service = TagService(db)
+                new_tag = await tag_service.create_tag(
+                    user_id, TagCreate(name=name)
+                )
+                tag_ids.append(str(new_tag.id))
+        return tag_ids
+
     async def _create_task(
         self,
         db: AsyncSession,
@@ -243,6 +266,7 @@ class TelegramCommandService:
         lang: str,
         area_id: str | None = None,
         project_id: str | None = None,
+        tag_names: list[str] | None = None,
     ) -> None:
         bot_token = user.decrypted_telegram_bot_token
         chat_id = user.telegram_chat_id
@@ -255,6 +279,10 @@ class TelegramCommandService:
             else:
                 gtd_status = GtdStatus.INBOX
 
+            tag_ids = None
+            if tag_names:
+                tag_ids = await self._resolve_tag_ids(db, user.id, tag_names)
+
             task_service = TaskService(db)
             task_data = TaskCreate(
                 title=title,
@@ -262,6 +290,7 @@ class TelegramCommandService:
                 due_date=due_date,
                 area_id=area_id,
                 project_id=project_id,
+                tag_ids=tag_ids,
             )
             task = await task_service.create_task(user.id, task_data)
             await db.flush()
@@ -269,6 +298,7 @@ class TelegramCommandService:
             await self._send_task_summary(
                 db, bot_token, chat_id, title, due_date, lang,
                 area_id=area_id, project_id=project_id,
+                tag_names=tag_names, task_id=str(task.id),
             )
 
             from app.event_bus import event_bus
@@ -293,6 +323,8 @@ class TelegramCommandService:
         lang: str,
         area_id: str | None = None,
         project_id: str | None = None,
+        tag_names: list[str] | None = None,
+        task_id: str | None = None,
     ) -> None:
         lines = [i18n_t("telegramAddSummary", lang, title=title)]
 
@@ -309,9 +341,18 @@ class TelegramCommandService:
         if due_date:
             lines.append(i18n_t("telegramAddDateLabel", lang, date=due_date.strftime("%d.%m.%Y")))
 
-        await TelegramNotifierService.send_message(
+        if tag_names:
+            lines.append(i18n_t("telegramSmartTags", lang, tags=", ".join(f"#{t}" for t in tag_names)))
+
+        result = await TelegramNotifierService.send_message(
             bot_token, chat_id, "\n".join(lines),
         )
+
+        if result and task_id and result.get("message_id"):
+            from app.services import message_task_mapper
+            message_task_mapper.store(
+                bot_token, chat_id, result["message_id"], int(task_id) if task_id.isdigit() else hash(task_id) % (10 ** 8)
+            )
 
     async def _get_user_areas(
         self, db: AsyncSession, user_id: str
@@ -547,6 +588,9 @@ class TelegramCommandService:
                     bot_token, chat_id, i18n_t("telegramExportError", lang)
                 )
 
+        elif command == "/stats":
+            await self._send_stats(db, user, bot_token, chat_id, lang, "week")
+
     async def handle_callback(
         self, user: User, callback_query: dict, db: AsyncSession
     ) -> None:
@@ -719,6 +763,27 @@ class TelegramCommandService:
                 )
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
 
+        elif data in ("action:today", "action:inbox"):
+            if data == "action:today":
+                today = datetime.now(user_tz).date()
+                tasks = await self._get_tasks_for_date(db, user.id, today, user_tz)
+                title = i18n_t("telegramCmdToday", lang)
+            else:
+                tasks = await self._get_inbox_tasks(db, user.id)
+                title = i18n_t("telegramCmdInbox", lang)
+            text, markup = self._format_task_list(tasks, title, user_tz, lang)
+            await TelegramNotifierService.send_message_with_buttons(
+                bot_token, chat_id, text, markup
+            )
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+
+        elif data in ("stats:week", "stats:month"):
+            period = "week" if data == "stats:week" else "month"
+            await self._send_stats(
+                db, user, bot_token, chat_id, lang, period,
+                message_id=message_id, cq_id=cq_id,
+            )
+
         elif data.startswith("done:"):
             task_id = data.split(":")[1]
             await self._complete_task(
@@ -727,6 +792,132 @@ class TelegramCommandService:
                 message_id=message_id,
                 message_text=message.get("text", ""),
                 reply_markup=message.get("reply_markup"),
+            )
+
+    @staticmethod
+    def _format_stats_bar(filled: int, total: int, width: int = 10) -> str:
+        if total == 0:
+            return "░" * width
+        ratio = filled / total
+        n = min(width, max(0, round(ratio * width)))
+        return "█" * n + "░" * (width - n)
+
+    async def _send_stats(
+        self,
+        db: AsyncSession,
+        user: User,
+        bot_token: str,
+        chat_id: str,
+        lang: str,
+        period: str,
+        message_id: int | None = None,
+        cq_id: str | None = None,
+    ) -> None:
+        from sqlalchemy import func as sa_func
+
+        now = datetime.now()
+        if period == "week":
+            days = 7
+            period_label = i18n_t("telegramStatsWeek", lang)
+        else:
+            days = 30
+            period_label = i18n_t("telegramStatsMonth", lang)
+
+        since = now - timedelta(days=days)
+
+        completed_result = await db.execute(
+            select(sa_func.count(Task.id)).where(
+                Task.user_id == user.id,
+                Task.is_completed.is_(True),
+                Task.completed_at >= since,
+            )
+        )
+        completed_count = completed_result.scalar() or 0
+
+        created_result = await db.execute(
+            select(sa_func.count(Task.id)).where(
+                Task.user_id == user.id,
+                Task.created_at >= since,
+            )
+        )
+        created_count = created_result.scalar() or 0
+
+        streak_result = await db.execute(
+            select(sa_func.date(Task.completed_at, tz=ZoneInfo(user.timezone or "Europe/Moscow")).label("day"))
+            .where(
+                Task.user_id == user.id,
+                Task.is_completed.is_(True),
+                Task.completed_at >= now - timedelta(days=60),
+            )
+            .group_by(sa_func.date(Task.completed_at, tz=ZoneInfo(user.timezone or "Europe/Moscow")))
+            .order_by(sa_func.date(Task.completed_at, tz=ZoneInfo(user.timezone or "Europe/Moscow")).desc())
+        )
+        streak_days = list(streak_result.scalars().all())
+        streak = 0
+        user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+        today = datetime.now(user_tz).date()
+        for i, day in enumerate(streak_days):
+            expected = today - timedelta(days=i)
+            if day == expected:
+                streak += 1
+            else:
+                break
+
+        from app.models.project import Project
+        top_projects_result = await db.execute(
+            select(Project.name, sa_func.count(Task.id).label("cnt"))
+            .join(Task, Task.project_id == Project.id)
+            .where(
+                Task.user_id == user.id,
+                Task.is_completed.is_(True),
+                Task.completed_at >= since,
+            )
+            .group_by(Project.name)
+            .order_by(sa_func.count(Task.id).desc())
+            .limit(3)
+        )
+        top_projects = list(top_projects_result.all())
+
+        bar = self._format_stats_bar(completed_count, created_count)
+        lines = [
+            i18n_t("telegramStatsTitle", lang, period=period_label),
+            "",
+            f"{bar} {completed_count}/{created_count} {i18n_t('telegramStatsTasks', lang)}",
+            f"🔥 {streak} {i18n_t('telegramStatsStreak', lang)}",
+        ]
+
+        if top_projects:
+            lines.append("")
+            lines.append(i18n_t("telegramStatsTopProjects", lang))
+            for i, (name, cnt) in enumerate(top_projects, 1):
+                lines.append(f"  {i}. {name} — {cnt}")
+
+        if completed_count == 0 and created_count == 0:
+            lines = [
+                i18n_t("telegramStatsTitle", lang, period=period_label),
+                "",
+                i18n_t("telegramStatsNoData", lang),
+            ]
+
+        text = "\n".join(lines)
+
+        keyboard = {
+            "inline_keyboard": [
+                [
+                    {"text": i18n_t("telegramStatsWeekBtn", lang), "callback_data": "stats:week"},
+                    {"text": i18n_t("telegramStatsMonthBtn", lang), "callback_data": "stats:month"},
+                ]
+            ]
+        }
+
+        if message_id and cq_id:
+            await TelegramNotifierService.edit_message_text(
+                bot_token, chat_id, message_id, text, keyboard,
+            )
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+        else:
+            await TelegramNotifierService.send_message_with_buttons(
+                bot_token, chat_id, text, keyboard,
             )
 
     async def handle_text(
@@ -747,7 +938,18 @@ class TelegramCommandService:
             )
             return
 
-        await self._create_task(db, user, text, None, lang)
+        user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+        parsed = smart_parse(text, lang)
+
+        due_date = None
+        if parsed.due_date:
+            t = parsed.due_time or time(23, 59)
+            due_date = datetime.combine(parsed.due_date, t, tzinfo=user_tz)
+
+        await self._create_task(
+            db, user, parsed.title, due_date, lang,
+            tag_names=parsed.tags if parsed.tags else None,
+        )
 
     async def _complete_task(
         self,
@@ -807,3 +1009,65 @@ class TelegramCommandService:
             "task_id": str(task.id),
             "action": "completed",
         })
+
+    async def handle_reply(
+        self, user: User, task_id: int, text: str, db: AsyncSession
+    ) -> None:
+        bot_token = user.decrypted_telegram_bot_token
+        chat_id = user.telegram_chat_id
+        lang = getattr(user, "language", None) or "ru"
+
+        text_lower = text.strip().lower()
+
+        action = None
+        if text_lower in ("done", "готово", "✅", "v", "д"):
+            action = "done"
+        elif text_lower == "завтра":
+            action = "tomorrow"
+        elif text_lower == "сегодня":
+            action = "today"
+        elif text_lower in ("удалить", "delete", "del", "дель"):
+            action = "delete"
+        elif text_lower == "inbox":
+            action = "inbox"
+
+        if action is None:
+            return
+
+        task_service = TaskService(db)
+        task = await task_service.get_task(user.id, str(task_id))
+        if not task:
+            return
+
+        confirmation = ""
+
+        if action == "done":
+            if not task.is_completed:
+                await task_service.move_task(user.id, task.id, GtdStatus.COMPLETED, user=user)
+            confirmation = i18n_t("telegramReplyDone", lang, title=task.title)
+        elif action == "tomorrow":
+            user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+            tomorrow = datetime.now(user_tz).date() + timedelta(days=1)
+            task.due_date = datetime.combine(tomorrow, time(23, 59), tzinfo=user_tz)
+            confirmation = i18n_t("telegramReplyTomorrow", lang, title=task.title)
+        elif action == "today":
+            user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+            today = datetime.now(user_tz).date()
+            task.due_date = datetime.combine(today, time(23, 59), tzinfo=user_tz)
+            confirmation = i18n_t("telegramReplyToday", lang, title=task.title)
+        elif action == "delete":
+            await task_service.move_task(user.id, task.id, GtdStatus.TRASH, user=user)
+            confirmation = i18n_t("telegramReplyDeleted", lang, title=task.title)
+        elif action == "inbox":
+            await task_service.move_task(user.id, task.id, GtdStatus.INBOX, user=user)
+            confirmation = i18n_t("telegramReplyInbox", lang, title=task.title)
+
+        await db.flush()
+
+        from app.event_bus import event_bus
+        await event_bus.publish(f"{user.id}:sync", "task_updated", {
+            "task_id": str(task.id),
+            "action": action,
+        })
+
+        await TelegramNotifierService.send_message(bot_token, chat_id, confirmation)
