@@ -400,7 +400,7 @@ class TelegramCommandService:
             due_date = None
             if selected_date:
                 user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
-                due_date = datetime.combine(selected_date, time.min, tzinfo=user_tz)
+                due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz)
             del _pending_adds[chat_id]
             await self._create_task(
                 db, user, state["title"], due_date, lang,
@@ -443,7 +443,7 @@ class TelegramCommandService:
                 user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
                 due_date = None
                 if selected_date:
-                    due_date = datetime.combine(selected_date, time.min, tzinfo=user_tz)
+                    due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz)
                 await self._create_task(db, user, title, due_date, lang)
 
     async def handle_command(
@@ -680,7 +680,7 @@ class TelegramCommandService:
             selected_date = state.get("selected_date")
             due_date = None
             if selected_date:
-                due_date = datetime.combine(selected_date, time.min, tzinfo=user_tz)
+                due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz)
 
             del _pending_adds[chat_id]
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
