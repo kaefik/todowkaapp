@@ -519,7 +519,7 @@ class TelegramCommandService:
                 kb,
             )
 
-        elif command == "/help":
+        elif command in ("/help", "?"):
             await TelegramNotifierService.send_message(
                 bot_token, chat_id, i18n_t("telegramHelp", lang)
             )

@@ -690,7 +690,7 @@ async def _do_poll_telegram_bots():
                     if not user.telegram_chat_id or chat_id != user.telegram_chat_id:
                         continue
 
-                    if text.startswith("/"):
+                    if text.startswith("/") or text == "?":
                         command = text.split()[0]
                         await cmd_service.handle_command(user, command, session)
                         await session.commit()
