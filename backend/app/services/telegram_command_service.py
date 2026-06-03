@@ -651,10 +651,17 @@ class TelegramCommandService:
 
             if data == "addarea:skip":
                 state["area_id"] = None
+                area_text = i18n_t("telegramAddSkip", lang)
             else:
                 state["area_id"] = data.split(":")[1]
+                area_text = data.split(":")[1]
 
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+            if message_id:
+                await TelegramNotifierService.edit_message_text(
+                    bot_token, chat_id, message_id, area_text,
+                    {"inline_keyboard": []},
+                )
             await self._proceed_after_area(db, user, chat_id, state, lang)
 
         elif data.startswith("addproj:"):
@@ -665,6 +672,11 @@ class TelegramCommandService:
 
             project_id = None if data == "addproj:skip" else data.split(":")[1]
 
+            if project_id:
+                proj_text = project_id
+            else:
+                proj_text = i18n_t("telegramAddSkip", lang)
+
             selected_date = state.get("selected_date")
             due_date = None
             if selected_date:
@@ -672,6 +684,11 @@ class TelegramCommandService:
 
             del _pending_adds[chat_id]
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+            if message_id:
+                await TelegramNotifierService.edit_message_text(
+                    bot_token, chat_id, message_id, proj_text,
+                    {"inline_keyboard": []},
+                )
             await self._create_task(
                 db, user, state["title"], due_date, lang,
                 area_id=state.get("area_id"),
