@@ -166,6 +166,11 @@ class TelegramCommandService:
                     "callback_data": f"done:{task.id}",
                 }])
 
+        if keyboard:
+            keyboard.append([{
+                "text": "✕",
+                "callback_data": "dismiss",
+            }])
         reply_markup = {"inline_keyboard": keyboard} if keyboard else None
 
         full_text = "\n".join(lines)
@@ -694,6 +699,15 @@ class TelegramCommandService:
                 area_id=state.get("area_id"),
                 project_id=project_id,
             )
+
+        elif data == "dismiss":
+            if message_id:
+                await TelegramNotifierService.edit_message_text(
+                    bot_token, chat_id, message_id,
+                    message.get("text", ""),
+                    {"inline_keyboard": []},
+                )
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
 
         elif data.startswith("done:"):
             task_id = data.split(":")[1]
