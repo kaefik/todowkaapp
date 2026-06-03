@@ -445,7 +445,7 @@ class TelegramCommandService:
             due_date = None
             if selected_date:
                 user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
-                due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz)
+                due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz).astimezone(UTC)
             del _pending_adds[chat_id]
             await self._create_task(
                 db, user, state["title"], due_date, lang,
@@ -488,7 +488,7 @@ class TelegramCommandService:
                 user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
                 due_date = None
                 if selected_date:
-                    due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz)
+                    due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz).astimezone(UTC)
                 await self._create_task(db, user, title, due_date, lang)
 
     async def handle_command(
@@ -739,7 +739,7 @@ class TelegramCommandService:
             selected_date = state.get("selected_date")
             due_date = None
             if selected_date:
-                due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz)
+                due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz).astimezone(UTC)
 
             del _pending_adds[chat_id]
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
@@ -939,12 +939,13 @@ class TelegramCommandService:
             return
 
         user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
-        parsed = smart_parse(text, lang)
+        today = datetime.now(user_tz).date()
+        parsed = smart_parse(text, lang, today=today)
 
         due_date = None
         if parsed.due_date:
-            t = parsed.due_time or time(23, 59)
-            due_date = datetime.combine(parsed.due_date, t, tzinfo=user_tz)
+            t = parsed.due_time or time.max
+            due_date = datetime.combine(parsed.due_date, t, tzinfo=user_tz).astimezone(UTC)
 
         await self._create_task(
             db, user, parsed.title, due_date, lang,
@@ -1048,12 +1049,12 @@ class TelegramCommandService:
         elif action == "tomorrow":
             user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
             tomorrow = datetime.now(user_tz).date() + timedelta(days=1)
-            task.due_date = datetime.combine(tomorrow, time(23, 59), tzinfo=user_tz)
+            task.due_date = datetime.combine(tomorrow, time.max, tzinfo=user_tz).astimezone(UTC)
             confirmation = i18n_t("telegramReplyTomorrow", lang, title=task.title)
         elif action == "today":
             user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
             today = datetime.now(user_tz).date()
-            task.due_date = datetime.combine(today, time(23, 59), tzinfo=user_tz)
+            task.due_date = datetime.combine(today, time.max, tzinfo=user_tz).astimezone(UTC)
             confirmation = i18n_t("telegramReplyToday", lang, title=task.title)
         elif action == "delete":
             await task_service.move_task(user.id, task.id, GtdStatus.TRASH, user=user)

@@ -2,15 +2,6 @@ import re
 from dataclasses import dataclass, field
 from datetime import date, time, timedelta
 
-
-@dataclass
-class ParsedTask:
-    title: str
-    due_date: date | None = None
-    due_time: time | None = None
-    tags: list[str] = field(default_factory=list)
-
-
 _WEEKDAYS_RU = {
     "понедельник": 0,
     "вторник": 1,
@@ -86,29 +77,19 @@ _RE_NEXT_WEEK_RU = re.compile(r"\bна\s+следующей\s+неделе\b", r
 _RE_NEXT_WEEK_EN = re.compile(r"\bnext\s+week\b", re.IGNORECASE)
 
 
+@dataclass
+class ParsedTask:
+    title: str
+    due_date: date | None = None
+    due_time: time | None = None
+    tags: list[str] = field(default_factory=list)
+
+
 def _next_weekday(today: date, target: int) -> date:
     days_ahead = target - today.weekday()
     if days_ahead <= 0:
         days_ahead += 7
     return today + timedelta(days=days_ahead)
-
-
-def _parse_relative_ru(match: re.Match) -> date:
-    n = int(match.group(1))
-    unit = match.group(2)
-    today = date.today()
-    if unit.startswith("недел"):
-        return today + timedelta(weeks=n)
-    return today + timedelta(days=n)
-
-
-def _parse_relative_en(match: re.Match) -> date:
-    n = int(match.group(1))
-    unit = match.group(2)
-    today = date.today()
-    if unit.startswith("week"):
-        return today + timedelta(weeks=n)
-    return today + timedelta(days=n)
 
 
 def _parse_time(text: str) -> time | None:
@@ -123,7 +104,7 @@ def _parse_time(text: str) -> time | None:
     return None
 
 
-def parse(text: str, locale: str = "ru") -> ParsedTask:
+def parse(text: str, locale: str = "ru", today: date | None = None) -> ParsedTask:
     result = ParsedTask(title=text)
     remaining = text
     parsed_any = False
@@ -140,7 +121,8 @@ def parse(text: str, locale: str = "ru") -> ParsedTask:
         remaining = _RE_TIME.sub("", remaining)
         parsed_any = True
 
-    today = date.today()
+    if today is None:
+        today = date.today()
 
     m = _RE_TODAY.search(remaining)
     if m:
@@ -210,14 +192,24 @@ def parse(text: str, locale: str = "ru") -> ParsedTask:
     if result.due_date is None:
         m = _RE_RELATIVE_RU.search(remaining)
         if m:
-            result.due_date = _parse_relative_ru(m)
+            n = int(m.group(1))
+            unit = m.group(2)
+            if unit.startswith("недел"):
+                result.due_date = today + timedelta(weeks=n)
+            else:
+                result.due_date = today + timedelta(days=n)
             remaining = remaining[: m.start()] + remaining[m.end() :]
             parsed_any = True
 
     if result.due_date is None:
         m = _RE_RELATIVE_EN.search(remaining)
         if m:
-            result.due_date = _parse_relative_en(m)
+            n = int(m.group(1))
+            unit = m.group(2)
+            if unit.startswith("week"):
+                result.due_date = today + timedelta(weeks=n)
+            else:
+                result.due_date = today + timedelta(days=n)
             remaining = remaining[: m.start()] + remaining[m.end() :]
             parsed_any = True
 
