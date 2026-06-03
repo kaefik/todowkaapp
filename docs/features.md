@@ -962,6 +962,37 @@
 - Тесты: `backend/tests/test_telegram_command_service.py` (22 теста)
 - Файлы: `backend/app/services/telegram_command_service.py`, `backend/app/services/telegram_notifier.py`, `backend/app/scheduler.py`, `backend/app/i18n/locales/ru.json`, `backend/app/i18n/locales/en.json`, `backend/app/i18n/locales/tt.json`
 
+**Telegram Bot — Smart Parse, Reply Actions, /stats, Daily Digest ✅ (Реализовано 03.06.2026)**
+- Smart Parse — умный парсинг текста при quick add:
+  - Даты: сегодня, завтра, день недели (в понедельник), число+месяц (15 июня), через N дней/недель, на следующей неделе
+  - Время: в HH:MM (только с двоеточием)
+  - Теги: #название (автосоздание если не существует)
+  - Fallback: ничего не распознано → задача во входящих как раньше
+  - Пример: `позвонить Ивану завтра в 15:00 #work` → задача с датой, временем, тегом
+- Reply Actions — управление задачами через ответ на сообщение бота:
+  - `done`/`готово` — выполнить, `завтра` — перенести, `сегодня` — на сегодня, `удалить` — в корзину, `inbox` — во входящие
+  - MessageTaskMapper: thread-safe module-level singleton, TTL 7 дней
+  - Порядок обработки: reply check → команда → smart parse
+  - event_bus sync при каждом действии (веб-клиент видит изменения)
+- /stats — мини-статистика продуктивности:
+  - Выполнено/создано задач за период (эмодзи-бар 10 сегментов)
+  - Streak — дни подряд с выполненными задачами
+  - Топ-3 проекта по завершённым задачам
+  - Inline-кнопки: за неделю / за месяц
+- Daily Digest — утренняя сводка по расписанию:
+  - Настраиваемое время отправки (HH:MM, по таймзоне пользователя)
+  - Включение/выключение через API: GET/PUT /api/users/me/digest
+  - Защита от дублей (digest_last_sent)
+  - Inline-кнопки: Все задачи / Входящие
+  - Scheduler job: каждую минуту проверяет пользователей с включённым digest
+- send_message рефакторинг: возврат dict|None вместо bool (message_id доступен)
+- Новые поля User: digest_enabled, digest_time (String(5) HH:MM), digest_last_sent (Date)
+- i18n: ключи telegramSmart*, telegramReply*, telegramStats*, telegramDigest* (ru/en)
+- Миграция: 20260603_1422_add_digest_settings
+- Сервисы: `backend/app/services/telegram_smart_parser.py`, `backend/app/services/message_task_mapper.py`
+- Тесты: `backend/tests/test_telegram_command_service.py` (27 тестов)
+- Файлы: `backend/app/services/telegram_smart_parser.py`, `backend/app/services/message_task_mapper.py`, `backend/app/services/telegram_command_service.py`, `backend/app/services/telegram_notifier.py`, `backend/app/scheduler.py`, `backend/app/models/user.py`, `backend/app/api/users.py`, `backend/app/i18n/locales/ru.json`, `backend/app/i18n/locales/en.json`, `backend/alembic/versions/20260603_1422_add_digest_settings_66a30c0b454f.py`
+
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Очистка прочитанных уведомлений ✅ (Реализовано 24.04.2026)
   - Кнопка «Очистить прочитанные» на странице уведомлений (`/notifications`)
