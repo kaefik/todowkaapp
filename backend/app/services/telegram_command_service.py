@@ -75,12 +75,11 @@ class TelegramCommandService:
 
         buttons = [header, day_header]
 
-        if prefix == "addcal":
-            quick_row = [
-                {"text": i18n_t("telegramAddToday", lang), "callback_data": "addcal:today"},
-                {"text": i18n_t("telegramAddTomorrow", lang), "callback_data": "addcal:tomorrow"},
-            ]
-            buttons.insert(0, quick_row)
+        quick_row = [
+            {"text": i18n_t("telegramAddToday", lang), "callback_data": f"{prefix}:today"},
+            {"text": i18n_t("telegramAddTomorrow", lang), "callback_data": f"{prefix}:tomorrow"},
+        ]
+        buttons.insert(0, quick_row)
 
         today = date.today()
 
@@ -599,9 +598,20 @@ class TelegramCommandService:
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
 
         elif data.startswith("cal:") and not data.startswith("cal_nav:"):
-            parts = data.split(":")
-            year, month, day = int(parts[1]), int(parts[2]), int(parts[3])
-            target = date(year, month, day)
+            if data == "cal:today":
+                target = datetime.now(user_tz).date()
+            elif data == "cal:tomorrow":
+                target = datetime.now(user_tz).date() + timedelta(days=1)
+            else:
+                parts = data.split(":")
+                target = date(int(parts[1]), int(parts[2]), int(parts[3]))
+
+            if message_id:
+                await TelegramNotifierService.edit_message_text(
+                    bot_token, chat_id, message_id,
+                    target.strftime("%d.%m.%Y"),
+                    {"inline_keyboard": []},
+                )
             tasks = await self._get_tasks_for_date(db, user.id, target, user_tz)
             date_str = target.strftime("%d.%m.%Y")
             title = i18n_t("telegramCmdDate", lang, date=date_str)
