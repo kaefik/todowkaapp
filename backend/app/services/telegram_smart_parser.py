@@ -42,6 +42,12 @@ _MONTHS_EN_SHORT = {
 
 _RE_TAG = re.compile(r"#([\wа-яА-ЯёЁ]+)")
 _RE_TIME = re.compile(r"\b(?:в\s+)?(\d{1,2}:\d{2})\b", re.IGNORECASE)
+_RE_TIME_RU = re.compile(r"\bв\s+(\d{1,2})\s+час(?:ов|а)?\b", re.IGNORECASE)
+_RE_TIME_PERIOD = re.compile(
+    r"\b(?:в\s+)?(\d{1,2})(?::(\d{2}))?\s*(утра|вечера|дня|ночи)\b",
+    re.IGNORECASE,
+)
+_RE_TIME_EN = re.compile(r"\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", re.IGNORECASE)
 
 _RE_TODAY = re.compile(r"\b(?:сегодня|today)\b", re.IGNORECASE)
 _RE_TOMORROW = re.compile(r"\b(?:завтра|tomorrow)\b", re.IGNORECASE)
@@ -92,16 +98,46 @@ def _next_weekday(today: date, target: int) -> date:
     return today + timedelta(days=days_ahead)
 
 
-def _parse_time(text: str) -> time | None:
+def _parse_time(text: str) -> tuple[time | None, re.Pattern | None, re.Match | None]:
+    m = _RE_TIME_PERIOD.search(text)
+    if m:
+        hour = int(m.group(1))
+        minute = int(m.group(2)) if m.group(2) else 0
+        period = m.group(3).lower()
+        if period in ("вечера", "дня") and hour < 12:
+            hour += 12
+        if period in ("ночи",) and hour == 12:
+            hour = 0
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return time(hour, minute), _RE_TIME_PERIOD, m
+
+    m = _RE_TIME_RU.search(text)
+    if m:
+        hour = int(m.group(1))
+        if 0 <= hour <= 23:
+            return time(hour, 0), _RE_TIME_RU, m
+
+    m = _RE_TIME_EN.search(text)
+    if m:
+        hour = int(m.group(1))
+        minute = int(m.group(2)) if m.group(2) else 0
+        period = m.group(3).lower()
+        if period == "pm" and hour < 12:
+            hour += 12
+        if period == "am" and hour == 12:
+            hour = 0
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return time(hour, minute), _RE_TIME_EN, m
+
     m = _RE_TIME.search(text)
-    if not m:
-        return None
-    parts = m.group(1).split(":")
-    hour = int(parts[0])
-    minute = int(parts[1])
-    if 0 <= hour <= 23 and 0 <= minute <= 59:
-        return time(hour, minute)
-    return None
+    if m:
+        parts = m.group(1).split(":")
+        hour = int(parts[0])
+        minute = int(parts[1])
+        if 0 <= hour <= 23 and 0 <= minute <= 59:
+            return time(hour, minute), _RE_TIME, m
+
+    return None, None, None
 
 
 def parse(text: str, locale: str = "ru", today: date | None = None) -> ParsedTask:
@@ -115,10 +151,10 @@ def parse(text: str, locale: str = "ru", today: date | None = None) -> ParsedTas
         remaining = _RE_TAG.sub("", remaining)
         parsed_any = True
 
-    due_time = _parse_time(remaining)
+    due_time, time_re, time_match = _parse_time(remaining)
     if due_time:
         result.due_time = due_time
-        remaining = _RE_TIME.sub("", remaining)
+        remaining = remaining[: time_match.start()] + remaining[time_match.end() :]
         parsed_any = True
 
     if today is None:
