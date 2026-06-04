@@ -98,6 +98,7 @@
   "telegramStatsNoData": "Пока нет данных",
   "telegramStatsWeekBtn": "📅 За неделю",
   "telegramStatsMonthBtn": "📅 За месяц",
+  "telegramStatsDismissBtn": "Отмена",
 
   "telegramDigestMorning": "☀️ Доброе утро!",
   "telegramDigestToday": "📋 Сегодня: {count} задач",

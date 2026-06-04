@@ -786,6 +786,15 @@ class TelegramCommandService:
                 message_id=message_id, cq_id=cq_id,
             )
 
+        elif data == "stats:dismiss":
+            if message_id:
+                await TelegramNotifierService.edit_message_text(
+                    bot_token, chat_id, message_id,
+                    message.get("text", ""),
+                    {"inline_keyboard": []},
+                )
+            await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
+
         elif data.startswith("done:"):
             task_id = data.split(":")[1]
             await self._complete_task(
@@ -912,7 +921,10 @@ class TelegramCommandService:
                 [
                     {"text": i18n_t("telegramStatsWeekBtn", lang), "callback_data": "stats:week"},
                     {"text": i18n_t("telegramStatsMonthBtn", lang), "callback_data": "stats:month"},
-                ]
+                ],
+                [
+                    {"text": i18n_t("telegramStatsDismissBtn", lang), "callback_data": "stats:dismiss"},
+                ],
             ]
         }
 
