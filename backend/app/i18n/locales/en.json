@@ -75,6 +75,7 @@
   "telegramAddAreaLabel": "📂 Area: {name}",
   "telegramAddProjectLabel": "📁 Project: {name}",
   "telegramAddDateLabel": "📅 Date: {date}",
+  "telegramAddInboxLabel": "📥 Inbox",
   "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/stats — productivity stats\n/export — export JSON\n/help — help\n\nOr just type text — task will be added to inbox.\nDate: tomorrow, on friday, june 15\nTag: #name",
 
   "telegramSmartCreated": "✅ Task created: «{title}»",

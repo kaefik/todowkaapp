@@ -340,6 +340,8 @@ class TelegramCommandService:
 
         if due_date:
             lines.append(i18n_t("telegramAddDateLabel", lang, date=due_date.strftime("%d.%m.%Y")))
+        else:
+            lines.append(i18n_t("telegramAddInboxLabel", lang))
 
         if tag_names:
             lines.append(i18n_t("telegramSmartTags", lang, tags=", ".join(f"#{t}" for t in tag_names)))

@@ -75,6 +75,7 @@
   "telegramAddAreaLabel": "📂 Область: {name}",
   "telegramAddProjectLabel": "📁 Проект: {name}",
   "telegramAddDateLabel": "📅 Дата: {date}",
+  "telegramAddInboxLabel": "📥 Во входящих",
   "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/stats — статистика продуктивности\n/export — экспорт JSON\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие.\nДата: завтра, в пятницу, 15 июня\nТег: #название",
 
   "telegramSmartCreated": "✅ Задача создана: «{title}»",
