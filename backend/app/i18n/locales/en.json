@@ -76,7 +76,7 @@
   "telegramAddProjectLabel": "📁 Project: {name}",
   "telegramAddDateLabel": "📅 Date: {date}",
   "telegramAddInboxLabel": "📥 Inbox",
-  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/stats — productivity stats\n/export — export JSON\n/help — help\n\nOr just type text — task will be added to inbox.\nDate: tomorrow, on friday, june 15\nTag: #name",
+  "telegramHelp": "🤖 Todowka commands:\n\n/today — tasks for today\n/tomorrow — tasks for tomorrow\n/date — tasks for date\n/inbox — inbox\n/add — add task\n/search query — search tasks\n/stats — productivity stats\n/export — export JSON\n/menu — show/hide menu\n/help — help\n\nOr just type text — task will be added to inbox.\nDate: tomorrow, on friday, june 15\nTag: #name",
 
   "telegramSmartCreated": "✅ Task created: «{title}»",
   "telegramSmartDate": "📅 {date}",
@@ -106,5 +106,17 @@
   "telegramDigestInbox": "📥 In inbox: {count}",
   "telegramDigestAllTasksBtn": "📋 All tasks",
   "telegramDigestInboxBtn": "📥 Inbox",
-  "telegramDigestNoTasks": "No tasks for today. Great day!"
+  "telegramDigestNoTasks": "No tasks for today. Great day!",
+
+  "telegramSearchTitle": "🔍 Search: «{query}»",
+  "telegramSearchNoResults": "Nothing found",
+  "telegramSearchMore": "...and {count} more tasks",
+  "telegramSearchHint": "Enter search query:",
+
+  "telegramKbInbox": "📥 Inbox",
+  "telegramKbToday": "📅 Today",
+  "telegramKbAdd": "➕ Add",
+  "telegramKbStats": "📊 Stats",
+  "telegramKbSearch": "🔍 Search",
+  "telegramKbHide": "✕ Hide menu"
 }

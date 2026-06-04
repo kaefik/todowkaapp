@@ -993,6 +993,28 @@
 - Тесты: `backend/tests/test_telegram_command_service.py` (27 тестов)
 - Файлы: `backend/app/services/telegram_smart_parser.py`, `backend/app/services/message_task_mapper.py`, `backend/app/services/telegram_command_service.py`, `backend/app/services/telegram_notifier.py`, `backend/app/scheduler.py`, `backend/app/models/user.py`, `backend/app/api/users.py`, `backend/app/i18n/locales/ru.json`, `backend/app/i18n/locales/en.json`, `backend/alembic/versions/20260603_1422_add_digest_settings_66a30c0b454f.py`
 
+**Telegram Bot — /search, ReplyKeyboard ✅ (Реализовано 04.06.2026)**
+- /search — поиск задач через бота:
+  - Синтаксис: `/search запрос` или `/s запрос`
+  - Поиск по заголовку и описанию (ILIKE, регистронезависимый)
+  - Только невыполненные, не в корзине
+  - Результат: до 10 задач с GTD-статусом, дедлайном, inline-кнопкой ✓
+  - Если результатов > 10 — «и ещё N»
+  - Пустой результат — «Ничего не найдено»
+  - Без аргумента: state `waiting_search` → следующий текст = поисковый запрос
+- ReplyKeyboardMarkup — персональная клавиатура:
+  - Показывается при `/start` вместе с приветствием/help
+  - `/menu` — показывает клавиатуру повторно
+  - Кнопка «✕ Скрыть меню» — убирает клавиатуру (ReplyKeyboardRemove)
+  - 2 ряда кнопок (локализованные): Входящие/Inbox, Сегодня/Today, Добавить/Add, Стат/Stats, Поиск/Search
+  - Текстовые кнопки маппятся на соответствующие команды (/inbox, /today, /add, /stats)
+  - Кнопка «🔍 Поиск» → state waiting_search → ввод запроса
+  - resize_keyboard=True для компактного отображения
+- TelegramNotifierService расширен: send_reply_keyboard, send_reply_keyboard_remove
+- i18n: ключи telegramSearch*, telegramKb* (ru/en/tt)
+- Тесты: `backend/tests/test_telegram_command_service.py` (15 новых тестов: 8 Search + 7 MainKeyboard)
+- Файлы: `backend/app/services/telegram_command_service.py`, `backend/app/services/telegram_notifier.py`, `backend/app/scheduler.py`, `backend/app/i18n/locales/ru.json`, `backend/app/i18n/locales/en.json`, `backend/app/i18n/locales/tt.json`
+
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Очистка прочитанных уведомлений ✅ (Реализовано 24.04.2026)
   - Кнопка «Очистить прочитанные» на странице уведомлений (`/notifications`)

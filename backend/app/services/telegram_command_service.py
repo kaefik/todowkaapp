@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 MAX_TASKS_DISPLAY = 20
 MAX_OVERDUE_DISPLAY = 5
+MAX_SEARCH_DISPLAY = 10
 
 _pending_adds: dict[str, dict] = {}
 _pending_add_timeout = timedelta(minutes=5)
@@ -235,6 +236,92 @@ class TelegramCommandService:
             .limit(MAX_TASKS_DISPLAY + 10)
         )
         return list(result.scalars().all())
+
+    async def _get_search_tasks(
+        self, db: AsyncSession, user_id: str, query: str
+    ) -> list[Task]:
+        from sqlalchemy import or_
+
+        like_pattern = f"%{query}%"
+        result = await db.execute(
+            select(Task)
+            .options(selectinload(Task.tags), selectinload(Task.project))
+            .where(
+                Task.user_id == user_id,
+                Task.is_completed.is_(False),
+                Task.gtd_status != GtdStatus.TRASH.value,
+                or_(
+                    Task.title.ilike(like_pattern),
+                    Task.description.ilike(like_pattern),
+                ),
+            )
+            .order_by(Task.due_date.asc().nulls_last(), Task.created_at.desc())
+            .limit(MAX_SEARCH_DISPLAY + 1)
+        )
+        return list(result.scalars().all())
+
+    def _format_search_results(
+        self,
+        tasks: list[Task],
+        query: str,
+        user_tz: ZoneInfo,
+        lang: str,
+    ) -> tuple[str, dict | None]:
+        title = i18n_t("telegramSearchTitle", lang, query=query)
+
+        if not tasks:
+            return f"{title}\n\n{i18n_t('telegramSearchNoResults', lang)}", None
+
+        gtd_status_map = {
+            "inbox": i18n_t("gtdInbox", lang),
+            "active": i18n_t("gtdActive", lang),
+            "next": i18n_t("gtdNext", lang),
+            "waiting": i18n_t("gtdWaiting", lang),
+            "someday": i18n_t("gtdSomeday", lang),
+        }
+
+        lines = [title, ""]
+        shown = tasks[:MAX_SEARCH_DISPLAY]
+
+        for task in shown:
+            status_text = gtd_status_map.get(task.gtd_status, "")
+            line = f"• {task.title}"
+            if status_text:
+                line += f" [{status_text}]"
+            if task.due_date:
+                due_local = task.due_date
+                if due_local.tzinfo is None:
+                    due_local = due_local.replace(tzinfo=UTC).astimezone(user_tz)
+                else:
+                    due_local = due_local.astimezone(user_tz)
+                if due_local.hour == 0 and due_local.minute == 0:
+                    line += f" ({due_local.strftime('%d.%m')})"
+                else:
+                    line += f" ({due_local.strftime('%d.%m %H:%M')})"
+            lines.append(line)
+
+        remaining = len(tasks) - MAX_SEARCH_DISPLAY
+        if remaining > 0:
+            lines.append(i18n_t("telegramSearchMore", lang, count=remaining))
+
+        keyboard = []
+        for task in shown:
+            if not task.is_completed:
+                keyboard.append([{
+                    "text": f"✓ {task.title}",
+                    "callback_data": f"done:{task.id}",
+                }])
+        if keyboard:
+            keyboard.append([{
+                "text": "✕",
+                "callback_data": "dismiss",
+            }])
+        reply_markup = {"inline_keyboard": keyboard} if keyboard else None
+
+        full_text = "\n".join(lines)
+        if len(full_text) > 3800:
+            full_text = full_text[:3800] + "\n..."
+        return full_text, reply_markup
 
     async def _resolve_tag_ids(
         self, db: AsyncSession, user_id: str, tag_names: list[str]
@@ -606,6 +693,30 @@ class TelegramCommandService:
         elif command == "/stats":
             await self._send_stats(db, user, bot_token, chat_id, lang, "week")
 
+        elif command in ("/search", "/s"):
+            await self._send_search_prompt(bot_token, chat_id, lang)
+
+        elif command.startswith("/search ") or command.startswith("/s "):
+            query = command.split(" ", 1)[1].strip()
+            if query:
+                tasks = await self._get_search_tasks(db, user.id, query)
+                text, markup = self._format_search_results(
+                    tasks, query, user_tz, lang
+                )
+                await TelegramNotifierService.send_message_with_buttons(
+                    bot_token, chat_id, text, markup
+                )
+            else:
+                await self._send_search_prompt(bot_token, chat_id, lang)
+
+        elif command == "/menu":
+            keyboard = self._build_main_keyboard(lang)
+            await TelegramNotifierService.send_reply_keyboard(
+                bot_token, chat_id,
+                i18n_t("telegramHelp", lang),
+                keyboard,
+            )
+
     async def handle_callback(
         self, user: User, callback_query: dict, db: AsyncSession
     ) -> None:
@@ -951,6 +1062,54 @@ class TelegramCommandService:
                 bot_token, chat_id, text, keyboard,
             )
 
+    async def _send_search_prompt(
+        self, bot_token: str, chat_id: str, lang: str
+    ) -> None:
+        _pending_adds[chat_id] = {
+            "step": "waiting_search",
+            "created_at": datetime.now(UTC),
+        }
+        await TelegramNotifierService.send_message(
+            bot_token, chat_id, i18n_t("telegramSearchHint", lang)
+        )
+
+    @staticmethod
+    def _build_main_keyboard(lang: str) -> dict:
+        return {
+            "keyboard": [
+                [
+                    {"text": i18n_t("telegramKbInbox", lang)},
+                    {"text": i18n_t("telegramKbToday", lang)},
+                ],
+                [
+                    {"text": i18n_t("telegramKbAdd", lang)},
+                    {"text": i18n_t("telegramKbStats", lang)},
+                    {"text": i18n_t("telegramKbSearch", lang)},
+                ],
+                [
+                    {"text": i18n_t("telegramKbHide", lang)},
+                ],
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": False,
+        }
+
+    @staticmethod
+    def _keyboard_button_commands() -> dict[str, str]:
+        return {
+            "📥 Входящие": "/inbox",
+            "📥 Inbox": "/inbox",
+            "📥 Кергән": "/inbox",
+            "📅 Сегодня": "/today",
+            "📅 Today": "/today",
+            "📅 Бүген": "/today",
+            "➕ Добавить": "/add",
+            "➕ Add": "/add",
+            "➕ Өстәү": "/add",
+            "📊 Стат": "/stats",
+            "📊 Stats": "/stats",
+        }
+
     async def handle_text(
         self, user: User, text: str, db: AsyncSession
     ) -> None:
@@ -959,7 +1118,43 @@ class TelegramCommandService:
         chat_id = user.telegram_chat_id
         lang = getattr(user, "language", None) or "ru"
 
+        kb_commands = self._keyboard_button_commands()
+        if text in kb_commands:
+            await self.handle_command(user, kb_commands[text], db)
+            return
+
+        if text == i18n_t("telegramKbHide", lang):
+            await TelegramNotifierService.send_reply_keyboard_remove(
+                user.decrypted_telegram_bot_token, chat_id,
+            )
+            return
+
+        if text in (
+            i18n_t("telegramKbSearch", "ru"),
+            i18n_t("telegramKbSearch", "en"),
+            i18n_t("telegramKbSearch", "tt"),
+        ):
+            await self._send_search_prompt(
+                user.decrypted_telegram_bot_token, chat_id, lang
+            )
+            return
+
         state = _pending_adds.get(chat_id)
+        if state and state.get("step") == "waiting_search":
+            query = text.strip()
+            del _pending_adds[chat_id]
+            if query:
+                user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+                tasks = await self._get_search_tasks(db, user.id, query)
+                result_text, markup = self._format_search_results(
+                    tasks, query, user_tz, lang
+                )
+                await TelegramNotifierService.send_message_with_buttons(
+                    user.decrypted_telegram_bot_token, chat_id,
+                    result_text, markup,
+                )
+            return
+
         if state and state.get("step") == "waiting_title":
             selected_date = state.get("selected_date")
             title = text[:255]

@@ -76,7 +76,7 @@
   "telegramAddProjectLabel": "📁 Проект: {name}",
   "telegramAddDateLabel": "📅 Дата: {date}",
   "telegramAddInboxLabel": "📥 Во входящих",
-  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/stats — статистика продуктивности\n/export — экспорт JSON\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие.\nДата: завтра, в пятницу, 15 июня\nТег: #название",
+  "telegramHelp": "🤖 Команды Todowka:\n\n/today — задачи на сегодня\n/tomorrow — задачи на завтра\n/date — задачи на дату\n/inbox — входящие\n/add — добавить задачу\n/search запрос — поиск задач\n/stats — статистика продуктивности\n/export — экспорт JSON\n/menu — показать/скрыть меню\n/help — помощь\n\nИли просто напишите текст — задача добавится во входящие.\nДата: завтра, в пятницу, 15 июня\nТег: #название",
 
   "telegramSmartCreated": "✅ Задача создана: «{title}»",
   "telegramSmartDate": "📅 {date}",
@@ -106,5 +106,17 @@
   "telegramDigestInbox": "📥 Во входящих: {count}",
   "telegramDigestAllTasksBtn": "📋 Все задачи",
   "telegramDigestInboxBtn": "📥 Входящие",
-  "telegramDigestNoTasks": "На сегодня задач нет. Отличный день!"
+  "telegramDigestNoTasks": "На сегодня задач нет. Отличный день!",
+
+  "telegramSearchTitle": "🔍 Поиск: «{query}»",
+  "telegramSearchNoResults": "Ничего не найдено",
+  "telegramSearchMore": "...и ещё {count} задач",
+  "telegramSearchHint": "Введите поисковый запрос:",
+
+  "telegramKbInbox": "📥 Входящие",
+  "telegramKbToday": "📅 Сегодня",
+  "telegramKbAdd": "➕ Добавить",
+  "telegramKbStats": "📊 Стат",
+  "telegramKbSearch": "🔍 Поиск",
+  "telegramKbHide": "✕ Скрыть меню"
 }

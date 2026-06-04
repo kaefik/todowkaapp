@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from app.services.telegram_command_service import (
     MAX_OVERDUE_DISPLAY,
+    MAX_SEARCH_DISPLAY,
     MAX_TASKS_DISPLAY,
     TelegramCommandService,
     _pending_adds,
@@ -389,3 +390,174 @@ class TestHandleCallback:
                 mock_ns.edit_message_text.assert_called_once()
                 call_args = mock_ns.edit_message_text.call_args
                 assert call_args[0][4] is None
+
+
+class TestSearch:
+    def test_format_search_results_empty(self, cmd_service):
+        text, markup = cmd_service._format_search_results(
+            [], "отчёт", ZoneInfo("Europe/Moscow"), "ru"
+        )
+        assert "Ничего не найдено" in text
+        assert markup is None
+
+    def test_format_search_results_with_tasks(self, cmd_service):
+        task = _make_task(task_id="s1", title="Отчёт за неделю")
+        task.gtd_status = "active"
+        text, markup = cmd_service._format_search_results(
+            [task], "отчёт", ZoneInfo("Europe/Moscow"), "ru"
+        )
+        assert "Отчёт за неделю" in text
+        assert "Активно" in text
+        assert markup is not None
+
+    def test_format_search_results_limit(self, cmd_service):
+        tasks = []
+        for i in range(15):
+            t = _make_task(task_id=f"s{i}", title=f"Task {i}")
+            t.gtd_status = "inbox"
+            tasks.append(t)
+        text, markup = cmd_service._format_search_results(
+            tasks, "task", ZoneInfo("Europe/Moscow"), "ru"
+        )
+        assert "и ещё" in text
+        assert len(markup["inline_keyboard"]) <= MAX_SEARCH_DISPLAY + 1
+
+    def test_format_search_results_completed_no_button(self, cmd_service):
+        task = _make_task(task_id="s1", title="Done", is_completed=True)
+        task.gtd_status = "completed"
+        text, markup = cmd_service._format_search_results(
+            [task], "done", ZoneInfo("Europe/Moscow"), "ru"
+        )
+        assert markup is None
+
+    @pytest.mark.asyncio
+    async def test_search_command_with_query(self, cmd_service, mock_user):
+        mock_db = AsyncMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_message_with_buttons = AsyncMock()
+            await cmd_service.handle_command(mock_user, "/search отчёт", mock_db)
+            mock_ns.send_message_with_buttons.assert_called_once()
+            call_text = mock_ns.send_message_with_buttons.call_args[0][2]
+            assert "отчёт" in call_text
+
+    @pytest.mark.asyncio
+    async def test_search_command_without_query_sets_state(self, cmd_service, mock_user):
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_message = AsyncMock()
+            await cmd_service.handle_command(mock_user, "/search", AsyncMock())
+            mock_ns.send_message.assert_called_once()
+            state = _pending_adds.get(mock_user.telegram_chat_id)
+            assert state is not None
+            assert state["step"] == "waiting_search"
+
+    @pytest.mark.asyncio
+    async def test_search_short_alias(self, cmd_service, mock_user):
+        mock_db = AsyncMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_message_with_buttons = AsyncMock()
+            await cmd_service.handle_command(mock_user, "/s тест", mock_db)
+            mock_ns.send_message_with_buttons.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_waiting_search_state_processes_query(self, cmd_service, mock_user):
+        _pending_adds[mock_user.telegram_chat_id] = {
+            "step": "waiting_search",
+            "created_at": datetime.now(UTC),
+        }
+        mock_db = AsyncMock()
+        mock_scalars = MagicMock()
+        mock_scalars.all.return_value = []
+        mock_result = MagicMock()
+        mock_result.scalars.return_value = mock_scalars
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_message_with_buttons = AsyncMock()
+            await cmd_service.handle_text(mock_user, "отчёт", mock_db)
+            mock_ns.send_message_with_buttons.assert_called_once()
+            assert mock_user.telegram_chat_id not in _pending_adds
+
+
+class TestMainKeyboard:
+    def test_build_main_keyboard_ru(self, cmd_service):
+        kb = cmd_service._build_main_keyboard("ru")
+        assert "keyboard" in kb
+        assert kb["resize_keyboard"] is True
+        assert kb["one_time_keyboard"] is False
+        all_texts = [btn["text"] for row in kb["keyboard"] for btn in row]
+        assert "📥 Входящие" in all_texts
+        assert "📅 Сегодня" in all_texts
+        assert "✕ Скрыть меню" in all_texts
+
+    def test_build_main_keyboard_en(self, cmd_service):
+        kb = cmd_service._build_main_keyboard("en")
+        all_texts = [btn["text"] for row in kb["keyboard"] for btn in row]
+        assert "📥 Inbox" in all_texts
+        assert "📅 Today" in all_texts
+        assert "✕ Hide menu" in all_texts
+
+    def test_keyboard_button_commands_mapping(self, cmd_service):
+        mapping = cmd_service._keyboard_button_commands()
+        assert mapping["📥 Входящие"] == "/inbox"
+        assert mapping["📅 Сегодня"] == "/today"
+        assert mapping["➕ Добавить"] == "/add"
+        assert mapping["📊 Стат"] == "/stats"
+
+    @pytest.mark.asyncio
+    async def test_menu_command_sends_keyboard(self, cmd_service, mock_user):
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_reply_keyboard = AsyncMock()
+            await cmd_service.handle_command(mock_user, "/menu", AsyncMock())
+            mock_ns.send_reply_keyboard.assert_called_once()
+            call_keyboard = mock_ns.send_reply_keyboard.call_args[0][3]
+            assert "keyboard" in call_keyboard
+
+    @pytest.mark.asyncio
+    async def test_hide_menu_button_sends_remove(self, cmd_service, mock_user):
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_reply_keyboard_remove = AsyncMock()
+            await cmd_service.handle_text(mock_user, "✕ Скрыть меню", AsyncMock())
+            mock_ns.send_reply_keyboard_remove.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_search_keyboard_button_sets_state(self, cmd_service, mock_user):
+        with patch(
+            "app.services.telegram_command_service.TelegramNotifierService"
+        ) as mock_ns:
+            mock_ns.send_message = AsyncMock()
+            await cmd_service.handle_text(mock_user, "🔍 Поиск", AsyncMock())
+            state = _pending_adds.get(mock_user.telegram_chat_id)
+            assert state is not None
+            assert state["step"] == "waiting_search"
+
+    @pytest.mark.asyncio
+    async def test_inbox_keyboard_button_routes_to_command(self, cmd_service, mock_user):
+        with patch.object(cmd_service, "handle_command", new_callable=AsyncMock) as mock_cmd:
+            mock_db = AsyncMock()
+            await cmd_service.handle_text(mock_user, "📥 Входящие", mock_db)
+            mock_cmd.assert_called_once()
+            assert mock_cmd.call_args[0][1] == "/inbox"

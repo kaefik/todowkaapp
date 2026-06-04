@@ -141,6 +141,51 @@ class TelegramNotifierService:
             return False
 
     @staticmethod
+    async def send_reply_keyboard(
+        bot_token: str, chat_id: str, text: str, keyboard: dict
+    ) -> dict | None:
+        url = TELEGRAM_API_BASE.format(token=bot_token, method="sendMessage")
+        payload: dict = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "reply_markup": keyboard,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.post(url, json=payload)
+                data = resp.json()
+                if not data.get("ok"):
+                    logger.warning(f"Telegram send_reply_keyboard failed: {data}")
+                    return None
+                return data["result"]
+        except httpx.HTTPError as e:
+            logger.warning(f"Telegram send_reply_keyboard error: {e}")
+            return None
+
+    @staticmethod
+    async def send_reply_keyboard_remove(
+        bot_token: str, chat_id: str
+    ) -> dict | None:
+        url = TELEGRAM_API_BASE.format(token=bot_token, method="sendMessage")
+        payload: dict = {
+            "chat_id": chat_id,
+            "text": "👌",
+            "reply_markup": {"remove_keyboard": True},
+        }
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.post(url, json=payload)
+                data = resp.json()
+                if not data.get("ok"):
+                    logger.warning(f"Telegram send_reply_keyboard_remove failed: {data}")
+                    return None
+                return data["result"]
+        except httpx.HTTPError as e:
+            logger.warning(f"Telegram send_reply_keyboard_remove error: {e}")
+            return None
+
+    @staticmethod
     async def send_document(
         bot_token: str, chat_id: str, filename: str, json_bytes: bytes, caption: str = ""
     ) -> bool:

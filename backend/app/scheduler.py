@@ -682,17 +682,23 @@ async def _do_poll_telegram_bots():
                                 f"Telegram chat_id {chat_id} linked for user {user.username}"
                             )
                             lang = getattr(user, 'language', None) or "ru"
-                            await TelegramNotifierService.send_message(
+                            from app.services.telegram_command_service import TelegramCommandService
+                            keyboard = TelegramCommandService._build_main_keyboard(lang)
+                            await TelegramNotifierService.send_reply_keyboard(
                                 bot_token,
                                 chat_id,
                                 i18n_t("telegramBotConnected", lang),
+                                keyboard,
                             )
                         else:
                             lang = getattr(user, 'language', None) or "ru"
-                            await TelegramNotifierService.send_message(
+                            from app.services.telegram_command_service import TelegramCommandService
+                            keyboard = TelegramCommandService._build_main_keyboard(lang)
+                            await TelegramNotifierService.send_reply_keyboard(
                                 bot_token,
                                 chat_id,
                                 i18n_t("telegramHelp", lang),
+                                keyboard,
                             )
                         continue
 

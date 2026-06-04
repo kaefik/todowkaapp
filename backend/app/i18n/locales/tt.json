@@ -75,5 +75,17 @@
   "telegramAddAreaLabel": "📂 Өлкә: {name}",
   "telegramAddProjectLabel": "📁 Проект: {name}",
   "telegramAddDateLabel": "📅 Дата: {date}",
-  "telegramHelp": "🤖 Todowka командалары:\n\n/today — бүгенге бурычлар\n/tomorrow — иртәгәге бурычлар\n/date — датага бурычлар\n/inbox — кергән\n/add — бурыч өстәү\n/export — JSON экспорт\n/help — ярдәм\n\nЯки текст языгыз — бурыч кергәнгә өстәләчәк."
+  "telegramHelp": "🤖 Todowka командалары:\n\n/today — бүгенге бурычлар\n/tomorrow — иртәгәге бурычлар\n/date — датага бурычлар\n/inbox — кергән\n/add — бурыч өстәү\n/export — JSON экспорт\n/help — ярдәм\n\nЯки текст языгыз — бурыч кергәнгә өстәләчәк.",
+
+  "telegramSearchTitle": "🔍 Эзләү: «{query}»",
+  "telegramSearchNoResults": "Нәрсә дә табылмады",
+  "telegramSearchMore": "...тагын {count} бурыч",
+  "telegramSearchHint": "Эзләү сораулыкны кертегез:",
+
+  "telegramKbInbox": "📥 Кергән",
+  "telegramKbToday": "📅 Бүген",
+  "telegramKbAdd": "➕ Өстәү",
+  "telegramKbStats": "📊 Стат",
+  "telegramKbSearch": "🔍 Эзләү",
+  "telegramKbHide": "✕ Менюны яшерү"
 }
