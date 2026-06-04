@@ -366,7 +366,7 @@ class TelegramCommandService:
         if result and task_id and result.get("message_id"):
             from app.services import message_task_mapper
             message_task_mapper.store(
-                bot_token, chat_id, result["message_id"], int(task_id) if task_id.isdigit() else hash(task_id) % (10 ** 8)
+                bot_token, chat_id, result["message_id"], task_id
             )
 
     async def _get_user_areas(
@@ -1045,7 +1045,7 @@ class TelegramCommandService:
         })
 
     async def handle_reply(
-        self, user: User, task_id: int, text: str, db: AsyncSession
+        self, user: User, task_id: str, text: str, db: AsyncSession
     ) -> None:
         bot_token = user.decrypted_telegram_bot_token
         chat_id = user.telegram_chat_id
@@ -1069,7 +1069,7 @@ class TelegramCommandService:
             return
 
         task_service = TaskService(db)
-        task = await task_service.get_task(user.id, str(task_id))
+        task = await task_service.get_task(user.id, task_id)
         if not task:
             return
 

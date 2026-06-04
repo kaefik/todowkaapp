@@ -2,7 +2,7 @@ import threading
 from datetime import UTC, datetime, timedelta
 
 _TTL = timedelta(days=7)
-_store: dict[str, tuple[int, datetime]] = {}
+_store: dict[str, tuple[str, datetime]] = {}
 _lock = threading.Lock()
 
 
@@ -10,13 +10,13 @@ def _make_key(bot_token: str, chat_id: str, message_id: int) -> str:
     return f"{bot_token}:{chat_id}:{message_id}"
 
 
-def store(bot_token: str, chat_id: str, message_id: int, task_id: int) -> None:
+def store(bot_token: str, chat_id: str, message_id: int, task_id: str) -> None:
     key = _make_key(bot_token, chat_id, message_id)
     with _lock:
         _store[key] = (task_id, datetime.now(UTC))
 
 
-def get(bot_token: str, chat_id: str, message_id: int) -> int | None:
+def get(bot_token: str, chat_id: str, message_id: int) -> str | None:
     key = _make_key(bot_token, chat_id, message_id)
     with _lock:
         entry = _store.get(key)
