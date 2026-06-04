@@ -270,6 +270,7 @@ class TelegramCommandService:
     ) -> None:
         bot_token = user.decrypted_telegram_bot_token
         chat_id = user.telegram_chat_id
+        user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
 
         try:
             title = title[:255]
@@ -299,6 +300,7 @@ class TelegramCommandService:
                 db, bot_token, chat_id, title, due_date, lang,
                 area_id=area_id, project_id=project_id,
                 tag_names=tag_names, task_id=str(task.id),
+                user_tz=user_tz,
             )
 
             from app.event_bus import event_bus
@@ -325,6 +327,7 @@ class TelegramCommandService:
         project_id: str | None = None,
         tag_names: list[str] | None = None,
         task_id: str | None = None,
+        user_tz: ZoneInfo | None = None,
     ) -> None:
         lines = [i18n_t("telegramAddSummary", lang, title=title)]
 
@@ -339,7 +342,17 @@ class TelegramCommandService:
                 lines.append(i18n_t("telegramAddProjectLabel", lang, name=project.name))
 
         if due_date:
-            lines.append(i18n_t("telegramAddDateLabel", lang, date=due_date.strftime("%d.%m.%Y")))
+            local_due = due_date
+            if local_due.tzinfo is None:
+                local_due = local_due.replace(tzinfo=UTC)
+            if user_tz:
+                local_due = local_due.astimezone(user_tz)
+            is_sentinel = local_due.hour == 23 and local_due.minute == 59
+            if is_sentinel or (local_due.hour == 0 and local_due.minute == 0):
+                date_str = local_due.strftime("%d.%m.%Y")
+            else:
+                date_str = local_due.strftime("%d.%m.%Y %H:%M")
+            lines.append(i18n_t("telegramAddDateLabel", lang, date=date_str))
         else:
             lines.append(i18n_t("telegramAddInboxLabel", lang))
 
