@@ -948,6 +948,8 @@ class TelegramCommandService:
         if parsed.due_date:
             t = parsed.due_time or time.max
             due_date = datetime.combine(parsed.due_date, t, tzinfo=user_tz).astimezone(UTC)
+        elif parsed.due_time:
+            due_date = datetime.combine(today, parsed.due_time, tzinfo=user_tz).astimezone(UTC)
 
         await self._create_task(
             db, user, parsed.title, due_date, lang,
