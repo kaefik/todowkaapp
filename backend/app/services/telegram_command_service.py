@@ -130,7 +130,7 @@ class TelegramCommandService:
             if task.due_date:
                 due_local = task.due_date
                 if due_local.tzinfo is None:
-                    due_local = due_local.replace(tzinfo=user_tz)
+                    due_local = due_local.replace(tzinfo=UTC).astimezone(user_tz)
                 else:
                     due_local = due_local.astimezone(user_tz)
                 due_day = due_local.date()
@@ -186,7 +186,7 @@ class TelegramCommandService:
         if task.due_date:
             due_local = task.due_date
             if due_local.tzinfo is None:
-                due_local = due_local.replace(tzinfo=user_tz)
+                due_local = due_local.replace(tzinfo=UTC).astimezone(user_tz)
             else:
                 due_local = due_local.astimezone(user_tz)
             if due_local.hour == 0 and due_local.minute == 0:
