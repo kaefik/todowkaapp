@@ -817,7 +817,8 @@ class TelegramCommandService:
     ) -> None:
         from sqlalchemy import func as sa_func
 
-        now = datetime.now()
+        user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
+        now = datetime.now(user_tz)
         if period == "week":
             days = 7
             period_label = i18n_t("telegramStatsWeek", lang)
@@ -845,22 +846,25 @@ class TelegramCommandService:
         created_count = created_result.scalar() or 0
 
         streak_result = await db.execute(
-            select(sa_func.date(Task.completed_at, tz=ZoneInfo(user.timezone or "Europe/Moscow")).label("day"))
+            select(Task.completed_at)
             .where(
                 Task.user_id == user.id,
                 Task.is_completed.is_(True),
                 Task.completed_at >= now - timedelta(days=60),
             )
-            .group_by(sa_func.date(Task.completed_at, tz=ZoneInfo(user.timezone or "Europe/Moscow")))
-            .order_by(sa_func.date(Task.completed_at, tz=ZoneInfo(user.timezone or "Europe/Moscow")).desc())
+            .order_by(Task.completed_at.desc())
         )
-        streak_days = list(streak_result.scalars().all())
+        seen_days: set[date] = set()
+        for row in streak_result.scalars().all():
+            ts = row
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=UTC)
+            seen_days.add(ts.astimezone(user_tz).date())
         streak = 0
-        user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
-        today = datetime.now(user_tz).date()
-        for i, day in enumerate(streak_days):
+        today = now.date()
+        for i in range(60):
             expected = today - timedelta(days=i)
-            if day == expected:
+            if expected in seen_days:
                 streak += 1
             else:
                 break
