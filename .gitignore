@@ -232,3 +232,12 @@ backend/data/*.db
 # SSL Certificates (generated locally)
 docker/certbot/
 .superpowers/
+
+# Android
+androidapp/
+.gradle/
+.kotlin/
+local.properties
+
+# Backups
+backups/
