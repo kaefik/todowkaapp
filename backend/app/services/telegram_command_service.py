@@ -1083,7 +1083,7 @@ class TelegramCommandService:
                 ],
                 [
                     {"text": i18n_t("telegramKbAdd", lang)},
-                    {"text": i18n_t("telegramKbStats", lang)},
+                    {"text": i18n_t("telegramKbTomorrow", lang)},
                     {"text": i18n_t("telegramKbSearch", lang)},
                 ],
                 [
@@ -1106,8 +1106,9 @@ class TelegramCommandService:
             "➕ Добавить": "/add",
             "➕ Add": "/add",
             "➕ Өстәү": "/add",
-            "📊 Стат": "/stats",
-            "📊 Stats": "/stats",
+            "📅 Завтра": "/tomorrow",
+            "📅 Tomorrow": "/tomorrow",
+            "📅 Иртәгә": "/tomorrow",
         }
 
     async def handle_text(

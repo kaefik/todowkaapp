@@ -506,14 +506,14 @@ class TestMainKeyboard:
         assert kb["one_time_keyboard"] is False
         all_texts = [btn["text"] for row in kb["keyboard"] for btn in row]
         assert "📥 Входящие" in all_texts
-        assert "📅 Сегодня" in all_texts
+        assert "📅 Завтра" in all_texts
         assert "✕ Скрыть меню" in all_texts
 
     def test_build_main_keyboard_en(self, cmd_service):
         kb = cmd_service._build_main_keyboard("en")
         all_texts = [btn["text"] for row in kb["keyboard"] for btn in row]
         assert "📥 Inbox" in all_texts
-        assert "📅 Today" in all_texts
+        assert "📅 Tomorrow" in all_texts
         assert "✕ Hide menu" in all_texts
 
     def test_keyboard_button_commands_mapping(self, cmd_service):
@@ -521,7 +521,7 @@ class TestMainKeyboard:
         assert mapping["📥 Входящие"] == "/inbox"
         assert mapping["📅 Сегодня"] == "/today"
         assert mapping["➕ Добавить"] == "/add"
-        assert mapping["📊 Стат"] == "/stats"
+        assert mapping["📅 Завтра"] == "/tomorrow"
 
     @pytest.mark.asyncio
     async def test_menu_command_sends_keyboard(self, cmd_service, mock_user):
