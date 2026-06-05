@@ -14,6 +14,8 @@ from app.models.project import Project
 from app.models.tag import Tag, task_tags
 from app.models.task import Task
 from app.models.task_recurrence import TaskRecurrence
+from app.models.calendar_event import CalendarEvent
+from app.models.event_recurrence import EventRecurrence
 from app.models.verb_template import VerbTemplate
 
 
@@ -92,6 +94,7 @@ def _serialize_task(t: Task) -> dict:
         "context_id": t.context_id,
         "area_id": t.area_id,
         "project_id": t.project_id,
+        "event_id": t.event_id,
         "position": t.position,
         "due_date": _dt(t.due_date),
         "notes": t.notes,
@@ -128,6 +131,36 @@ def _serialize_task_recurrence(r: TaskRecurrence) -> dict:
         "task_id": r.task_id,
         "generated_task_id": r.generated_task_id,
         "due_date_of_generated_task": _dt(r.due_date_of_generated_task),
+        "generated_at": _dt(r.generated_at),
+        "status": r.status,
+    }
+
+
+def _serialize_calendar_event(e: CalendarEvent) -> dict:
+    return {
+        "id": e.id,
+        "title": e.title,
+        "description": e.description,
+        "start_time": _dt(e.start_time),
+        "end_time": _dt(e.end_time),
+        "all_day": e.all_day,
+        "color": e.color,
+        "location": e.location,
+        "attendees": e.attendees,
+        "recurrence_type": e.recurrence_type,
+        "recurrence_config": e.recurrence_config,
+        "recurrence_end_date": _dt(e.recurrence_end_date),
+        "created_at": _dt(e.created_at),
+        "updated_at": _dt(e.updated_at),
+    }
+
+
+def _serialize_event_recurrence(r: EventRecurrence) -> dict:
+    return {
+        "id": r.id,
+        "event_id": r.event_id,
+        "generated_event_id": r.generated_event_id,
+        "start_time_of_generated_event": _dt(r.start_time_of_generated_event),
         "generated_at": _dt(r.generated_at),
         "status": r.status,
     }
@@ -189,6 +222,20 @@ class ExportImportService:
             checklist_items = []
             task_recurrences = []
 
+        events_result = await self.db.execute(
+            select(CalendarEvent).where(CalendarEvent.user_id == uid)
+        )
+        calendar_events = list(events_result.scalars().all())
+
+        if calendar_events:
+            event_ids = [e.id for e in calendar_events]
+            event_rec_result = await self.db.execute(
+                select(EventRecurrence).where(EventRecurrence.event_id.in_(event_ids))
+            )
+            event_recurrences = list(event_rec_result.scalars().all())
+        else:
+            event_recurrences = []
+
         task_tags = []
         for t in tasks:
             for tag in t.tags:
@@ -207,6 +254,8 @@ class ExportImportService:
                 "tasks": [_serialize_task(t) for t in tasks],
                 "checklist_items": [_serialize_checklist_item(c) for c in checklist_items],
                 "task_recurrences": [_serialize_task_recurrence(r) for r in task_recurrences],
+                "calendar_events": [_serialize_calendar_event(e) for e in calendar_events],
+                "event_recurrences": [_serialize_event_recurrence(r) for r in event_recurrences],
                 "task_tags": task_tags,
             },
         }
