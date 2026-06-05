@@ -306,39 +306,55 @@ class ExportImportService:
         key: str,
         errors: list[str],
         id_map: dict[str, str],
+        mode: str = "replace",
+        extra_datetime_fields: list[str] | None = None,
     ) -> set[str]:
+        datetime_fields = ["created_at", "updated_at"]
+        if extra_datetime_fields:
+            datetime_fields.extend(extra_datetime_fields)
         ids: set[str] = set()
         count = 0
         for item in items:
             entity_id = item.get("id")
             if not entity_id:
                 continue
-            existing = await self.db.get(model_class, entity_id)
-            if existing is not None and existing.user_id != user_id:
+            if mode == "duplicate":
                 new_id = self._new_id(entity_id, id_map)
                 kwargs: dict = {"id": new_id, "user_id": user_id}
                 for field in fields:
                     if field in item:
                         kwargs[field] = item[field]
                 obj = model_class(**kwargs)
-                self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
+                self._set_datetime_fields(obj, item, datetime_fields)
                 self.db.add(obj)
                 ids.add(new_id)
-            elif existing is not None:
-                for field in fields:
-                    if field in item:
-                        setattr(existing, field, item[field])
-                self._set_datetime_fields(existing, item, ["created_at", "updated_at"])
-                ids.add(entity_id)
             else:
-                kwargs = {"id": entity_id, "user_id": user_id}
-                for field in fields:
-                    if field in item:
-                        kwargs[field] = item[field]
-                obj = model_class(**kwargs)
-                self._set_datetime_fields(obj, item, ["created_at", "updated_at"])
-                self.db.add(obj)
-                ids.add(entity_id)
+                existing = await self.db.get(model_class, entity_id)
+                if existing is not None and existing.user_id != user_id:
+                    new_id = self._new_id(entity_id, id_map)
+                    kwargs = {"id": new_id, "user_id": user_id}
+                    for field in fields:
+                        if field in item:
+                            kwargs[field] = item[field]
+                    obj = model_class(**kwargs)
+                    self._set_datetime_fields(obj, item, datetime_fields)
+                    self.db.add(obj)
+                    ids.add(new_id)
+                elif existing is not None:
+                    for field in fields:
+                        if field in item:
+                            setattr(existing, field, item[field])
+                    self._set_datetime_fields(existing, item, datetime_fields)
+                    ids.add(entity_id)
+                else:
+                    kwargs = {"id": entity_id, "user_id": user_id}
+                    for field in fields:
+                        if field in item:
+                            kwargs[field] = item[field]
+                    obj = model_class(**kwargs)
+                    self._set_datetime_fields(obj, item, datetime_fields)
+                    self.db.add(obj)
+                    ids.add(entity_id)
             count += 1
         imported[key] = count
         return ids
