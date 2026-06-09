@@ -5,6 +5,7 @@ import { db } from '../db/database'
 import { useOnlineStatus } from '../db/hooks'
 import { isPushEcho } from '../db/pushEcho'
 import { SyncContext } from './SyncContext'
+import { performInitialSync } from '../db/init'
 
 const PULL_INTERVAL = 15 * 60 * 1000
 const PUSH_DEBOUNCE_MS = 1500
@@ -265,7 +266,12 @@ export function SyncProvider({ children }: SyncProviderProps) {
 
     syncSSE.connect(
       (eventType: string) => {
-        if (userRef.current) schedulePull(userRef.current.id, eventType)
+        if (!userRef.current) return
+        if (eventType === 'data_imported') {
+          performInitialSync(userRef.current.id)
+        } else {
+          schedulePull(userRef.current.id, eventType)
+        }
       },
       (entityType: EntityType, entityId: string) => {
         deleteLocalEntity(entityType, entityId)
