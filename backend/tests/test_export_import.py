@@ -33,7 +33,7 @@ async def test_export_requires_auth(client):
 
 @pytest.mark.asyncio
 async def test_import_requires_auth(client):
-    data = json.dumps({
+    json_bytes = json.dumps({
         "version": "1.0",
         "app": "todowka",
         "data": {
@@ -49,8 +49,8 @@ async def test_import_requires_auth(client):
         },
     }).encode()
     response = await client.post(
-        "/api/export-import/import",
-        files={"file": ("import.json", io.BytesIO(data), "application/json")},
+        "/api/export-import/import?mode=replace",
+        files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
     )
     assert response.status_code == 401
 
@@ -169,7 +169,7 @@ async def test_import_creates_new_data(client, auth_user):
     json_bytes = json.dumps(import_payload).encode()
 
     response = await client.post(
-        "/api/export-import/import",
+        "/api/export-import/import?mode=replace",
         files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
     )
     assert response.status_code == 200
@@ -189,7 +189,7 @@ async def test_import_rejects_invalid_json(client, auth_user):
     bad_bytes = b"this is not json at all"
 
     response = await client.post(
-        "/api/export-import/import",
+        "/api/export-import/import?mode=replace",
         files={"file": ("import.json", io.BytesIO(bad_bytes), "application/json")},
     )
     assert response.status_code == 400
@@ -205,7 +205,7 @@ async def test_import_rejects_wrong_app(client, auth_user):
     }).encode()
 
     response = await client.post(
-        "/api/export-import/import",
+        "/api/export-import/import?mode=replace",
         files={"file": ("import.json", io.BytesIO(payload), "application/json")},
     )
     assert response.status_code == 400
@@ -246,7 +246,7 @@ async def test_import_upsert_updates_existing(client, auth_user):
     json_bytes = json.dumps(import_payload).encode()
 
     response = await client.post(
-        "/api/export-import/import",
+        "/api/export-import/import?mode=replace",
         files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
     )
     assert response.status_code == 200
@@ -282,7 +282,7 @@ async def test_cross_user_import_creates_with_new_ids(client, auth_user, db_sess
 
     json_bytes = export_content.encode()
     import_resp = await client.post(
-        "/api/export-import/import",
+        "/api/export-import/import?mode=replace",
         files={"file": ("import.json", io.BytesIO(json_bytes), "application/json")},
     )
     assert import_resp.status_code == 200

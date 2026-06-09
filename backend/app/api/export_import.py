@@ -36,9 +36,16 @@ async def export_data(
 async def import_data(
     request: Request,
     file: UploadFile,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    mode: str = "duplicate",
+    current_user: Annotated[User, Depends(get_current_user)] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
 ):
+    if mode not in ("replace", "duplicate"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid mode: must be 'replace' or 'duplicate'",
+        )
+
     if not file.filename or not file.filename.endswith(".json"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -79,5 +86,14 @@ async def import_data(
         )
 
     service = ExportImportService(db)
-    result = await service.import_data(user_id=current_user.id, import_data=data)
+    result = await service.import_data(
+        user_id=current_user.id, import_data=data, mode=mode
+    )
+
+    from app.event_bus import event_bus
+    await event_bus.publish(f"{current_user.id}:sync", "data_imported", {
+        "user_id": str(current_user.id),
+        "mode": mode,
+    })
+
     return ImportReport(**result)
