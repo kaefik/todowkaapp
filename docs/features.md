@@ -361,6 +361,18 @@
 - API: GET/POST/PUT/DELETE /api/backup-schedule, POST /api/backup-schedule/send-now
 - Файлы: `backend/app/models/backup_schedule.py`, `backend/app/schemas/backup_schedule.py`, `backend/app/services/backup_schedule_service.py`, `backend/app/api/backup_schedules.py`, `backend/app/scheduler.py`, `backend/app/services/telegram_notifier.py`, `frontend/src/components/BackupScheduleSettings.tsx`, `frontend/src/api/backupSchedules.ts`, `frontend/src/hooks/useBackupSchedule.ts`, `frontend/src/routes/Settings.tsx`
 
+#### Экспорт и импорт данных
+- Экспорт всех данных в JSON (11 типов сущностей: areas, contexts, tags, verb_templates, calendar_events, projects, tasks, checklist_items, task_recurrences, event_recurrences, task_tags)
+- Импорт с выбором режима: дубликаты (безопасный, по умолчанию) или замена данных
+  - «Создать дубликаты» — все записи добавятся как новые, существующие не изменятся
+  - «Заменить данные» — совпадающие записи будут перезаписаны данными из файла
+- Поддержка CalendarEvent и EventRecurrence при экспорте/импорте
+- Связь Task→CalendarEvent (event_id) сохраняется при экспорт/импорт
+- Обратная совместимость со старыми файлами (без calendar_events/event_recurrences)
+- SSE-событие `data_imported` после импорта — синхронизация на всех вкладках
+- API: GET /api/export-import/export, POST /api/export-import/import?mode=duplicate|replace
+- Файлы: `backend/app/services/export_import_service.py`, `backend/app/api/export_import.py`, `frontend/src/api/exportImport.ts`, `frontend/src/routes/Settings.tsx`, `frontend/src/components/SyncProvider.tsx`
+
 #### Управление контекстами
 - CRUD для контекстов (создание, редактирование, удаление)
 - Привязка задач к контексту (context_id в tasks)
