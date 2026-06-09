@@ -1,10 +1,10 @@
-import pytest
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
+import pytest
+
 from app.services.telegram_command_service import (
-    MAX_OVERDUE_DISPLAY,
     MAX_SEARCH_DISPLAY,
     MAX_TASKS_DISPLAY,
     TelegramCommandService,

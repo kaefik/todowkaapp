@@ -5,9 +5,9 @@ Revises: add_recurrence_to_calendar_events
 Create Date: 2026-05-12 10:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 revision = 'add_event_recurrences_table'
 down_revision = 'add_recurrence_to_calendar_events'

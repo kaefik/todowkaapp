@@ -8,14 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.area import Area
+from app.models.calendar_event import CalendarEvent
 from app.models.checklist import ChecklistItem
 from app.models.context import Context
+from app.models.event_recurrence import EventRecurrence
 from app.models.project import Project
 from app.models.tag import Tag, task_tags
 from app.models.task import Task
 from app.models.task_recurrence import TaskRecurrence
-from app.models.calendar_event import CalendarEvent
-from app.models.event_recurrence import EventRecurrence
 from app.models.verb_template import VerbTemplate
 
 

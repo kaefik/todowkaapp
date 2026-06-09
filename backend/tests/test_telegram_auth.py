@@ -1,5 +1,5 @@
-import pytest
-from app.schemas.telegram_auth import TelegramLoginRequest, TelegramLoginResponse, TelegramBindRequest
+from app.schemas.telegram_auth import TelegramBindRequest, TelegramLoginRequest
+
 
 def test_telegram_login_request_schema():
     data = {"init_data": "query_id=xxx&user={\"id\":123}&auth_date=1234567890"}
