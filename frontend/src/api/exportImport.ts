@@ -44,7 +44,7 @@ export const exportImportApi = {
     URL.revokeObjectURL(url)
   },
 
-  async importData(file: File): Promise<ImportReport> {
+  async importData(file: File, mode: 'replace' | 'duplicate' = 'duplicate'): Promise<ImportReport> {
     const formData = new FormData()
     formData.append('file', file)
 
@@ -55,7 +55,7 @@ export const exportImportApi = {
       headers['X-Requested-With'] = 'XMLHttpRequest'
     }
 
-    const response = await fetch(`${API_BASE_URL}/export-import/import`, {
+    const response = await fetch(`${API_BASE_URL}/export-import/import?mode=${mode}`, {
       method: 'POST',
       headers,
       credentials: 'include',
