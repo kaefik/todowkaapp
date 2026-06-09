@@ -78,6 +78,8 @@ function SettingsContent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [exportLoading, setExportLoading] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [showImportModeDialog, setShowImportModeDialog] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -145,13 +147,15 @@ function SettingsContent() {
     }
   }
 
-  const handleImport = async (file: File) => {
-    if (!confirm(t('confirmImport'))) return
+  const handleImportWithMode = async (mode: 'replace' | 'duplicate') => {
+    if (!importFile) return
+    setShowImportModeDialog(false)
     setImportLoading(true)
     try {
-      const report = await exportImportApi.importData(file)
+      const report = await exportImportApi.importData(importFile, mode)
+      const successKey = mode === 'duplicate' ? 'importSuccessDuplicate' : 'importSuccessReplace'
       addToast({
-        title: t('importSuccess', {
+        title: t(successKey, {
           tasks: report.imported.tasks || 0,
           projects: report.imported.projects || 0,
         }),
@@ -165,7 +169,13 @@ function SettingsContent() {
       addToast({ title: t('importError'), body: '', type: 'error' })
     } finally {
       setImportLoading(false)
+      setImportFile(null)
     }
+  }
+
+  const cancelImport = () => {
+    setShowImportModeDialog(false)
+    setImportFile(null)
   }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -579,7 +589,10 @@ function SettingsContent() {
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
-                    if (file) handleImport(file)
+                    if (file) {
+                      setImportFile(file)
+                      setShowImportModeDialog(true)
+                    }
                     e.target.value = ''
                   }}
                 />
@@ -591,6 +604,48 @@ function SettingsContent() {
                   {importLoading ? t('importing') : t('importData')}
                 </button>
               </div>
+              {showImportModeDialog && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                      {t('importModeTitle')}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      {t('importModeDescription')}
+                    </p>
+                    <div className="space-y-3">
+                      <button
+                        onClick={() => handleImportWithMode('duplicate')}
+                        className="w-full text-left p-4 rounded-lg border-2 border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-500 transition-colors"
+                      >
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {t('importModeDuplicate')}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('importModeDuplicateHint')}
+                        </p>
+                      </button>
+                      <button
+                        onClick={() => handleImportWithMode('replace')}
+                        className="w-full text-left p-4 rounded-lg border-2 border-amber-300 dark:border-amber-700 hover:border-amber-500 dark:hover:border-amber-500 transition-colors"
+                      >
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {t('importModeReplace')}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {t('importModeReplaceHint')}
+                        </p>
+                      </button>
+                    </div>
+                    <button
+                      onClick={cancelImport}
+                      className="mt-4 w-full px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      {t('importModeCancel')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </>
