@@ -1,15 +1,18 @@
 from typing import Annotated
 
+import logging
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.services.crypto_service import encrypt_secret
 
 router = APIRouter(prefix="/mattermost", tags=["mattermost"])
+logger = logging.getLogger(__name__)
 
 
 class ValidateTokenRequest(BaseModel):
@@ -38,17 +41,20 @@ async def validate_mattermost_token(
     """Validate Mattermost bot token"""
     import httpx
 
+    url = f"{settings.mattermost_url}/api/v4/users/me"
+    logger.info(f"Validating Mattermost token against {url}")
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
             resp = await client.get(
-                "http://localhost:8065/api/v4/users/me",
+                url,
                 headers={"Authorization": f"Bearer {req.token}"}
             )
+            logger.info(f"Mattermost validation response: {resp.status_code}")
             if resp.status_code == 200:
                 data = resp.json()
                 return ValidateTokenResponse(valid=True, username=data.get("username"))
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Mattermost validation error: {e}")
 
     return ValidateTokenResponse(valid=False)
 
