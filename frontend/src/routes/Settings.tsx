@@ -179,6 +179,16 @@ function SettingsContent() {
     setImportFile(null)
   }
 
+  const handleUpdate = async (data: Record<string, any>) => {
+    try {
+      const updatedUser = await usersApi.updateCurrentUser(data)
+      setCurrentUser(updatedUser)
+      addToast({ title: t('saved'), body: '', type: 'success' })
+    } catch {
+      addToast({ title: t('error'), body: '', type: 'error' })
+    }
+  }
+
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setProfileLoading(true)
