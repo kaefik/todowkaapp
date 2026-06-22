@@ -8,7 +8,6 @@ from app.services.telegram_command_service import (
     MAX_SEARCH_DISPLAY,
     MAX_TASKS_DISPLAY,
     TelegramCommandService,
-    _pending_adds,
 )
 
 
@@ -18,10 +17,10 @@ def cmd_service():
 
 
 @pytest.fixture(autouse=True)
-def clear_pending():
-    _pending_adds.clear()
+def clear_pending(cmd_service):
+    cmd_service._pending_adds.clear()
     yield
-    _pending_adds.clear()
+    cmd_service._pending_adds.clear()
 
 
 @pytest.fixture
@@ -47,13 +46,13 @@ def _make_task(task_id="t1", title="Task", due_date=None, is_completed=False):
 
 class TestCalendarKeyboard:
     def test_navigation_prev_next(self, cmd_service):
-        kb = cmd_service._build_calendar_keyboard(2026, 6, "cal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(2026, 6, "cal")}
         nav = kb["inline_keyboard"][0]
         assert nav[0]["callback_data"] == "cal_nav:2026:5"
         assert nav[2]["callback_data"] == "cal_nav:2026:7"
 
     def test_add_prefix_has_nodate_button(self, cmd_service):
-        kb = cmd_service._build_calendar_keyboard(2026, 6, "addcal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(2026, 6, "addcal")}
         all_callbacks = [
             btn["callback_data"]
             for row in kb["inline_keyboard"]
@@ -62,13 +61,13 @@ class TestCalendarKeyboard:
         assert "addcal:nodate" in all_callbacks
 
     def test_cal_prefix_no_nodate_button(self, cmd_service):
-        kb = cmd_service._build_calendar_keyboard(2026, 6, "cal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(2026, 6, "cal")}
         for row in kb["inline_keyboard"]:
             for btn in row:
                 assert "nodate" not in btn["callback_data"]
 
     def test_day_buttons_have_correct_callback(self, cmd_service):
-        kb = cmd_service._build_calendar_keyboard(2026, 6, "cal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(2026, 6, "cal")}
         found = False
         for row in kb["inline_keyboard"][2:]:
             for btn in row:
@@ -77,16 +76,16 @@ class TestCalendarKeyboard:
         assert found
 
     def test_month_wrap_backward(self, cmd_service):
-        kb = cmd_service._build_calendar_keyboard(2026, 1, "cal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(2026, 1, "cal")}
         assert kb["inline_keyboard"][0][0]["callback_data"] == "cal_nav:2026:0"
 
     def test_month_wrap_forward(self, cmd_service):
-        kb = cmd_service._build_calendar_keyboard(2026, 12, "cal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(2026, 12, "cal")}
         assert kb["inline_keyboard"][0][2]["callback_data"] == "cal_nav:2026:13"
 
     def test_today_marked_with_dots(self, cmd_service):
         today = date.today()
-        kb = cmd_service._build_calendar_keyboard(today.year, today.month, "cal")
+        kb = {"inline_keyboard": cmd_service.build_calendar_keyboard(today.year, today.month, "cal")}
         for row in kb["inline_keyboard"][2:]:
             for btn in row:
                 if btn["callback_data"].endswith(f":{today.day}"):
@@ -124,7 +123,8 @@ class TestFormatTaskList:
         text, markup = cmd_service._format_task_list(
             tasks, "Title", ZoneInfo("Europe/Moscow"), "ru"
         )
-        assert len(markup["inline_keyboard"]) <= MAX_TASKS_DISPLAY
+        # 20 task buttons + 1 dismiss button = 21 max
+        assert len(markup["inline_keyboard"]) <= MAX_TASKS_DISPLAY + 1
 
     def test_text_truncated_at_3800(self, cmd_service):
         tasks = [_make_task(task_id=f"t{i}", title="A" * 200) for i in range(30)]
@@ -145,22 +145,22 @@ class TestFormatTaskList:
 
 class TestCleanupExpiredStates:
     def test_removes_expired(self, cmd_service):
-        _pending_adds["old"] = {
+        cmd_service._pending_adds["old"] = {
             "step": "waiting_title",
             "selected_date": None,
             "created_at": datetime.now(UTC) - timedelta(minutes=10),
         }
-        cmd_service._cleanup_expired_states()
-        assert "old" not in _pending_adds
+        cmd_service.cleanup_expired_states()
+        assert "old" not in cmd_service._pending_adds
 
     def test_keeps_fresh(self, cmd_service):
-        _pending_adds["fresh"] = {
+        cmd_service._pending_adds["fresh"] = {
             "step": "waiting_title",
             "selected_date": date(2026, 6, 15),
             "created_at": datetime.now(UTC),
         }
-        cmd_service._cleanup_expired_states()
-        assert "fresh" in _pending_adds
+        cmd_service.cleanup_expired_states()
+        assert "fresh" in cmd_service._pending_adds
 
 
 class TestHandleCommand:
@@ -177,7 +177,7 @@ class TestHandleCommand:
 
     @pytest.mark.asyncio
     async def test_command_clears_pending_state(self, cmd_service, mock_user):
-        _pending_adds[mock_user.telegram_chat_id] = {
+        cmd_service._pending_adds[mock_user.telegram_chat_id] = {
             "step": "waiting_title",
             "selected_date": date(2026, 6, 15),
             "created_at": datetime.now(UTC),
@@ -187,7 +187,7 @@ class TestHandleCommand:
         ) as mock_ns:
             mock_ns.send_message = AsyncMock()
             await cmd_service.handle_command(mock_user, "/help", AsyncMock())
-        assert mock_user.telegram_chat_id not in _pending_adds
+        assert mock_user.telegram_chat_id not in cmd_service._pending_adds
 
     @pytest.mark.asyncio
     async def test_add_sets_pending_state(self, cmd_service, mock_user):
@@ -196,7 +196,7 @@ class TestHandleCommand:
         ) as mock_ns:
             mock_ns.send_message_with_buttons = AsyncMock()
             await cmd_service.handle_command(mock_user, "/add", AsyncMock())
-        state = _pending_adds.get(mock_user.telegram_chat_id)
+        state = cmd_service._pending_adds.get(mock_user.telegram_chat_id)
         assert state is not None
         assert state["step"] == "calendar"
 
@@ -228,7 +228,7 @@ class TestHandleText:
 
     @pytest.mark.asyncio
     async def test_pending_add_with_date_creates_active_task(self, cmd_service, mock_user):
-        _pending_adds[mock_user.telegram_chat_id] = {
+        cmd_service._pending_adds[mock_user.telegram_chat_id] = {
             "step": "waiting_title",
             "selected_date": date(2026, 6, 15),
             "created_at": datetime.now(UTC),
@@ -456,7 +456,7 @@ class TestSearch:
             mock_ns.send_message = AsyncMock()
             await cmd_service.handle_command(mock_user, "/search", AsyncMock())
             mock_ns.send_message.assert_called_once()
-            state = _pending_adds.get(mock_user.telegram_chat_id)
+            state = cmd_service._pending_adds.get(mock_user.telegram_chat_id)
             assert state is not None
             assert state["step"] == "waiting_search"
 
@@ -478,7 +478,7 @@ class TestSearch:
 
     @pytest.mark.asyncio
     async def test_waiting_search_state_processes_query(self, cmd_service, mock_user):
-        _pending_adds[mock_user.telegram_chat_id] = {
+        cmd_service._pending_adds[mock_user.telegram_chat_id] = {
             "step": "waiting_search",
             "created_at": datetime.now(UTC),
         }
@@ -495,7 +495,7 @@ class TestSearch:
             mock_ns.send_message_with_buttons = AsyncMock()
             await cmd_service.handle_text(mock_user, "отчёт", mock_db)
             mock_ns.send_message_with_buttons.assert_called_once()
-            assert mock_user.telegram_chat_id not in _pending_adds
+            assert mock_user.telegram_chat_id not in cmd_service._pending_adds
 
 
 class TestMainKeyboard:
@@ -550,7 +550,7 @@ class TestMainKeyboard:
         ) as mock_ns:
             mock_ns.send_message = AsyncMock()
             await cmd_service.handle_text(mock_user, "🔍 Поиск", AsyncMock())
-            state = _pending_adds.get(mock_user.telegram_chat_id)
+            state = cmd_service._pending_adds.get(mock_user.telegram_chat_id)
             assert state is not None
             assert state["step"] == "waiting_search"
 

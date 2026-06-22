@@ -1,6 +1,5 @@
 import json
 import logging
-from calendar import monthcalendar
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -15,6 +14,7 @@ from app.models.tag import Tag
 from app.models.task import GtdStatus, Task
 from app.models.user import User
 from app.schemas.task import TaskCreate
+from app.services.base_command_service import BaseCommandService
 from app.services.task_service import TaskService
 from app.services.telegram_notifier import TelegramNotifierService
 from app.services.telegram_smart_parser import parse as smart_parse
@@ -25,90 +25,11 @@ MAX_TASKS_DISPLAY = 20
 MAX_OVERDUE_DISPLAY = 5
 MAX_SEARCH_DISPLAY = 10
 
-_pending_adds: dict[str, dict] = {}
-_pending_add_timeout = timedelta(minutes=5)
 
-_MONTH_NAMES_RU = {
-    1: "Январь", 2: "Февраль", 3: "Март", 4: "Апрель",
-    5: "Май", 6: "Июнь", 7: "Июль", 8: "Август",
-    9: "Сентябрь", 10: "Октябрь", 11: "Ноябрь", 12: "Декабрь",
-}
+class TelegramCommandService(BaseCommandService):
 
-_MONTH_NAMES_EN = {
-    1: "January", 2: "February", 3: "March", 4: "April",
-    5: "May", 6: "June", 7: "July", 8: "August",
-    9: "September", 10: "October", 11: "November", 12: "December",
-}
-
-
-class TelegramCommandService:
-
-    def _cleanup_expired_states(self):
-        now = datetime.now(UTC)
-        expired = [
-            k for k, v in _pending_adds.items()
-            if now - v.get("created_at", now) > _pending_add_timeout
-        ]
-        for k in expired:
-            del _pending_adds[k]
-
-    def _clear_user_state(self, chat_id: str):
-        _pending_adds.pop(chat_id, None)
-
-    @staticmethod
-    def _month_name(month: int, lang: str) -> str:
-        names = _MONTH_NAMES_RU if lang == "ru" else _MONTH_NAMES_EN
-        return names.get(month, str(month))
-
-    def _build_calendar_keyboard(
-        self, year: int, month: int, prefix: str, lang: str = "ru"
-    ) -> dict:
-        weeks = monthcalendar(year, month)
-        month_name = self._month_name(month, lang)
-        header = [
-            {"text": "◀️", "callback_data": f"{prefix}_nav:{year}:{month - 1}"},
-            {"text": f"{month_name} {year}", "callback_data": "ignore"},
-            {"text": "▶️", "callback_data": f"{prefix}_nav:{year}:{month + 1}"},
-        ]
-
-        day_names_ru = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-        day_names_en = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-        day_names = day_names_ru if lang == "ru" else day_names_en
-        day_header = [{"text": d, "callback_data": "ignore"} for d in day_names]
-
-        buttons = [header, day_header]
-
-        quick_row = [
-            {"text": i18n_t("telegramAddToday", lang), "callback_data": f"{prefix}:today"},
-            {"text": i18n_t("telegramAddTomorrow", lang), "callback_data": f"{prefix}:tomorrow"},
-        ]
-        buttons.insert(0, quick_row)
-
-        today = date.today()
-
-        for week in weeks:
-            row = []
-            for day in week:
-                if day == 0:
-                    row.append({"text": " ", "callback_data": "ignore"})
-                else:
-                    cell_date = date(year, month, day)
-                    if cell_date == today:
-                        text = f"·{day}·"
-                    else:
-                        text = str(day)
-                    row.append({
-                        "text": text,
-                        "callback_data": f"{prefix}:{year}:{month}:{day}",
-                    })
-            buttons.append(row)
-
-        if prefix == "addcal":
-            no_date_text = i18n_t("telegramAddNoDate", lang)
-            buttons.append([{"text": no_date_text, "callback_data": f"{prefix}:nodate"}])
-            buttons.append([{"text": i18n_t("telegramAddCancel", lang), "callback_data": "addcancel"}])
-
-        return {"inline_keyboard": buttons}
+    def __init__(self):
+        super().__init__()
 
     def _format_task_list(
         self,
@@ -534,7 +455,7 @@ class TelegramCommandService:
         projects = await self._get_user_projects(db, user.id)
 
         if projects:
-            _pending_adds[chat_id] = {
+            self._pending_adds[chat_id] = {
                 "step": "select_project",
                 "selected_date": state.get("selected_date"),
                 "title": state.get("title"),
@@ -548,7 +469,7 @@ class TelegramCommandService:
             if selected_date:
                 user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
                 due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz).astimezone(UTC)
-            del _pending_adds[chat_id]
+            del self._pending_adds[chat_id]
             await self._create_task(
                 db, user, state["title"], due_date, lang,
                 area_id=state.get("area_id"),
@@ -568,7 +489,7 @@ class TelegramCommandService:
         areas = await self._get_user_areas(db, user.id)
 
         if areas:
-            _pending_adds[chat_id] = {
+            self._pending_adds[chat_id] = {
                 "step": "select_area",
                 "selected_date": selected_date,
                 "title": title,
@@ -578,7 +499,7 @@ class TelegramCommandService:
         else:
             projects = await self._get_user_projects(db, user.id)
             if projects:
-                _pending_adds[chat_id] = {
+                self._pending_adds[chat_id] = {
                     "step": "select_project",
                     "selected_date": selected_date,
                     "title": title,
@@ -596,10 +517,10 @@ class TelegramCommandService:
     async def handle_command(
         self, user: User, command: str, db: AsyncSession
     ) -> None:
-        self._cleanup_expired_states()
+        self.cleanup_expired_states()
 
         chat_id = user.telegram_chat_id
-        self._clear_user_state(chat_id)
+        self.clear_user_state(chat_id)
 
         bot_token = user.decrypted_telegram_bot_token
         lang = getattr(user, "language", None) or "ru"
@@ -624,12 +545,12 @@ class TelegramCommandService:
             )
 
         elif command == "/date":
-            kb = self._build_calendar_keyboard(
+            kb = {"inline_keyboard": self.build_calendar_keyboard(
                 datetime.now(user_tz).year,
                 datetime.now(user_tz).month,
                 "cal",
                 lang,
-            )
+            )}
             await TelegramNotifierService.send_message_with_buttons(
                 bot_token, chat_id,
                 i18n_t("telegramAddSelectDate", lang),
@@ -645,17 +566,17 @@ class TelegramCommandService:
             )
 
         elif command == "/add":
-            _pending_adds[chat_id] = {
+            self._pending_adds[chat_id] = {
                 "step": "calendar",
                 "selected_date": None,
                 "created_at": datetime.now(UTC),
             }
-            kb = self._build_calendar_keyboard(
+            kb = {"inline_keyboard": self.build_calendar_keyboard(
                 datetime.now(user_tz).year,
                 datetime.now(user_tz).month,
                 "addcal",
                 lang,
-            )
+            )}
             await TelegramNotifierService.send_message_with_buttons(
                 bot_token, chat_id,
                 i18n_t("telegramAddSelectDate", lang),
@@ -720,7 +641,7 @@ class TelegramCommandService:
     async def handle_callback(
         self, user: User, callback_query: dict, db: AsyncSession
     ) -> None:
-        self._cleanup_expired_states()
+        self.cleanup_expired_states()
 
         bot_token = user.decrypted_telegram_bot_token
         chat_id = user.telegram_chat_id
@@ -744,7 +665,7 @@ class TelegramCommandService:
             elif month > 12:
                 month = 1
                 year += 1
-            kb = self._build_calendar_keyboard(year, month, "cal", lang)
+            kb = {"inline_keyboard": self.build_calendar_keyboard(year, month, "cal", lang)}
             await TelegramNotifierService.edit_message_text(
                 bot_token, chat_id, message_id,
                 i18n_t("telegramAddSelectDate", lang), kb,
@@ -760,7 +681,7 @@ class TelegramCommandService:
             elif month > 12:
                 month = 1
                 year += 1
-            kb = self._build_calendar_keyboard(year, month, "addcal", lang)
+            kb = {"inline_keyboard": self.build_calendar_keyboard(year, month, "addcal", lang)}
             await TelegramNotifierService.edit_message_text(
                 bot_token, chat_id, message_id,
                 i18n_t("telegramAddSelectDate", lang), kb,
@@ -802,7 +723,7 @@ class TelegramCommandService:
                 parts = data.split(":")
                 selected_date = date(int(parts[1]), int(parts[2]), int(parts[3]))
 
-            _pending_adds[chat_id] = {
+            self._pending_adds[chat_id] = {
                 "step": "waiting_title",
                 "selected_date": selected_date,
                 "created_at": datetime.now(UTC),
@@ -822,14 +743,14 @@ class TelegramCommandService:
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
 
         elif data == "addcancel":
-            self._clear_user_state(chat_id)
+            self.clear_user_state(chat_id)
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
             await TelegramNotifierService.send_message(
                 bot_token, chat_id, i18n_t("telegramAddCancelled", lang)
             )
 
         elif data.startswith("addarea:"):
-            state = _pending_adds.get(chat_id)
+            state = self._pending_adds.get(chat_id)
             if not state or state.get("step") != "select_area":
                 await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
                 return
@@ -850,7 +771,7 @@ class TelegramCommandService:
             await self._proceed_after_area(db, user, chat_id, state, lang)
 
         elif data.startswith("addproj:"):
-            state = _pending_adds.get(chat_id)
+            state = self._pending_adds.get(chat_id)
             if not state or state.get("step") != "select_project":
                 await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
                 return
@@ -867,7 +788,7 @@ class TelegramCommandService:
             if selected_date:
                 due_date = datetime.combine(selected_date, time.max, tzinfo=user_tz).astimezone(UTC)
 
-            del _pending_adds[chat_id]
+            del self._pending_adds[chat_id]
             await TelegramNotifierService.answer_callback_query(bot_token, cq_id)
             if message_id:
                 await TelegramNotifierService.edit_message_text(
@@ -1065,7 +986,7 @@ class TelegramCommandService:
     async def _send_search_prompt(
         self, bot_token: str, chat_id: str, lang: str
     ) -> None:
-        _pending_adds[chat_id] = {
+        self._pending_adds[chat_id] = {
             "step": "waiting_search",
             "created_at": datetime.now(UTC),
         }
@@ -1114,7 +1035,7 @@ class TelegramCommandService:
     async def handle_text(
         self, user: User, text: str, db: AsyncSession
     ) -> None:
-        self._cleanup_expired_states()
+        self.cleanup_expired_states()
 
         chat_id = user.telegram_chat_id
         lang = getattr(user, "language", None) or "ru"
@@ -1140,10 +1061,10 @@ class TelegramCommandService:
             )
             return
 
-        state = _pending_adds.get(chat_id)
+        state = self._pending_adds.get(chat_id)
         if state and state.get("step") == "waiting_search":
             query = text.strip()
-            del _pending_adds[chat_id]
+            del self._pending_adds[chat_id]
             if query:
                 user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
                 tasks = await self._get_search_tasks(db, user.id, query)
