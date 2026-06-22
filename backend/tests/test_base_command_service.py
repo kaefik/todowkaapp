@@ -1,4 +1,5 @@
 import pytest
+
 from app.services.base_command_service import BaseCommandService
 
 

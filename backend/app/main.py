@@ -17,6 +17,7 @@ from app.api.config import config_router
 from app.api.contexts import contexts_router
 from app.api.deleted import deleted_router
 from app.api.export_import import export_import_router
+from app.api.mattermost_auth import router as mattermost_router
 from app.api.notifications import notifications_router
 from app.api.projects import projects_router
 from app.api.router import api_router
@@ -27,7 +28,6 @@ from app.api.stats import stats_router
 from app.api.tags import tags_router
 from app.api.tasks import tasks_router
 from app.api.telegram_auth import router as telegram_router
-from app.api.mattermost_auth import router as mattermost_router
 from app.api.users import users_router
 from app.api.verb_templates import verb_templates_router
 from app.config import settings

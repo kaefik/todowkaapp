@@ -1,5 +1,6 @@
+
 import pytest
-from unittest.mock import AsyncMock, patch
+
 from app.adapters.mattermost_adapter import MattermostBotAdapter
 
 

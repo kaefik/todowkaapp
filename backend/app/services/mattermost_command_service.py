@@ -1,12 +1,12 @@
 import logging
 from datetime import date, datetime, time, timedelta
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 from app.adapters.mattermost_adapter import MattermostBotAdapter
 from app.database import AsyncSessionLocal
 from app.i18n import t as i18n_t
 from app.services.base_command_service import BaseCommandService
+from app.services.telegram_command_service import TelegramCommandService
 from app.services.telegram_smart_parser import parse as smart_parse
 
 logger = logging.getLogger(__name__)
@@ -40,8 +40,9 @@ class MattermostCommandService(BaseCommandService):
         self, command: str, args: str, user_id: str
     ) -> dict:
         """Handle Mattermost slash command. Returns response dict."""
-        from app.models.user import User
         from sqlalchemy import select
+
+        from app.models.user import User
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -99,8 +100,9 @@ class MattermostCommandService(BaseCommandService):
 
     async def handle_text(self, text: str, user_id: str) -> dict:
         """Handle plain text message"""
-        from app.models.user import User
         from sqlalchemy import select
+
+        from app.models.user import User
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -148,9 +150,10 @@ class MattermostCommandService(BaseCommandService):
         return {"response_type": "ephemeral", "text": help_text}
 
     async def _handle_today(self, user, user_tz, lang) -> dict:
+        from sqlalchemy import or_, select
+
+        from app.models.task import GtdStatus, Task
         from app.services.telegram_command_service import TelegramCommandService
-        from app.models.task import Task, GtdStatus
-        from sqlalchemy import select, or_
 
         async with AsyncSessionLocal() as db:
             now = datetime.now(user_tz)
@@ -187,9 +190,11 @@ class MattermostCommandService(BaseCommandService):
         }
 
     async def _handle_tomorrow(self, user, user_tz, lang) -> dict:
-        from datetime import datetime, time, timedelta
-        from app.models.task import Task, GtdStatus
+        from datetime import datetime, time
+
         from sqlalchemy import select
+
+        from app.models.task import GtdStatus, Task
 
         async with AsyncSessionLocal() as db:
             tomorrow = datetime.now(user_tz).date() + timedelta(days=1)
@@ -213,8 +218,9 @@ class MattermostCommandService(BaseCommandService):
         return {"response_type": "ephemeral", "text": text}
 
     async def _handle_inbox(self, user, lang) -> dict:
-        from app.models.task import Task, GtdStatus
         from sqlalchemy import select
+
+        from app.models.task import GtdStatus, Task
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -256,8 +262,9 @@ class MattermostCommandService(BaseCommandService):
         if not query:
             return {"response_type": "ephemeral", "text": i18n_t("telegramSearchPrompt", lang)}
 
-        from app.models.task import Task, GtdStatus
-        from sqlalchemy import select, or_
+        from sqlalchemy import or_, select
+
+        from app.models.task import GtdStatus, Task
 
         like_pattern = f"%{query}%"
         async with AsyncSessionLocal() as db:
@@ -277,9 +284,11 @@ class MattermostCommandService(BaseCommandService):
         return {"response_type": "ephemeral", "text": text}
 
     async def _handle_stats(self, user, user_tz, lang) -> dict:
-        from datetime import datetime, timedelta
+        from datetime import datetime
+
+        from sqlalchemy import func, select
+
         from app.models.task import Task
-        from sqlalchemy import select, func
 
         async with AsyncSessionLocal() as db:
             week_ago = datetime.now(user_tz) - timedelta(days=7)
@@ -314,9 +323,10 @@ class MattermostCommandService(BaseCommandService):
         }
 
     async def _handle_done(self, task_id, user_id) -> dict:
+        from sqlalchemy import select
+
         from app.models.task import Task
         from app.services.task_service import TaskService
-        from sqlalchemy import select
 
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(Task).where(Task.id == task_id))
@@ -383,7 +393,7 @@ class MattermostCommandService(BaseCommandService):
 
     async def _handle_smart_add(self, text, user, user_tz, lang) -> dict:
         parsed = smart_parse(text, lang)
-        from app.models.task import Task, GtdStatus
+        from app.models.task import GtdStatus, Task
 
         async with AsyncSessionLocal() as db:
             task = Task(
@@ -401,7 +411,7 @@ class MattermostCommandService(BaseCommandService):
         if not state or "title" not in state:
             return {"ephemeral_text": "Ошибка"}
 
-        from app.models.task import Task, GtdStatus
+        from app.models.task import GtdStatus, Task
         async with AsyncSessionLocal() as db:
             task = Task(
                 user_id=state.get("user_id"),

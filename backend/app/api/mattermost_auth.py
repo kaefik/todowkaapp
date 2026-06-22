@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -32,7 +33,7 @@ class BindResponse(BaseModel):
 @router.post("/validate-token", response_model=ValidateTokenResponse)
 async def validate_mattermost_token(
     req: ValidateTokenRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Validate Mattermost bot token"""
     import httpx
@@ -55,8 +56,8 @@ async def validate_mattermost_token(
 @router.post("/bind", response_model=BindResponse)
 async def bind_mattermost_account(
     req: BindRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Bind Mattermost user ID to Todowka account"""
     current_user.mattermost_user_id = req.mattermost_user_id
@@ -68,8 +69,8 @@ async def bind_mattermost_account(
 @router.post("/save-token")
 async def save_mattermost_token(
     req: ValidateTokenRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Save encrypted Mattermost bot token"""
     encrypted = encrypt_secret(req.token)
@@ -81,8 +82,8 @@ async def save_mattermost_token(
 
 @router.post("/logout")
 async def mattermost_logout(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Clear Mattermost connection"""
     current_user.mattermost_user_id = None

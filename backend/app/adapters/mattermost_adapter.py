@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import httpx
 
@@ -26,8 +25,8 @@ class MattermostBotAdapter(BotInterface):
         self,
         user_id: str,
         text: str,
-        buttons: Optional[list[dict[str, str]]] = None,
-        reply_to: Optional[str] = None,
+        buttons: list[dict[str, str]] | None = None,
+        reply_to: str | None = None,
     ) -> str:
         payload = {
             "channel_id": user_id,
@@ -72,7 +71,7 @@ class MattermostBotAdapter(BotInterface):
         user_id: str,
         message_id: str,
         text: str,
-        buttons: Optional[list[dict[str, str]]] = None,
+        buttons: list[dict[str, str]] | None = None,
     ) -> bool:
         payload = {"message": text}
         try:
@@ -125,7 +124,7 @@ class MattermostBotAdapter(BotInterface):
     async def answer_callback(
         self,
         callback_id: str,
-        text: Optional[str] = None,
+        text: str | None = None,
     ) -> bool:
         # Mattermost handles action responses via response_url
         # This is a no-op for compatibility

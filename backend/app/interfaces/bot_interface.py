@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 
 class BotInterface(ABC):
@@ -10,8 +9,8 @@ class BotInterface(ABC):
         self,
         user_id: str,
         text: str,
-        buttons: Optional[list[dict[str, str]]] = None,
-        reply_to: Optional[str] = None,
+        buttons: list[dict[str, str]] | None = None,
+        reply_to: str | None = None,
     ) -> str:
         """Send a message. Returns message_id."""
         ...
@@ -22,7 +21,7 @@ class BotInterface(ABC):
         user_id: str,
         message_id: str,
         text: str,
-        buttons: Optional[list[dict[str, str]]] = None,
+        buttons: list[dict[str, str]] | None = None,
     ) -> bool:
         """Edit an existing message."""
         ...
@@ -41,7 +40,7 @@ class BotInterface(ABC):
     async def answer_callback(
         self,
         callback_id: str,
-        text: Optional[str] = None,
+        text: str | None = None,
     ) -> bool:
         """Answer a callback query (button press)."""
         ...

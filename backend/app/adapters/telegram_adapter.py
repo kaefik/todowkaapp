@@ -1,4 +1,3 @@
-from typing import Optional
 
 from app.interfaces.bot_interface import BotInterface
 from app.services.telegram_notifier import TelegramNotifierService
@@ -14,8 +13,8 @@ class TelegramBotAdapter(BotInterface):
         self,
         user_id: str,
         text: str,
-        buttons: Optional[list[dict[str, str]]] = None,
-        reply_to: Optional[str] = None,
+        buttons: list[dict[str, str]] | None = None,
+        reply_to: str | None = None,
     ) -> str:
         reply_markup = None
         if buttons:
@@ -30,7 +29,7 @@ class TelegramBotAdapter(BotInterface):
         user_id: str,
         message_id: str,
         text: str,
-        buttons: Optional[list[dict[str, str]]] = None,
+        buttons: list[dict[str, str]] | None = None,
     ) -> bool:
         reply_markup = None
         if buttons:
@@ -54,7 +53,7 @@ class TelegramBotAdapter(BotInterface):
     async def answer_callback(
         self,
         callback_id: str,
-        text: Optional[str] = None,
+        text: str | None = None,
     ) -> bool:
         return await TelegramNotifierService.answer_callback_query(
             self.bot_token, callback_id, text or ""

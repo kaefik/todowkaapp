@@ -1,4 +1,5 @@
 import pytest
+
 from app.interfaces.bot_interface import BotInterface
 
 
