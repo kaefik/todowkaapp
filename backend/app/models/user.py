@@ -40,6 +40,24 @@ class User(Base):
         return decrypted
     telegram_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     telegram_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
+
+    # Mattermost fields
+    mattermost_user_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    mattermost_bot_token: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mattermost_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
+    mattermost_channel_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    @property
+    def decrypted_mattermost_bot_token(self) -> str | None:
+        from app.services.crypto_service import decrypt_secret
+        if not self.mattermost_bot_token:
+            return self.mattermost_bot_token
+        decrypted = decrypt_secret(self.mattermost_bot_token)
+        if decrypted is None:
+            _logger.warning(f"Failed to decrypt mattermost_bot_token for user {self.id}")
+            return self.mattermost_bot_token
+        return decrypted
+
     capitalize_first: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text('1'), nullable=False)
     last_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_count: Mapped[int] = mapped_column(Integer, default=0, server_default=text('0'), nullable=False)
