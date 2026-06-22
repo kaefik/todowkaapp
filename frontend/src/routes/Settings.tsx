@@ -8,6 +8,7 @@ import { usersApi } from '../api/users'
 import type { User } from '../api/users'
 import { VerbSettings } from '../components/VerbSettings'
 import { BackupScheduleSettings } from '../components/BackupScheduleSettings'
+import MattermostSettings from '../components/MattermostSettings'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
 import { SessionList } from '../components/sessions/SessionList'
 import { exportImportApi } from '../api/exportImport'
@@ -508,6 +509,13 @@ function SettingsContent() {
               </div>
             )}
           </div>
+
+          <MattermostSettings
+            botToken={user?.mattermost_bot_token}
+            isConnected={!!user?.mattermost_user_id}
+            notificationsEnabled={user?.mattermost_notifications_enabled || false}
+            onUpdate={handleUpdate}
+          />
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">{t('language')}</h2>
