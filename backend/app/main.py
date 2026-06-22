@@ -27,6 +27,7 @@ from app.api.stats import stats_router
 from app.api.tags import tags_router
 from app.api.tasks import tasks_router
 from app.api.telegram_auth import router as telegram_router
+from app.api.mattermost_auth import router as mattermost_router
 from app.api.users import users_router
 from app.api.verb_templates import verb_templates_router
 from app.config import settings
@@ -119,6 +120,7 @@ def create_app() -> FastAPI:
     api_router.include_router(verb_templates_router)
     api_router.include_router(settings_router)
     api_router.include_router(telegram_router)
+    api_router.include_router(mattermost_router)
     app.include_router(api_router)
 
     @app.get("/")
