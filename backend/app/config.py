@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     trusted_proxies: str = ""
     secrets_encryption_key: str | None = None
 
+    # Mattermost
+    mattermost_url: str = "http://localhost:8065"
+    mattermost_bot_token: str | None = None
+    mattermost_bot_user_id: str | None = None
+
     @property
     def frontend_url(self) -> str:
         origins = [o.strip() for o in self.allowed_origins.split(",")]
