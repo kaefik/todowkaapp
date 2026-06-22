@@ -118,5 +118,10 @@
   "telegramKbAdd": "➕ Add",
   "telegramKbTomorrow": "📅 Tomorrow",
   "telegramKbSearch": "🔍 Search",
-  "telegramKbHide": "✕ Hide menu"
+  "telegramKbHide": "✕ Hide menu",
+
+  "mattermostNotLinked": "Your Mattermost account is not linked. Use /start to link.",
+  "mattermostUnknownCommand": "Unknown command. Use /help for list of commands.",
+  "mattermostConnected": "Mattermost connected successfully!",
+  "mattermostDisconnected": "Mattermost disconnected."
 }

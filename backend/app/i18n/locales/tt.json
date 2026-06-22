@@ -87,5 +87,10 @@
   "telegramKbAdd": "➕ Өстәү",
   "telegramKbTomorrow": "📅 Иртәгә",
   "telegramKbSearch": "🔍 Эзләү",
-  "telegramKbHide": "✕ Менюны яшерү"
+  "telegramKbHide": "✕ Менюны яшерү",
+
+  "mattermostNotLinked": "Сезнең Mattermost аккаунтыңыз бәйләнмәгән. Бәйләү өчен /start кулланыгыз.",
+  "mattermostUnknownCommand": "Билгесез команда. Список команд өчен /help кулланыгыз.",
+  "mattermostConnected": "Mattermost уңышлы бәйләнде!",
+  "mattermostDisconnected": "Mattermost аерылды."
 }

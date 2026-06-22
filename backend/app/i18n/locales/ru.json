@@ -118,5 +118,10 @@
   "telegramKbAdd": "➕ Добавить",
   "telegramKbTomorrow": "📅 Завтра",
   "telegramKbSearch": "🔍 Поиск",
-  "telegramKbHide": "✕ Скрыть меню"
+  "telegramKbHide": "✕ Скрыть меню",
+
+  "mattermostNotLinked": "Ваш аккаунт Mattermost не привязан. Используйте /start для привязки.",
+  "mattermostUnknownCommand": "Неизвестная команда. Используйте /help для списка команд.",
+  "mattermostConnected": "Mattermost подключен успешно!",
+  "mattermostDisconnected": "Mattermost отключен."
 }
