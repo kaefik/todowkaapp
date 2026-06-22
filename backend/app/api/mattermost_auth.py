@@ -1,6 +1,6 @@
+import logging
 from typing import Annotated
 
-import logging
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class ValidateTokenRequest(BaseModel):
     token: str
+    mattermost_url: str | None = None
 
 
 class ValidateTokenResponse(BaseModel):
@@ -41,7 +42,8 @@ async def validate_mattermost_token(
     """Validate Mattermost bot token"""
     import httpx
 
-    url = f"{settings.mattermost_url}/api/v4/users/me"
+    base_url = req.mattermost_url or settings.mattermost_url
+    url = f"{base_url.rstrip('/')}/api/v4/users/me"
     logger.info(f"Validating Mattermost token against {url}")
     try:
         async with httpx.AsyncClient(timeout=10.0, verify=False) as client:

@@ -524,6 +524,7 @@ function SettingsContent() {
             botToken={user?.mattermost_bot_token}
             isConnected={!!user?.mattermost_user_id}
             notificationsEnabled={user?.mattermost_notifications_enabled || false}
+            mattermostUrl={user?.mattermost_url || ''}
             onUpdate={handleUpdate}
           />
 

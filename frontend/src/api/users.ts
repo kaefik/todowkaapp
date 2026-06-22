@@ -12,6 +12,11 @@ export interface User {
   telegram_bot_token: string | null
   telegram_chat_id: string | null
   telegram_notifications_enabled: boolean
+  mattermost_user_id: string | null
+  mattermost_bot_token: string | null
+  mattermost_notifications_enabled: boolean
+  mattermost_channel_id: string | null
+  mattermost_url: string | null
   capitalize_first: boolean
   created_at: string
   last_login_at: string | null
@@ -30,7 +35,7 @@ export const usersApi = {
     return response.data
   },
 
-  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'language' | 'telegram_bot_token' | 'telegram_notifications_enabled' | 'capitalize_first' | 'review_frequency_days' | 'review_notifications_enabled' | 'email_notifications_enabled'>>): Promise<User> => {
+  updateCurrentUser: async (data: Partial<Pick<User, 'username' | 'email' | 'timezone' | 'default_section' | 'language' | 'telegram_bot_token' | 'telegram_notifications_enabled' | 'mattermost_user_id' | 'mattermost_bot_token' | 'mattermost_notifications_enabled' | 'mattermost_channel_id' | 'mattermost_url' | 'capitalize_first' | 'review_frequency_days' | 'review_notifications_enabled' | 'email_notifications_enabled'>>): Promise<User> => {
     const response = await httpClient.patch<User>('/users/me', data)
     return response.data
   },

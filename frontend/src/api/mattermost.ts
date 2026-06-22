@@ -10,8 +10,8 @@ export interface MattermostBindResponse {
   message: string;
 }
 
-export async function validateMattermostToken(token: string): Promise<MattermostValidateResponse> {
-	const resp = await httpClient.post<MattermostValidateResponse>('/mattermost/validate-token', { token });
+export async function validateMattermostToken(token: string, mattermostUrl: string): Promise<MattermostValidateResponse> {
+	const resp = await httpClient.post<MattermostValidateResponse>('/mattermost/validate-token', { token, mattermost_url: mattermostUrl });
 	return resp.data;
 }
 
