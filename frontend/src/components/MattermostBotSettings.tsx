@@ -123,7 +123,7 @@ export default function MattermostBotSettings() {
         )}
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-        {saved && <p className="text-sm text-green-600 dark:text-green-400">{t('smtpSaved', { defaultValue: 'Сохранено' })}</p>}
+        {saved && <p className="text-sm text-green-600 dark:text-green-400">{t('common.saved', { defaultValue: 'Сохранено' })}</p>}
 
         {settings && (
           <div className="pt-2 text-sm text-gray-500 dark:text-gray-400">
