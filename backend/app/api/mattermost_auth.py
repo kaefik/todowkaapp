@@ -35,6 +35,103 @@ class BindResponse(BaseModel):
     message: str
 
 
+class BotBindRequest(BaseModel):
+    email: str
+
+
+class BotBindResponse(BaseModel):
+    found: bool
+    mattermost_user_id: str | None = None
+    username: str | None = None
+    display_name: str | None = None
+    error: str | None = None
+
+
+class BotConfirmRequest(BaseModel):
+    mattermost_user_id: str
+    email: str
+
+
+class BotStatusResponse(BaseModel):
+    bound: bool
+    bind_mode: str
+    email: str | None = None
+    mattermost_user_id: str | None = None
+    username: str | None = None
+    notifications_enabled: bool
+
+
+@router.post("/bot/bind", response_model=BotBindResponse)
+async def bot_bind(
+    req: BotBindRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Find Mattermost user by email using bot token"""
+    if not settings.mattermost_bot_token:
+        return BotBindResponse(found=False, error="Mattermost bot token not configured")
+
+    from app.adapters.mattermost_adapter import MattermostBotAdapter
+    adapter = MattermostBotAdapter(settings.mattermost_url, settings.mattermost_bot_token)
+    user_data = await adapter.get_user_by_email(req.email)
+
+    if not user_data:
+        return BotBindResponse(found=False, error="User not found in Mattermost")
+
+    display_name = " ".join(filter(None, [user_data.get("first_name"), user_data.get("last_name")]))
+
+    return BotBindResponse(
+        found=True,
+        mattermost_user_id=user_data["id"],
+        username=user_data["username"],
+        display_name=display_name or None,
+    )
+
+
+@router.post("/bot/confirm", response_model=BindResponse)
+async def bot_confirm(
+    req: BotConfirmRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Confirm bot binding — save Mattermost user ID and email"""
+    current_user.mattermost_user_id = req.mattermost_user_id
+    current_user.mattermost_email = req.email
+    current_user.mattermost_bind_mode = 'bot'
+    current_user.mattermost_notifications_enabled = True
+    db.add(current_user)
+    await db.commit()
+    return BindResponse(success=True, message="Mattermost account bound successfully")
+
+
+@router.post("/bot/status", response_model=BotStatusResponse)
+async def bot_status(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Get current bot binding status"""
+    return BotStatusResponse(
+        bound=bool(current_user.mattermost_user_id and current_user.mattermost_bind_mode == 'bot'),
+        bind_mode=current_user.mattermost_bind_mode or 'pat',
+        email=current_user.mattermost_email,
+        mattermost_user_id=current_user.mattermost_user_id,
+        notifications_enabled=current_user.mattermost_notifications_enabled,
+    )
+
+
+@router.post("/bot/unbind", response_model=BindResponse)
+async def bot_unbind(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Unbind bot — reset to PAT mode"""
+    current_user.mattermost_user_id = None
+    current_user.mattermost_email = None
+    current_user.mattermost_bind_mode = 'pat'
+    current_user.mattermost_notifications_enabled = False
+    db.add(current_user)
+    await db.commit()
+    return BindResponse(success=True, message="Mattermost account unbound")
+
+
 @router.post("/validate-token", response_model=ValidateTokenResponse)
 async def validate_mattermost_token(
     req: ValidateTokenRequest,
