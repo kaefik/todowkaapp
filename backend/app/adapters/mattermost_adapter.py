@@ -35,6 +35,27 @@ class MattermostBotAdapter(BotInterface):
             logger.warning(f"Mattermost get_current_user_id error: {e}")
         return ""
 
+    async def get_user_by_email(self, email: str) -> dict | None:
+        """Find Mattermost user by email"""
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.get(
+                    f"{self.mattermost_url}/api/v4/users/email/{email}",
+                    headers=self._headers,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return {
+                        "id": data.get("id", ""),
+                        "username": data.get("username", ""),
+                        "email": data.get("email", ""),
+                        "first_name": data.get("first_name", ""),
+                        "last_name": data.get("last_name", ""),
+                    }
+        except httpx.HTTPError as e:
+            logger.warning(f"Mattermost get_user_by_email error: {e}")
+        return None
+
     async def get_or_create_dm_channel(self, target_user_id: str) -> str:
         """Get or create a DM channel with the target user. Returns channel_id."""
         my_user_id = await self.get_current_user_id()

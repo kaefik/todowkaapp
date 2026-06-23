@@ -37,3 +37,10 @@ async def test_remove_keyboard_returns_true(adapter):
     """remove_keyboard returns True (no-op)"""
     result = await adapter.remove_keyboard("user123", "msg123")
     assert result is True
+
+
+@pytest.mark.asyncio
+async def test_get_user_by_email_returns_none_on_error(adapter):
+    """get_user_by_email returns None on connection error"""
+    result = await adapter.get_user_by_email("test@example.com")
+    assert result is None
