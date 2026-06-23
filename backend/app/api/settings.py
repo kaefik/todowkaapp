@@ -30,6 +30,16 @@ class SMTPConfigResponse(BaseModel):
     smtp_configured: bool = False
 
 
+class MattermostConfig(BaseModel):
+    mattermost_url: str | None = None
+    mattermost_bot_token: str | None = None
+
+
+class MattermostConfigResponse(BaseModel):
+    mattermost_url: str | None = None
+    mattermost_bot_token_configured: bool = False
+
+
 async def get_smtp_config_from_db(db: AsyncSession) -> dict:
     from sqlalchemy import text
     result = await db.execute(text(
@@ -53,6 +63,36 @@ async def get_smtp_config_from_db(db: AsyncSession) -> dict:
             config['smtp_from'] = row[1]
     config['smtp_configured'] = bool(config['smtp_host'] and config['smtp_user'])
     return config
+
+
+async def get_mattermost_config_from_db(db: AsyncSession) -> dict:
+    from sqlalchemy import text
+    result = await db.execute(text(
+        "SELECT key, value FROM system_settings WHERE key LIKE 'mattermost_%'"
+    ))
+    rows = result.fetchall()
+    config = {
+        'mattermost_url': None,
+        'mattermost_bot_token_configured': False,
+    }
+    for row in rows:
+        if row[0] == 'mattermost_url':
+            config['mattermost_url'] = row[1]
+        elif row[0] == 'mattermost_bot_token' and row[1]:
+            config['mattermost_bot_token_configured'] = True
+    return config
+
+
+async def get_mattermost_bot_token_from_db(db: AsyncSession) -> str | None:
+    from sqlalchemy import text
+    result = await db.execute(text(
+        "SELECT value FROM system_settings WHERE key = 'mattermost_bot_token'"
+    ))
+    row = result.fetchone()
+    if row and row[0]:
+        from app.services.crypto_service import decrypt_secret
+        return decrypt_secret(row[0])
+    return None
 
 
 @settings_router.get("/smtp", response_model=SMTPConfigResponse)
@@ -94,3 +134,41 @@ async def update_smtp_settings(
 
     result = await get_smtp_config_from_db(db)
     return SMTPConfigResponse(**result)
+
+
+@settings_router.get("/mattermost", response_model=MattermostConfigResponse)
+async def get_mattermost_settings(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_admin_user)],
+) -> MattermostConfigResponse:
+    config = await get_mattermost_config_from_db(db)
+    return MattermostConfigResponse(**config)
+
+
+@settings_router.put("/mattermost", response_model=MattermostConfigResponse)
+async def update_mattermost_settings(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_admin_user)],
+    config: MattermostConfig,
+) -> MattermostConfigResponse:
+    from sqlalchemy import text
+
+    now = datetime.now(ZoneInfo('UTC'))
+
+    settings_to_save = [
+        ('mattermost_url', config.mattermost_url),
+        ('mattermost_bot_token', encrypt_secret(config.mattermost_bot_token) if config.mattermost_bot_token else None),
+    ]
+
+    for key, value in settings_to_save:
+        if value is not None:
+            await db.execute(text("""
+                INSERT INTO system_settings (key, value, updated_at)
+                VALUES (:key, :value, :updated_at)
+                ON CONFLICT(key) DO UPDATE SET value = :value, updated_at = :updated_at
+            """), {'key': key, 'value': value, 'updated_at': now})
+
+    await db.commit()
+
+    result = await get_mattermost_config_from_db(db)
+    return MattermostConfigResponse(**result)
