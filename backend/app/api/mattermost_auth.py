@@ -65,13 +65,29 @@ class BotStatusResponse(BaseModel):
 async def bot_bind(
     req: BotBindRequest,
     current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Find Mattermost user by email using bot token"""
-    bot_token = current_user.decrypted_mattermost_bot_token or settings.mattermost_bot_token
+    from app.services.mattermost_notifier import get_mattermost_config_from_db
+
+    # 1. Личный токен пользователя
+    bot_token = current_user.decrypted_mattermost_bot_token
+    mattermost_url = current_user.mattermost_url
+
+    # 2. Админские настройки из system_settings
+    if not bot_token:
+        db_config = await get_mattermost_config_from_db()
+        bot_token = db_config.get('mattermost_bot_token')
+        mattermost_url = mattermost_url or db_config.get('mattermost_url')
+
+    # 3. .env fallback
+    if not bot_token:
+        bot_token = settings.mattermost_bot_token
+        mattermost_url = mattermost_url or settings.mattermost_url
+
     if not bot_token:
         return BotBindResponse(found=False, error="Mattermost bot token not configured")
 
-    mattermost_url = current_user.mattermost_url or settings.mattermost_url
     from app.adapters.mattermost_adapter import MattermostBotAdapter
     adapter = MattermostBotAdapter(mattermost_url, bot_token)
     user_data = await adapter.get_user_by_email(req.email)
