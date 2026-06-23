@@ -12,10 +12,6 @@ export default function MattermostBotSettings() {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; username?: string } | null>(null);
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
   const loadSettings = async () => {
     try {
       const data = await usersApi.getMattermostSettings();
@@ -27,6 +23,10 @@ export default function MattermostBotSettings() {
       console.error(err);
     }
   };
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   const handleValidate = async () => {
     setIsValidating(true);

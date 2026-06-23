@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 async def get_mattermost_config_from_db():
     """Get Mattermost config from system_settings table"""
     from sqlalchemy import text
+
     from app.database import async_session_factory
 
     async with async_session_factory() as db:
