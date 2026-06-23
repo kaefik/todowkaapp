@@ -525,6 +525,9 @@ function SettingsContent() {
             isConnected={!!user?.mattermost_user_id}
             notificationsEnabled={user?.mattermost_notifications_enabled || false}
             mattermostUrl={user?.mattermost_url || ''}
+            mattermostEmail={user?.mattermost_email || ''}
+            mattermostBindMode={user?.mattermost_bind_mode || 'pat'}
+            mattermostUserId={user?.mattermost_user_id || ''}
             onUpdate={handleUpdate}
           />
 
