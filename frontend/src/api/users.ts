@@ -97,4 +97,13 @@ export const usersApi = {
     const response = await httpClient.put<{ smtp_host: string | null; smtp_port: number | null; smtp_user: string | null; smtp_from: string | null; smtp_configured: boolean }>('/settings/smtp', data)
     return response.data
   },
+  getMattermostSettings: async (): Promise<{ mattermost_url: string | null; mattermost_bot_token_configured: boolean }> => {
+    const response = await httpClient.get<{ mattermost_url: string | null; mattermost_bot_token_configured: boolean }>('/settings/mattermost')
+    return response.data
+  },
+
+  updateMattermostSettings: async (data: { mattermost_url: string | null; mattermost_bot_token: string | null }): Promise<{ mattermost_url: string | null; mattermost_bot_token_configured: boolean }> => {
+    const response = await httpClient.put<{ mattermost_url: string | null; mattermost_bot_token_configured: boolean }>('/settings/mattermost', data)
+    return response.data
+  },
 }
