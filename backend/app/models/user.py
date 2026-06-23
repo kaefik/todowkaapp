@@ -47,6 +47,8 @@ class User(Base):
     mattermost_notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text('0'), nullable=False)
     mattermost_channel_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     mattermost_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mattermost_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    mattermost_bind_mode: Mapped[str] = mapped_column(String(20), default='pat', server_default='pat', nullable=False)
 
     @property
     def decrypted_mattermost_bot_token(self) -> str | None:
