@@ -9,6 +9,7 @@ import type { User } from '../api/users'
 import { VerbSettings } from '../components/VerbSettings'
 import { BackupScheduleSettings } from '../components/BackupScheduleSettings'
 import MattermostSettings from '../components/MattermostSettings'
+import MattermostBotSettings from '../components/MattermostBotSettings'
 import { DeleteAccountModal } from '../components/DeleteAccountModal'
 import { SessionList } from '../components/sessions/SessionList'
 import { exportImportApi } from '../api/exportImport'
@@ -965,6 +966,7 @@ function SettingsContent() {
       )}
       {activeTab === 'users' && user?.is_admin && <UsersTab currentUser={user} />}
       {activeTab === 'users' && user?.is_admin && <SMTPSettingsSection />}
+      {activeTab === 'users' && user?.is_admin && <MattermostBotSettings />}
       {activeTab === 'backup' && <BackupScheduleSettings user={user!} />}
       {activeTab === 'review' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-gray-900/50 p-6 space-y-6">
