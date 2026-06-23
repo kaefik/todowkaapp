@@ -3,6 +3,7 @@ import { httpClient } from './httpClient';
 export interface MattermostValidateResponse {
   valid: boolean;
   username?: string;
+  mattermost_user_id?: string;
 }
 
 export interface MattermostBindResponse {

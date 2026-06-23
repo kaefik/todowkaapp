@@ -219,10 +219,28 @@ class TaskScheduler:
                                         f"Telegram send failed for user {task.user.username}: {tg_err}"
                                     )
 
-                                if (
-                                    task.user.email_notifications_enabled
-                                    and task.user.notification_email
-                                ):
+                            if (
+                                task.user.mattermost_notifications_enabled
+                                and task.user.mattermost_bot_token
+                                and task.user.mattermost_user_id
+                            ):
+                                try:
+                                    from app.services.mattermost_notifier import (
+                                        MattermostNotifierService,
+                                    )
+
+                                    await MattermostNotifierService.send_reminder(
+                                        task.user, task
+                                    )
+                                except Exception as mm_err:
+                                    logger.error(
+                                        f"Mattermost send failed for user {task.user.username}: {mm_err}"
+                                    )
+
+                            if (
+                                task.user.email_notifications_enabled
+                                and task.user.notification_email
+                            ):
                                     try:
                                         from app.config import settings
                                         from app.services.email_service import (
@@ -392,6 +410,22 @@ class TaskScheduler:
                                     )
 
                             if (
+                                user.mattermost_notifications_enabled
+                                and user.mattermost_bot_token
+                                and user.mattermost_user_id
+                            ):
+                                try:
+                                    from app.services.mattermost_notifier import (
+                                        MattermostNotifierService,
+                                    )
+
+                                    await MattermostNotifierService.send_reminder(user, task)
+                                except Exception as mm_err:
+                                    logger.error(
+                                        f"Mattermost send failed for user {user.username}: {mm_err}"
+                                    )
+
+                            if (
                                 user.email_notifications_enabled
                                 and user.notification_email
                             ):
@@ -484,6 +518,30 @@ class TaskScheduler:
                                 )
                             except Exception as tg_err:
                                 logger.error(f"Telegram deadline send failed for user {user.username}: {tg_err}")
+
+                        if (
+                            user.mattermost_notifications_enabled
+                            and user.mattermost_bot_token
+                            and user.mattermost_user_id
+                        ):
+                            try:
+                                from app.adapters.mattermost_adapter import MattermostBotAdapter
+                                from app.config import settings
+                                task_link = f"[{i18n_t('telegramOpenTask', lang)}]({settings.frontend_url}/tasks?viewTaskId={task.id})"
+                                adapter = MattermostBotAdapter(
+                                    user.mattermost_url or settings.mattermost_url,
+                                    user.decrypted_mattermost_bot_token,
+                                )
+                                dm_channel_id = await adapter.get_or_create_dm_channel(user.mattermost_user_id)
+                                if dm_channel_id:
+                                    await adapter.send_message(
+                                        dm_channel_id,
+                                        f'{i18n_t("deadlineArrivedTelegram", lang, title=task.title)}\n\n{task_link}',
+                                    )
+                                else:
+                                    logger.warning(f"Failed to get DM channel for Mattermost user {user.mattermost_user_id}")
+                            except Exception as mm_err:
+                                logger.error(f"Mattermost deadline send failed for user {user.username}: {mm_err}")
 
                         if (
                             user.email_notifications_enabled

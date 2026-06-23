@@ -21,6 +21,41 @@ class MattermostBotAdapter(BotInterface):
     def _headers(self) -> dict:
         return {"Authorization": f"Bearer {self.bot_token}"}
 
+    async def get_current_user_id(self) -> str:
+        """Get the user ID of the token owner"""
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.get(
+                    f"{self.mattermost_url}/api/v4/users/me",
+                    headers=self._headers,
+                )
+                if resp.status_code == 200:
+                    return resp.json().get("id", "")
+        except httpx.HTTPError as e:
+            logger.warning(f"Mattermost get_current_user_id error: {e}")
+        return ""
+
+    async def get_or_create_dm_channel(self, target_user_id: str) -> str:
+        """Get or create a DM channel with the target user. Returns channel_id."""
+        my_user_id = await self.get_current_user_id()
+        if not my_user_id:
+            logger.warning("Cannot get current user ID for DM channel")
+            return ""
+
+        try:
+            async with httpx.AsyncClient(timeout=HTTPX_TIMEOUT) as client:
+                resp = await client.post(
+                    f"{self.mattermost_url}/api/v4/channels/direct",
+                    headers=self._headers,
+                    json=[my_user_id, target_user_id],
+                )
+                if resp.status_code in (200, 201):
+                    return resp.json().get("id", "")
+                logger.warning(f"Mattermost create DM channel failed: {resp.status_code} {resp.text}")
+        except httpx.HTTPError as e:
+            logger.warning(f"Mattermost get_or_create_dm_channel error: {e}")
+        return ""
+
     async def send_message(
         self,
         user_id: str,

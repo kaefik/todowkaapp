@@ -1027,6 +1027,25 @@
 - Тесты: `backend/tests/test_telegram_command_service.py` (15 новых тестов: 8 Search + 7 MainKeyboard)
 - Файлы: `backend/app/services/telegram_command_service.py`, `backend/app/services/telegram_notifier.py`, `backend/app/scheduler.py`, `backend/app/i18n/locales/ru.json`, `backend/app/i18n/locales/en.json`, `backend/app/i18n/locales/tt.json`
 
+**Mattermost Integration ✅ (Реализовано 23.06.2026)**
+- Подключение Mattermost через Personal Access Token
+- Валидация токена через Mattermost API (`/api/v4/users/me`)
+- Автоматическое сохранение `mattermost_user_id` при валидации токена (для отправки DM)
+- Сохранение зашифрованного токена и URL сервера в БД
+- Уведомления о задачах в Mattermost (напоминания и дедлайны):
+  - Отправка через `MattermostBotAdapter` (личные сообщения пользователю)
+  - Полный формат сообщения: название, описание, проект, область, контекст, теги, дедлайн, повторение, статус, заметки, дата создания
+  - Кликабельная ссылка на задачу во фронтенде
+- Переключатель вкл/выкл Mattermost-уведомлений в настройках
+- Улучшенный UX настроек:
+  - Подсказка по созданию Personal Access Token
+  - Плейсхолдеры с инструкциями
+  - Убран дефолтный URL localhost
+- Сервис: `backend/app/services/mattermost_notifier.py`
+- API: POST `/api/mattermost/validate-token` (с сохранением user_id), POST `/api/mattermost/save-token`, POST `/api/mattermost/logout`
+- i18n: ключи mattermost* в ru/en/tt settings.json
+- Файлы: `backend/app/services/mattermost_notifier.py`, `backend/app/adapters/mattermost_adapter.py`, `backend/app/api/mattermost_auth.py`, `backend/app/scheduler.py`, `backend/app/models/user.py`, `frontend/src/components/MattermostSettings.tsx`, `frontend/src/api/mattermost.ts`, `frontend/src/i18n/locales/ru/settings.json`, `frontend/src/i18n/locales/en/settings.json`, `frontend/src/i18n/locales/tt/settings.json`
+
 #### Напоминания задач с конкретным временем ✅ (Реализовано 14.04.2026)
 - Очистка прочитанных уведомлений ✅ (Реализовано 24.04.2026)
   - Кнопка «Очистить прочитанные» на странице уведомлений (`/notifications`)

@@ -7,7 +7,7 @@ interface MattermostSettingsProps {
   isConnected: boolean;
   notificationsEnabled: boolean;
   mattermostUrl?: string;
-  onUpdate: (data: any) => void;
+  onUpdate: (data: Record<string, unknown>) => void;
 }
 
 export default function MattermostSettings({
@@ -19,7 +19,7 @@ export default function MattermostSettings({
 }: MattermostSettingsProps) {
   const { t } = useTranslation();
   const [token, setToken] = useState(botToken || '');
-  const [url, setUrl] = useState(mattermostUrl || 'http://localhost:8065');
+  const [url, setUrl] = useState(mattermostUrl || '');
   const [isValidating, setIsValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; username?: string } | null>(null);
 
@@ -31,9 +31,9 @@ export default function MattermostSettings({
       setValidationResult(result);
       if (result.valid) {
         await saveMattermostToken(token);
-        onUpdate({ mattermost_bot_token: token });
+        onUpdate({ mattermost_bot_token: token, mattermost_user_id: result.mattermost_user_id });
       }
-    } catch (err) {
+    } catch {
       setValidationResult({ valid: false });
     } finally {
       setIsValidating(false);
@@ -61,21 +61,26 @@ export default function MattermostSettings({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            placeholder="http://localhost:8065"
+            placeholder="http://your-server:8065"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('settings.mattermostToken', { defaultValue: 'Bot Token' })}
+            {t('settings.mattermostToken', { defaultValue: 'Personal Access Token' })}
           </label>
           <input
             type="password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-            placeholder="xoxb-..."
+            placeholder={t('settings.mattermostTokenPlaceholder', { defaultValue: 'вставьте ваш Personal Access Token' })}
           />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {t('settings.mattermostTokenHint', {
+              defaultValue: 'Создайте токен: Mattermost → Integrations → Personal Access Tokens → Create New Token',
+            })}
+          </p>
         </div>
 
         <div className="flex gap-2">

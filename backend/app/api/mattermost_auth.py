@@ -23,6 +23,7 @@ class ValidateTokenRequest(BaseModel):
 class ValidateTokenResponse(BaseModel):
     valid: bool
     username: str | None = None
+    mattermost_user_id: str | None = None
 
 
 class BindRequest(BaseModel):
@@ -38,8 +39,9 @@ class BindResponse(BaseModel):
 async def validate_mattermost_token(
     req: ValidateTokenRequest,
     current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Validate Mattermost bot token"""
+    """Validate Mattermost bot token and save user ID for DM notifications"""
     import httpx
 
     base_url = req.mattermost_url or settings.mattermost_url
@@ -54,7 +56,14 @@ async def validate_mattermost_token(
             logger.info(f"Mattermost validation response: {resp.status_code}")
             if resp.status_code == 200:
                 data = resp.json()
-                return ValidateTokenResponse(valid=True, username=data.get("username"))
+                mm_user_id = data.get("id")
+                if mm_user_id:
+                    current_user.mattermost_user_id = mm_user_id
+                    if req.mattermost_url:
+                        current_user.mattermost_url = req.mattermost_url
+                    db.add(current_user)
+                    await db.commit()
+                return ValidateTokenResponse(valid=True, username=data.get("username"), mattermost_user_id=mm_user_id)
     except Exception as e:
         logger.error(f"Mattermost validation error: {e}")
 
