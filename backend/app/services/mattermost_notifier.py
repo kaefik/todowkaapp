@@ -16,9 +16,9 @@ async def get_mattermost_config_from_db():
     """Get Mattermost config from system_settings table"""
     from sqlalchemy import text
 
-    from app.database import async_session_factory
+    from app.database import AsyncSessionLocal
 
-    async with async_session_factory() as db:
+    async with AsyncSessionLocal() as db:
         result = await db.execute(text(
             "SELECT key, value FROM system_settings WHERE key LIKE 'mattermost_%'"
         ))
