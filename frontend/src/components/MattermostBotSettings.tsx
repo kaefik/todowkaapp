@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usersApi } from '../api/users';
+import { validateMattermostToken } from '../api/mattermost';
 
 export default function MattermostBotSettings() {
   const { t } = useTranslation('settings');
@@ -32,15 +33,8 @@ export default function MattermostBotSettings() {
     setIsValidating(true);
     setValidationResult(null);
     try {
-      const resp = await fetch(`${formData.mattermost_url}/api/v4/users/me`, {
-        headers: { 'Authorization': `Bearer ${formData.mattermost_bot_token}` }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        setValidationResult({ valid: true, username: data.username });
-      } else {
-        setValidationResult({ valid: false });
-      }
+      const result = await validateMattermostToken(formData.mattermost_bot_token, formData.mattermost_url);
+      setValidationResult({ valid: result.valid, username: result.username });
     } catch {
       setValidationResult({ valid: false });
     } finally {
