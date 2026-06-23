@@ -39,6 +39,8 @@ class UserResponse(BaseResponseSchema):
     mattermost_notifications_enabled: bool = False
     mattermost_channel_id: str | None = None
     mattermost_url: str | None = None
+    mattermost_email: str | None = None
+    mattermost_bind_mode: str = 'pat'
     capitalize_first: bool = True
     last_review_at: datetime | None = None
     review_count: int = 0
@@ -80,6 +82,8 @@ class UserUpdate(BaseModel):
     mattermost_notifications_enabled: bool | None = None
     mattermost_channel_id: str | None = None
     mattermost_url: str | None = Field(default=None, max_length=255)
+    mattermost_email: str | None = Field(default=None, max_length=255)
+    mattermost_bind_mode: str | None = Field(default=None, max_length=20)
     capitalize_first: bool | None = None
     review_frequency_days: int | None = None
     review_notifications_enabled: bool | None = None
