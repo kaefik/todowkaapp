@@ -12,6 +12,29 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+async def get_mattermost_config_from_db():
+    """Get Mattermost config from system_settings table"""
+    from sqlalchemy import text
+    from app.database import async_session_factory
+
+    async with async_session_factory() as db:
+        result = await db.execute(text(
+            "SELECT key, value FROM system_settings WHERE key LIKE 'mattermost_%'"
+        ))
+        rows = result.fetchall()
+        config = {
+            'mattermost_url': None,
+            'mattermost_bot_token': None,
+        }
+        for row in rows:
+            if row[0] == 'mattermost_url':
+                config['mattermost_url'] = row[1]
+            elif row[0] == 'mattermost_bot_token' and row[1]:
+                from app.services.crypto_service import decrypt_secret
+                config['mattermost_bot_token'] = decrypt_secret(row[1])
+        return config
+
+
 class MattermostNotifierService:
     @staticmethod
     def format_full_task_info(task: 'Task', user_tz: ZoneInfo, frontend_url: str | None = None, lang: str = "ru") -> str:
@@ -100,17 +123,20 @@ class MattermostNotifierService:
 
         from app.config import settings
 
+        # Get config from DB first, fallback to .env
+        db_config = await get_mattermost_config_from_db()
+
         if user.mattermost_bind_mode == 'bot':
-            if not settings.mattermost_bot_token:
+            token = db_config.get('mattermost_bot_token') or settings.mattermost_bot_token
+            if not token:
                 logger.warning(f"No Mattermost bot token configured for bot mode user {user.id}")
                 return False
-            mattermost_url = settings.mattermost_url
-            token = settings.mattermost_bot_token
+            mattermost_url = db_config.get('mattermost_url') or settings.mattermost_url
         else:
             token = user.decrypted_mattermost_bot_token
             if not token:
                 return False
-            mattermost_url = user.mattermost_url or settings.mattermost_url
+            mattermost_url = user.mattermost_url or db_config.get('mattermost_url') or settings.mattermost_url
 
         if not mattermost_url:
             logger.warning(f"No Mattermost URL configured for user {user.id}")
