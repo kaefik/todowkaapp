@@ -95,14 +95,22 @@ class MattermostNotifierService:
 
     @staticmethod
     async def send_reminder(user: 'User', task: 'Task') -> bool:
-        token = user.decrypted_mattermost_bot_token
-        if not token or not user.mattermost_user_id:
+        if not user.mattermost_notifications_enabled or not user.mattermost_user_id:
             return False
 
-        mattermost_url = user.mattermost_url
-        if not mattermost_url:
-            from app.config import settings
+        from app.config import settings
+
+        if user.mattermost_bind_mode == 'bot':
+            if not settings.mattermost_bot_token:
+                logger.warning(f"No Mattermost bot token configured for bot mode user {user.id}")
+                return False
             mattermost_url = settings.mattermost_url
+            token = settings.mattermost_bot_token
+        else:
+            token = user.decrypted_mattermost_bot_token
+            if not token:
+                return False
+            mattermost_url = user.mattermost_url or settings.mattermost_url
 
         if not mattermost_url:
             logger.warning(f"No Mattermost URL configured for user {user.id}")
@@ -111,12 +119,10 @@ class MattermostNotifierService:
         user_tz = ZoneInfo(user.timezone or "Europe/Moscow")
         lang = getattr(user, 'language', None) or "ru"
 
-        from app.config import settings
         text = MattermostNotifierService.format_full_task_info(task, user_tz, frontend_url=settings.frontend_url, lang=lang)
 
         adapter = MattermostBotAdapter(mattermost_url, token)
 
-        # Get or create DM channel with the user
         dm_channel_id = await adapter.get_or_create_dm_channel(user.mattermost_user_id)
         if not dm_channel_id:
             logger.warning(f"Failed to get DM channel for user {user.id}")
