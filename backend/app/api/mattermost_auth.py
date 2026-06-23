@@ -67,11 +67,13 @@ async def bot_bind(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     """Find Mattermost user by email using bot token"""
-    if not settings.mattermost_bot_token:
+    bot_token = current_user.decrypted_mattermost_bot_token or settings.mattermost_bot_token
+    if not bot_token:
         return BotBindResponse(found=False, error="Mattermost bot token not configured")
 
+    mattermost_url = current_user.mattermost_url or settings.mattermost_url
     from app.adapters.mattermost_adapter import MattermostBotAdapter
-    adapter = MattermostBotAdapter(settings.mattermost_url, settings.mattermost_bot_token)
+    adapter = MattermostBotAdapter(mattermost_url, bot_token)
     user_data = await adapter.get_user_by_email(req.email)
 
     if not user_data:
