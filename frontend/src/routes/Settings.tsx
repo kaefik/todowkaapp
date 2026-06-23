@@ -527,7 +527,6 @@ function SettingsContent() {
             mattermostUrl={user?.mattermost_url || ''}
             mattermostEmail={user?.mattermost_email || ''}
             mattermostBindMode={user?.mattermost_bind_mode || 'pat'}
-            mattermostUserId={user?.mattermost_user_id || ''}
             onUpdate={handleUpdate}
           />
 

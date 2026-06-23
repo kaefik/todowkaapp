@@ -17,7 +17,6 @@ interface MattermostSettingsProps {
   mattermostUrl?: string;
   mattermostEmail?: string;
   mattermostBindMode?: string;
-  mattermostUserId?: string;
   onUpdate: (data: Record<string, unknown>) => void;
 }
 
@@ -28,7 +27,6 @@ export default function MattermostSettings({
   mattermostUrl,
   mattermostEmail,
   mattermostBindMode = 'pat',
-  mattermostUserId,
   onUpdate,
 }: MattermostSettingsProps) {
   const { t } = useTranslation();
@@ -57,12 +55,6 @@ export default function MattermostSettings({
     email?: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (mode === 'bot') {
-      loadBotStatus();
-    }
-  }, [mode]);
-
   const loadBotStatus = async () => {
     try {
       const status = await botStatusMattermost();
@@ -71,6 +63,12 @@ export default function MattermostSettings({
       setBotStatus(null);
     }
   };
+
+  useEffect(() => {
+    if (mode === 'bot') {
+      loadBotStatus();
+    }
+  }, [mode]);
 
   // PAT handlers
   const handleValidate = async () => {
